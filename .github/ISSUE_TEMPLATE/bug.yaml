@@ -1,0 +1,41 @@
+name: "🐛 2. Bug (버그 수정)"
+description: "버그 관련 이슈 템플릿"
+title: "[bug] "
+labels: ["🐛 bug"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: "🎯 달성 목표"
+      description: "이 버그를 수정함으로써 달성하려는 목표를 적어주세요."
+    validations:
+      required: true
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: "🔍 버그 현상"
+      description: "발생한 버그에 대해 자세히 설명해주세요."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: "🕹️ 재현 방법"
+      value: |
+        1. 
+        2. 
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "✅ 기대 결과"
+      description: "정상적으로 동작했을 때 기대되는 결과를 적어주세요."
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: "📸 스크린샷 (필요 시)"
+      description: "버그와 관련된 스크린샷을 첨부해주세요."
