@@ -1,6 +1,6 @@
 spring:
   config:
-    import: classpath:application-secret.yaml
+    import: optional:classpath:application-secret.yaml
   jpa:
     hibernate:
       ddl-auto: validate

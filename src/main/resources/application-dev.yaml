@@ -1,6 +1,6 @@
 spring:
   config:
-    import: classpath:application-secret.yaml # 시크릿 파일 가져오기
+    import: optional:classpath:application-secret.yaml # 시크릿 파일 가져오기
   jpa:
     hibernate:
       ddl-auto: update # 엔티티 변경 시 테이블 구조 자동 반영 (기존 데이터 유지)
