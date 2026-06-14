@@ -1,0 +1,23 @@
+spring:
+  docker:
+    compose:
+      enabled: false  # 도커 컴포즈 자동 실행 비활성화
+  datasource:
+    driver-class-name: org.h2.Driver
+    # MODE=MySQL 옵션으로 MySQL 문법과의 호환성을 높입니다.
+    url: jdbc:h2:mem:baton;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console # http://localhost:8080/h2-console 로 접속 가능
+  jpa:
+    hibernate:
+      ddl-auto: create-drop # 실행 시 테이블 생성, 종료 시 드롭
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+        highlight_sql: true
