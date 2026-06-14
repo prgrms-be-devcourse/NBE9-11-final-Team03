@@ -33,7 +33,8 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new LinkedHashMap<>();
 
         for (FieldError fieldError : e.getBindingResult().getFieldErrors()) {
-            errors.put(fieldError.getField(), fieldError.getDefaultMessage());
+            String message = fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage() : "올바르지 않은 입력값입니다.";
+            errors.put(fieldError.getField(), message);
         }
 
         ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
