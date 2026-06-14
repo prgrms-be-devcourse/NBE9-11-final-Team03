@@ -1,3 +1,5 @@
 spring:
   application:
     name: baton
+  profiles:
+    active: local
