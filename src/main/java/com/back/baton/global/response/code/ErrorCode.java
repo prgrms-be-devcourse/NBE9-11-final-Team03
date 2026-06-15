@@ -16,7 +16,10 @@ public enum ErrorCode {
 
     // Auth
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "401-1", "인증이 필요합니다."),
-    FORBIDDEN(HttpStatus.FORBIDDEN, "403-1", "접근 권한이 없습니다.");
+    FORBIDDEN(HttpStatus.FORBIDDEN, "403-1", "접근 권한이 없습니다."),
+
+    // Credit
+    CREDIT_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "404-2", "크레딧 계좌를 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
