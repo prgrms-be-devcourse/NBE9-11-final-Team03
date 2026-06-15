@@ -38,3 +38,6 @@ out/
 
 # Secrets
 **/application-secret.yaml
+
+# Mac OS
+.DS_Store
