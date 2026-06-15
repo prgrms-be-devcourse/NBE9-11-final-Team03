@@ -14,6 +14,10 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "404-1", "사용자를 찾을 수 없습니다."),
     DUPLICATED_USER(HttpStatus.CONFLICT, "409-1", "이미 존재하는 사용자입니다."),
 
+    // Talent
+    TALENT_NOT_FOUND(HttpStatus.NOT_FOUND, "404-2", "재능을 찾을 수 없습니다."),
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "404-3", "카테고리를 찾을 수 없습니다."),
+
     // Auth
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "401-1", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "403-1", "접근 권한이 없습니다.");
