@@ -26,12 +26,12 @@ public class UserService {
 
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
         // 1. 이메일 검증
-        if(userRepository.findByEmail(email)){
+        if(userRepository.existsByEmail(email)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
 
         // TODO: 1-2. 이메일 인증 여부 확인
-        
+
 
         // 2. 비밀번호 형식 검증
         password = password.strip(); // 앞뒤 공백 제거
