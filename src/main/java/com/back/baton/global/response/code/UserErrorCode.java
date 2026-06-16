@@ -2,31 +2,31 @@ package com.back.baton.global.response.code;
 
 import org.springframework.http.HttpStatus;
 
-public enum SuccessCode {
-    OK(HttpStatus.OK, "200-0", "요청에 성공했습니다."),
-    CREATED(HttpStatus.CREATED, "201-0", "요청에 성공했습니다."),
-
-    USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
-    USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다.");
+public enum UserErrorCode implements ErrorCode {
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER-404-001", "사용자를 찾을 수 없습니다."),
+    DUPLICATED_USER(HttpStatus.CONFLICT, "USER-409-001", "이미 존재하는 사용자입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
 
-    SuccessCode(HttpStatus httpStatus, String code, String message) {
+    UserErrorCode(HttpStatus httpStatus, String code, String message) {
         this.httpStatus = httpStatus;
         this.code = code;
         this.message = message;
     }
 
+    @Override
     public HttpStatus getHttpStatus() {
         return httpStatus;
     }
 
+    @Override
     public String getCode() {
         return code;
     }
 
+    @Override
     public String getMessage() {
         return message;
     }
