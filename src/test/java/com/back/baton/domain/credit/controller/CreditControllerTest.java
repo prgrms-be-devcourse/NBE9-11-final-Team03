@@ -3,7 +3,7 @@ package com.back.baton.domain.credit.controller;
 import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.global.exception.CustomException;
-import com.back.baton.global.response.code.ErrorCode;
+import com.back.baton.global.response.code.CreditErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,13 +44,13 @@ class CreditControllerTest {
     @Test
     @DisplayName("크레딧 계좌가 없으면 404와 CREDIT_ACCOUNT_NOT_FOUND 에러를 반환한다")
     void getBalance_notFound() throws Exception {
-        given(creditService.getBalance(999L)).willThrow(new CustomException(ErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+        given(creditService.getBalance(999L)).willThrow(new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/credit/balance")
                         .param("userId", "999"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("404-2"))
+                .andExpect(jsonPath("$.code").value("CREDIT-404-001"))
                 .andExpect(jsonPath("$.message").value("크레딧 계좌를 찾을 수 없습니다."))
                 .andExpect(jsonPath("$.data").isEmpty());
     }

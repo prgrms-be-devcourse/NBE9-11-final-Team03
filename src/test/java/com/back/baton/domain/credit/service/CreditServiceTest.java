@@ -4,7 +4,7 @@ import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
 import com.back.baton.domain.credit.entity.CreditAccount;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.global.exception.CustomException;
-import com.back.baton.global.response.code.ErrorCode;
+import com.back.baton.global.response.code.CreditErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,6 +53,6 @@ class CreditServiceTest {
         assertThatThrownBy(() -> creditService.getBalance(999L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+                        .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
     }
 }
