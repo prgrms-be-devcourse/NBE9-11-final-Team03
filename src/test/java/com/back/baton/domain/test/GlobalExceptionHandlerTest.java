@@ -3,7 +3,7 @@ package com.back.baton.domain.test;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.exception.GlobalExceptionHandler;
 import com.back.baton.global.response.ApiResponse;
-import com.back.baton.global.response.code.ErrorCode;
+import com.back.baton.global.response.code.UserErrorCode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -25,7 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest
+@WebMvcTest(useDefaultFilters = false)
 @Import({
         GlobalExceptionHandler.class,
         GlobalExceptionHandlerTest.TestController.class
@@ -52,7 +52,7 @@ public class GlobalExceptionHandlerTest {
         mockMvc.perform(get("/test/custom-exception"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("404-1"))
+                .andExpect(jsonPath("$.code").value("USER-404-001"))
                 .andExpect(jsonPath("$.message").value("사용자를 찾을 수 없습니다."))
                 .andExpect(jsonPath("$.data").isEmpty());
     }
@@ -72,7 +72,7 @@ public class GlobalExceptionHandlerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("400-2"))
+                .andExpect(jsonPath("$.code").value("COMMON-400-002"))
                 .andExpect(jsonPath("$.message").value("요청 필드 검증에 실패했습니다."))
                 .andExpect(jsonPath("$.data.email").value("이메일 형식이 올바르지 않습니다."))
                 .andExpect(jsonPath("$.data.password").value("비밀번호는 8자 이상이어야 합니다."));
@@ -84,7 +84,7 @@ public class GlobalExceptionHandlerTest {
         mockMvc.perform(get("/test/server-error"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("500-1"))
+                .andExpect(jsonPath("$.code").value("COMMON-500-001"))
                 .andExpect(jsonPath("$.message").value("서버 내부 오류가 발생했습니다."))
                 .andExpect(jsonPath("$.data").isEmpty());
     }
@@ -99,7 +99,7 @@ public class GlobalExceptionHandlerTest {
 
         @GetMapping("/test/custom-exception")
         public ApiResponse<Void> customException() {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
         }
 
         @PostMapping("/test/validation")

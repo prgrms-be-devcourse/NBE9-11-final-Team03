@@ -1,12 +1,15 @@
 package com.back.baton.global.exception;
 
 import com.back.baton.global.response.ApiResponse;
+import com.back.baton.global.response.code.CommonErrorCode;
 import com.back.baton.global.response.code.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -33,15 +36,35 @@ public class GlobalExceptionHandler {
         Map<String, String> errors = new LinkedHashMap<>();
 
         for (FieldError fieldError : e.getBindingResult().getFieldErrors()) {
-            String message = fieldError.getDefaultMessage() != null ? fieldError.getDefaultMessage() : "올바르지 않은 입력값입니다.";
+            String message = fieldError.getDefaultMessage() != null
+                    ? fieldError.getDefaultMessage()
+                    : "올바르지 않은 입력값입니다.";
             errors.put(fieldError.getField(), message);
         }
 
-        ErrorCode errorCode = ErrorCode.VALIDATION_FAILED;
+        ErrorCode errorCode = CommonErrorCode.VALIDATION_FAILED;
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
                 .body(ApiResponse.fail(errorCode, errors));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException() {
+        ErrorCode errorCode = CommonErrorCode.INVALID_JSON;
+
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ApiResponse.fail(errorCode));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpRequestMethodNotSupportedException() {
+        ErrorCode errorCode = CommonErrorCode.METHOD_NOT_ALLOWED;
+
+        return ResponseEntity
+                .status(errorCode.getHttpStatus())
+                .body(ApiResponse.fail(errorCode));
     }
 
     @ExceptionHandler(Exception.class)
@@ -51,7 +74,7 @@ public class GlobalExceptionHandler {
     ) {
         log.error("Unexpected exception occurred. uri={}", request.getRequestURI(), e);
 
-        ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
+        ErrorCode errorCode = CommonErrorCode.INTERNAL_SERVER_ERROR;
 
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
