@@ -1,4 +1,4 @@
-package com.back.baton.domain.credit.dto;
+package com.back.baton.domain.credit.dto.response;
 
 import com.back.baton.domain.credit.entity.CreditAccount;
 import io.swagger.v3.oas.annotations.media.Schema;
