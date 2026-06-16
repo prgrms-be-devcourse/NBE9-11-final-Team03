@@ -26,21 +26,23 @@ class TalentControllerTest {
     @MockitoBean TalentService talentService;
 
     @Test
-    @DisplayName("정상 요청이면 201을 반환한다")
+    @DisplayName("정상 요청이면 201과 함께 Location, 응답 본문을 반환한다")
     void create_success() throws Exception {
-        //given
         given(talentService.createTalent(any(), any()))
                 .willReturn(new TalentCreateRes(100L));
         var request = new TalentCreateReq(10L, "제목", "내용", 2, 100);
 
-        //when then
         mockMvc.perform(post("/api/v1/talents")
                         .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.code").value("201-2"));
+                .andExpect(header().string("Location", "/api/v1/talents/100"))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("201-2"))
+                .andExpect(jsonPath("$.data.talentId").value(100));
     }
+
 
     @Test
     @DisplayName("제목이 비어 있으면 400을 반환한다")
@@ -54,6 +56,6 @@ class TalentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("400-2"));
+                .andExpect(jsonPath("$.code").value("COMMON-400-002"));
     }
 }

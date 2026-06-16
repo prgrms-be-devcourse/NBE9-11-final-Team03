@@ -33,7 +33,9 @@ class TalentServiceTest {
     void createTalent_success() {
         Long authorId = 1L;
         var request = new TalentCreateReq(10L, "스프링 코드리뷰", "내용", 2, 100);
-        given(categoryRepository.findById(10L)).willReturn(Optional.of(mock(Category.class)));
+        Category category = mock(Category.class);
+        given(category.isActive()).willReturn(true);
+        given(categoryRepository.findById(10L)).willReturn(Optional.of(category));
 
         Talent saved = Talent.create(authorId, mock(Category.class), "스프링 코드리뷰", "내용", 2, 100);
         ReflectionTestUtils.setField(saved, "id", 100L); // save 후 id 채워진 상태 모사
@@ -50,6 +52,19 @@ class TalentServiceTest {
     void createTalent_categoryNotFound() {
         var request = new TalentCreateReq(999L, "제목", "내용", 2, 100);
         given(categoryRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> talentService.createTalent(1L, request))
+                .isInstanceOf(CustomException.class);
+        then(talentRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("비활성 카테고리면 예외를 던지고 저장하지 않는다")
+    void createTalent_categoryInactive() {
+        var request = new TalentCreateReq(10L, "제목", "내용", 2, 100);
+        Category inactive = mock(Category.class);
+        given(categoryRepository.findById(10L)).willReturn(Optional.of(inactive));
+        given(inactive.isActive()).willReturn(false);
 
         assertThatThrownBy(() -> talentService.createTalent(1L, request))
                 .isInstanceOf(CustomException.class);
