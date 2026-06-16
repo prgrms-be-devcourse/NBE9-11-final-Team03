@@ -17,7 +17,10 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class CreditServiceTest {
@@ -54,5 +57,31 @@ class CreditServiceTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("초기 크레딧 계좌가 정상적으로 생성된다")
+    void initializeAccount_success() {
+        ReflectionTestUtils.setField(creditService, "initialCreditAmount", 10000);
+        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.empty());
+
+        creditService.initializeAccount(1L);
+
+        then(creditAccountRepository).should().save(any(CreditAccount.class));
+    }
+
+    @Test
+    @DisplayName("이미 크레딧 계좌가 존재하면 CREDIT_ACCOUNT_ALREADY_EXISTS 예외가 발생한다")
+    void initializeAccount_alreadyExists() {
+        CreditAccount existingAccount = new CreditAccount();
+        ReflectionTestUtils.setField(existingAccount, "userId", 1L);
+        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(existingAccount));
+
+        assertThatThrownBy(() -> creditService.initializeAccount(1L))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_ALREADY_EXISTS));
+
+        then(creditAccountRepository).should(never()).save(any());
     }
 }
