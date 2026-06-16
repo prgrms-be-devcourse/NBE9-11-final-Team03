@@ -1,6 +1,6 @@
 package com.back.baton.domain.credit.service;
 
-import com.back.baton.domain.credit.dto.CreditBalanceRes;
+import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
 import com.back.baton.domain.credit.entity.CreditAccount;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.global.exception.CustomException;
