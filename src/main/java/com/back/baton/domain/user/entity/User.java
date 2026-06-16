@@ -2,7 +2,10 @@ package com.back.baton.domain.user.entity;
 
 import com.back.baton.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -44,6 +47,7 @@ public class User extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private UserRole role;
 
+    @Column(nullable = false)
     private LocalDateTime deletedAt;
 
     @Builder
@@ -58,6 +62,7 @@ public class User extends BaseTimeEntity {
         this.trustScore = trustScore;
         this.status = UserStatus.ACTIVE;
         this.role = UserRole.USER;
+        this.deletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
     }
 
     public void upgradeToAdmin() {
