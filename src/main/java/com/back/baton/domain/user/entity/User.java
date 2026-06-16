@@ -59,4 +59,8 @@ public class User extends BaseTimeEntity {
         this.status = UserStatus.ACTIVE;
         this.role = UserRole.USER;
     }
+
+    public void upgradeToAdmin() {
+        this.role = UserRole.ADMIN;
+    }
 }
