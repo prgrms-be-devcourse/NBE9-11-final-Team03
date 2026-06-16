@@ -77,4 +77,15 @@ public class Talent extends BaseTimeEntity {
                 .title(title).content(content)
                 .estimatedHours(estimatedHours).creditPrice(creditPrice).build();
     }
+
+    public void update(Category category, String title, String content, int estimatedHours, int creditPrice){
+        this.category = category;
+        this.title = title;
+        this.content = content;
+        this.estimatedHours = estimatedHours;
+        this.creditPrice = creditPrice;
+    }
+    public boolean isDeleted() {
+        return this.deletedAt == null;
+    }
 }

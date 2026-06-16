@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public enum SuccessCode {
     OK(HttpStatus.OK, "200-0", "요청에 성공했습니다."),
+    CREATED(HttpStatus.CREATED, "201-0", "요청에 성공했습니다."),
 
     TALENT_CREATED(HttpStatus.CREATED, "201-2", "재능 등록에 성공했습니다."),
 

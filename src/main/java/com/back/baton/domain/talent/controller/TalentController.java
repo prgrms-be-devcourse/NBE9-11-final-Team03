@@ -1,7 +1,9 @@
 package com.back.baton.domain.talent.controller;
 
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
+import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
 import com.back.baton.domain.talent.dto.response.TalentCreateRes;
+import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.code.SuccessCode;
@@ -29,5 +31,13 @@ public class TalentController {
         return ResponseEntity
                 .created(URI.create("/api/v1/talents/" + response.talentId()))
                 .body(ApiResponse.success(SuccessCode.TALENT_CREATED, response));
+    }
+    @PutMapping("/{talentId}")
+    public ResponseEntity<ApiResponse<TalentUpdateRes>> update(
+            @PathVariable Long talentId,
+            @RequestHeader("X-User-Id") Long authorId,   // TODO: @AuthenticationPrincipal
+            @Valid @RequestBody TalentUpdateReq req) {
+        TalentUpdateRes res = talentService.updateTalent(talentId, authorId, req);
+        return ResponseEntity.ok(ApiResponse.success(res));
     }
 }
