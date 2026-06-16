@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public enum SuccessCode {
     OK(HttpStatus.OK, "200-0", "요청에 성공했습니다."),
+    CREATED(HttpStatus.CREATED, "201-0", "요청에 성공했습니다."),
 
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다.");
