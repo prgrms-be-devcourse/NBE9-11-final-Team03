@@ -171,6 +171,82 @@ class MatchProposalServiceTest {
         verify(matchProposalRepository, never()).save(any(MatchProposal.class));
     }
 
+    @Test
+    @DisplayName("판매자는 요청받은 매칭 제안을 수락할 수 있다")
+    void acceptMatchProposal() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        MatchProposalRes res = matchProposalService.acceptMatchProposal(proposalId, providerId);
+
+        assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
+        assertThat(res.respondedAt()).isNotNull();
+
+        verify(matchProposalRepository).findById(proposalId);
+    }
+
+    @Test
+    @DisplayName("제안을 받은 판매자가 아니면 매칭 제안을 수락할 수 없다")
+    void acceptMatchProposal_accessDenied() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+        Long invalidProviderId = 999L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, invalidProviderId))
+                .isInstanceOf(CustomException.class);
+
+        verify(matchProposalRepository).findById(proposalId);
+    }
+
+    @Test
+    @DisplayName("REQUESTED 상태가 아닌 매칭 제안은 수락할 수 없다")
+    void acceptMatchProposal_invalidStatus() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+        matchProposal.accept();
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, providerId))
+                .isInstanceOf(CustomException.class);
+
+        verify(matchProposalRepository).findById(proposalId);
+    }
+
     private Talent createTalent(Long id, Long authorId) {
         Category category = createCategory();
 

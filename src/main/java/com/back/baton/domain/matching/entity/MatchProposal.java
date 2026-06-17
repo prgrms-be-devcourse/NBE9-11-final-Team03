@@ -76,4 +76,9 @@ public class MatchProposal extends BaseTimeEntity {
                 requestMessage
         );
     }
+
+    public void accept() {
+        this.status = MatchProposalStatus.ACCEPTED;
+        this.respondedAt = LocalDateTime.now();
+    }
 }

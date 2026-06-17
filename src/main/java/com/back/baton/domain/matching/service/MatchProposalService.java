@@ -54,6 +54,26 @@ public class MatchProposalService {
         return MatchProposalRes.from(savedMatchProposal);
     }
 
+    @Transactional
+    public MatchProposalRes acceptMatchProposal(Long proposalId, Long providerId) {
+        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
+                .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
+
+        // MatchProposal 상태 및 수락 권한 검증
+        validateAcceptableStatus(matchProposal);
+        validateProviderCanAccept(providerId, matchProposal);
+
+        // TODO: Credit/Trade/Escrow 기능 구현 완료 후 연동 필요
+        //  - 구매자 크레딧 잔액 확인
+        //  - 구매자 크레딧 에스크로 예치
+        //  - 거래(Trade) 생성
+        //  - 크레딧 거래 내역(CreditTransaction) 기록
+        //  - 처리가 모두 성공한 뒤 매칭 제안을 ACCEPTED로 변경
+        matchProposal.accept();
+
+        return MatchProposalRes.from(matchProposal);
+    }
+
     private Talent getTalent(Long talentId) {
         return talentRepository.findById(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
@@ -80,6 +100,18 @@ public class MatchProposalService {
     private void validateSelfMatching(Long requesterId, Long providerId) {
         if (Objects.equals(requesterId, providerId)) {
             throw new CustomException(MatchingErrorCode.SELF_MATCHING_NOT_ALLOWED);
+        }
+    }
+
+    private void validateAcceptableStatus(MatchProposal matchProposal) {
+        if (matchProposal.getStatus() != MatchProposalStatus.REQUESTED) {
+            throw new CustomException(MatchingErrorCode.INVALID_MATCHING_STATUS);
+        }
+    }
+
+    private void validateProviderCanAccept(Long providerId, MatchProposal matchProposal) {
+        if (!Objects.equals(matchProposal.getProviderId(), providerId)) {
+            throw new CustomException(MatchingErrorCode.MATCH_PROPOSAL_ACCESS_DENIED);
         }
     }
 
