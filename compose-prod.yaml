@@ -11,18 +11,24 @@ services:
       - '3306:3306'
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+
   backend:
     image: ujin3261/dev11-final-team03-service:latest
     restart: always
     ports:
       - '8080:8080'
     environment:
-      - SPRING_PROFILES_ACTIVE=prod,secret
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/baton?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-      - SPRING_DATASOURCE_USERNAME=admin
-      - DB_PROD_PASSWORD=${LIVE_DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: "prod,secret"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/baton?serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+      SPRING_DATASOURCE_USERNAME: "admin"
+      DB_PROD_PASSWORD: "${LIVE_DB_PASSWORD}"
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy # ◀ 중요: MySQL 헬스체크가 통과되면 스프링이 켜짐
 
 volumes:
     db_data:
