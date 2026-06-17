@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +33,15 @@ public class UserService {
 
         // TODO: 1-2. 이메일 인증 여부 확인
 
+        // 2. 닉네임 검증
+        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
 
-        // 2. 비밀번호 형식 검증
+        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
+            throw new CustomException(UserErrorCode.DUPLICATED_USER);
+        }
+        //TODO: 2-2. 닉네임 중복 확인 별도 구현
+
+        // 3. 비밀번호 형식 검증
         password = password.strip(); // 앞뒤 공백 제거
         int lastAtIndex = email.lastIndexOf('@');
         String username = email.substring(0, lastAtIndex); // 이메일 앞자리 추출
@@ -41,10 +49,10 @@ public class UserService {
             throw new CustomException(UserErrorCode.INVALID_PASSWORD);
         }
 
-        // 3. 비밀번호 암호화-> 솔트 + 암호화 + 연산 반복 -> BCrypt 적용
+        // 4. 비밀번호 암호화-> 솔트 + 암호화 + 연산 반복 -> BCrypt 적용
         String encodedPwd = passwordEncoder.encode(password);
 
-        // 4. user 생성
+        // 5. user 생성
         User user = User.builder()
                 .email(email)
                 .password(encodedPwd)
@@ -55,7 +63,7 @@ public class UserService {
                 .build();
         userRepository.save(user);
 
-        // TODO: 5. Account 생성
+        // TODO: 6. Account 생성
 
         return new UserSignupRes(user);
     }
