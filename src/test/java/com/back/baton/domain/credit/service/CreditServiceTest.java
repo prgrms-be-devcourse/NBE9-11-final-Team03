@@ -18,6 +18,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -83,5 +84,37 @@ class CreditServiceTest {
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_ALREADY_EXISTS));
 
         then(creditAccountRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("적립 금액이 양수이고 계좌가 존재하면 잔액이 증가한다")
+    void earnCredit_success() {
+        given(creditAccountRepository.addBalance(1L, 5000)).willReturn(1);
+
+        creditService.earnCredit(1L, 5000);
+
+        then(creditAccountRepository).should().addBalance(1L, 5000);
+    }
+
+    @Test
+    @DisplayName("적립 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
+    void earnCredit_invalidAmount() {
+        assertThatThrownBy(() -> creditService.earnCredit(1L, 0))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
+
+        then(creditAccountRepository).should(never()).addBalance(any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
+    void earnCredit_accountNotFound() {
+        given(creditAccountRepository.addBalance(999L, 5000)).willReturn(0);
+
+        assertThatThrownBy(() -> creditService.earnCredit(999L, 5000))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
     }
 }

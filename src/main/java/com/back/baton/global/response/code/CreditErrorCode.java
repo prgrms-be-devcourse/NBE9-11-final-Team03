@@ -4,7 +4,8 @@ import org.springframework.http.HttpStatus;
 
 public enum CreditErrorCode implements ErrorCode {
     CREDIT_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "CREDIT-404-001", "크레딧 계좌를 찾을 수 없습니다."),
-    CREDIT_ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CREDIT-409-001", "이미 크레딧 계좌가 존재합니다.");
+    CREDIT_ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CREDIT-409-001", "이미 크레딧 계좌가 존재합니다."),
+    INVALID_CREDIT_AMOUNT(HttpStatus.BAD_REQUEST, "CREDIT-400-001", "적립 금액은 0보다 커야 합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

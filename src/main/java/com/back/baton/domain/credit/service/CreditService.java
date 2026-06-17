@@ -35,4 +35,16 @@ public class CreditService {
         CreditAccount account = CreditAccount.create(userId, initialCreditAmount);
         creditAccountRepository.save(account);
     }
+
+    @Transactional
+    public void earnCredit(Long userId, int amount) {
+        if (amount <= 0) {
+            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
+        }
+
+        int updatedRows = creditAccountRepository.addBalance(userId, amount);
+        if (updatedRows == 0) {
+            throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
+        }
+    }
 }
