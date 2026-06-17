@@ -42,7 +42,17 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/dev11-final-team03-service:latest .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/dev11-final-team03-service:latest
 
-      # 5. EC2 서버에 접속하여 최신 이미지로 교체 (Nginx 포트 8080 연결 유지)
+      # 5. Docker Hub 푸시가 끝난 직후, 컴포즈 파일을 EC2 서버로 복사해 줍니다.
+      - name: Copy compose-prod.yaml to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "compose-prod.yaml"      # 로컬(깃허브 가상공간)에 있는 이 파일을
+          target: "/home/ubuntu/app"       # EC2 서버의 이 디렉토리로 복사한다!
+
+      # 6. EC2 서버에 접속하여 최신 이미지로 교체 (Nginx 포트 8080 연결 유지)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@master
         with:
