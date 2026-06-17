@@ -7,6 +7,7 @@ public enum SuccessCode {
     CREATED(HttpStatus.CREATED, "201-0", "요청에 성공했습니다."),
 
     TALENT_CREATED(HttpStatus.CREATED, "201-2", "재능 등록에 성공했습니다."),
+    TALENT_OK(HttpStatus.OK, "200-2", "재능 요청에 성공했습니다."),
 
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다.");
