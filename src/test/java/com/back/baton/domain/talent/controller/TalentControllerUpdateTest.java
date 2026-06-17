@@ -43,7 +43,7 @@ class TalentControllerUpdateTest {
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.code").value("200-0"))
+                .andExpect(jsonPath("$.code").value("200-2"))
                 .andExpect(jsonPath("$.data.title").value("수정"))
                 .andExpect(jsonPath("$.data.creditPrice").value(200));
     }

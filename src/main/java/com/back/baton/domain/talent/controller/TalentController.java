@@ -6,6 +6,7 @@ import com.back.baton.domain.talent.dto.response.TalentCreateRes;
 import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.response.ApiResponse;
+import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,6 @@ public class TalentController {
             @Valid @RequestBody TalentUpdateReq request) {
 
         TalentUpdateRes response = talentService.updateTalent(talentId, authorId, request);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 }
