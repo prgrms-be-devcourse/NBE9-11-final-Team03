@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -73,6 +74,38 @@ class MatchProposalControllerTest {
                 .andExpect(jsonPath("$.data.providerId").value(req.providerId()))
                 .andExpect(jsonPath("$.data.requesterId").value(requesterId))
                 .andExpect(jsonPath("$.data.requestMessage").value(req.requestMessage()));
+    }
+
+    @Test
+    @DisplayName("매칭 제안 수락 API - 성공")
+    void acceptMatchProposal_Success() throws Exception {
+        Long proposalId = 1L;
+        Long providerId = 2L;
+
+        MatchProposalRes res = new MatchProposalRes(
+                proposalId,
+                20L,
+                null,
+                1L,
+                providerId,
+                MatchProposalStatus.ACCEPTED,
+                "재능 구매 제안드립니다.",
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+
+        when(matchProposalService.acceptMatchProposal(eq(proposalId), eq(providerId)))
+                .thenReturn(res);
+
+        mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/accept", proposalId)
+                        .param("providerId", String.valueOf(providerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-4"))
+                .andExpect(jsonPath("$.message").value("매칭 제안이 수락되었습니다."))
+                .andExpect(jsonPath("$.data.id").value(proposalId))
+                .andExpect(jsonPath("$.data.providerId").value(providerId))
+                .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
     }
 
     @Test
