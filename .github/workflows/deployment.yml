@@ -27,8 +27,7 @@ jobs:
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
-          ./gradlew clean build -x test # 테스트에 DB 연결이 필요할 수 있으므로 빌드만 우선 진행
-
+          ./gradlew clean build -x test -Dspring.profiles.active=prod
       # 3. Docker Hub 가상 환경 로그인
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
