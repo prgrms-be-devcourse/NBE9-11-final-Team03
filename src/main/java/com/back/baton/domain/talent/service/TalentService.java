@@ -69,4 +69,26 @@ public class TalentService {
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
         return TalentUpdateRes.from(talent);
     }
+
+    @Transactional
+    public void deleteTalent(Long talentId, Long authorId) {
+        Talent talent = talentRepository.findById(talentId)
+                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+
+        // 이미 삭제된 글은 없는 것 (소유권보다 먼저)
+        if(talent.isDeleted()) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
+        }
+
+        //소유권 확인
+        if(!talent.getAuthorId().equals(authorId)) {
+            throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
+        }
+
+        // TODO: 진행 중 거래(trade/match) 있으면 삭제 차단
+        talent.softDelete();
+        // Dirty Checking: save() 없이 커밋 시 UPDATE
+
+        // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
+    }
 }
