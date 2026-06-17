@@ -78,14 +78,16 @@ public class Talent extends BaseTimeEntity {
                 .estimatedHours(estimatedHours).creditPrice(creditPrice).build();
     }
 
-    public void update(Category category, String title, String content, int estimatedHours, int creditPrice){
+    // 수정 가능한 필드
+    public void update(Category category, String title, String content, Integer estimatedHours, Integer creditPrice){
         this.category = category;
         this.title = title;
         this.content = content;
         this.estimatedHours = estimatedHours;
         this.creditPrice = creditPrice;
     }
+    // deletedAt에 시각이 찍혀 있으면 삭제된 것
     public boolean isDeleted() {
-        return this.deletedAt == null;
+        return this.deletedAt != null;
     }
 }
