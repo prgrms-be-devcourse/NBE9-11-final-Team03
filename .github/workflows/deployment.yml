@@ -39,8 +39,8 @@ jobs:
       # 4. 도커 이미지 빌드 및 Private 레포지토리로 Push
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/dev11-final-team03-service:latest .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/dev11-final-team03-service:latest
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest
 
       # 5. EC2 서버에 접속하여 최신 이미지로 교체 (Nginx 포트 8080 연결 유지)
       - name: Deploy to EC2 via SSH
