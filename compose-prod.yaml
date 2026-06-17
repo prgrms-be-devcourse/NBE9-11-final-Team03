@@ -25,7 +25,7 @@ services:
       SPRING_PROFILES_ACTIVE: "prod,secret"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/baton?serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
       SPRING_DATASOURCE_USERNAME: "admin"
-      DB_PROD_PASSWORD: "${LIVE_DB_PASSWORD}"
+      SPRING_DATASOURCE_PASSWORD: "${LIVE_DB_PASSWORD}"
     depends_on:
       mysql:
         condition: service_healthy # ◀ 중요: MySQL 헬스체크가 통과되면 스프링이 켜짐
