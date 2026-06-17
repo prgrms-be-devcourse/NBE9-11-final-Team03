@@ -80,6 +80,21 @@ public class Talent extends BaseTimeEntity {
 
     // 수정 가능한 필드
     public void update(Category category, String title, String content, Integer estimatedHours, Integer creditPrice){
+        if (category == null) {
+            throw new IllegalArgumentException("카테고리는 필수입니다.");
+        }
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException("제목은 필수입니다.");
+        }
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("내용은 필수입니다.");
+        }
+        if (estimatedHours == null || estimatedHours < 1) {
+            throw new IllegalArgumentException("예상 소요 시간은 1 이상이어야 합니다.");
+        }
+        if (creditPrice == null || creditPrice < 0) {
+            throw new IllegalArgumentException("크레딧 가격은 0 이상이어야 합니다.");
+        }
         this.category = category;
         this.title = title;
         this.content = content;
