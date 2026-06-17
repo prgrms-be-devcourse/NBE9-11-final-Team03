@@ -1,0 +1,28 @@
+services:
+  mysql:
+    image: 'mysql:latest'
+    restart: always
+    environment:
+      MYSQL_DATABASE: mydatabase_prod
+      MYSQL_USER: myuser_prod
+      MYSQL_PASSWORD: ${LIVE_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${LIVE_DB_ROOT_PASSWORD}
+    ports:
+      - '3306:3306'
+    volumes:
+      - db_data:/var/lib/mysql
+  backend:
+    image: ujin3261/dev11-final-team03-service:latest
+    restart: always
+    ports:
+      - '8080:8080'
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod,secret
+      - DB_PROD_PASSWORD=${LIVE_DB_PASSWORD}
+    depends_on:
+      - mysql
+
+volumes:
+    db_data:
+      driver: local
+
