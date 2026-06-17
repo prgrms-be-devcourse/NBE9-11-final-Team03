@@ -117,4 +117,54 @@ class CreditServiceTest {
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
     }
+
+    @Test
+    @DisplayName("차감 금액이 양수이고 잔액이 충분하면 잔액이 감소한다")
+    void deductCredit_success() {
+        given(creditAccountRepository.deductBalance(1L, 3000)).willReturn(1);
+
+        creditService.deductCredit(1L, 3000);
+
+        then(creditAccountRepository).should().deductBalance(1L, 3000);
+    }
+
+    @Test
+    @DisplayName("차감 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
+    void deductCredit_invalidAmount() {
+        assertThatThrownBy(() -> creditService.deductCredit(1L, 0))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
+
+        then(creditAccountRepository).should(never()).deductBalance(any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
+    void deductCredit_accountNotFound() {
+        given(creditAccountRepository.deductBalance(999L, 3000)).willReturn(0);
+        given(creditAccountRepository.findByUserId(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> creditService.deductCredit(999L, 3000))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("잔액이 부족하면 INSUFFICIENT_CREDIT_BALANCE 예외가 발생한다")
+    void deductCredit_insufficientBalance() {
+        CreditAccount account = new CreditAccount();
+        ReflectionTestUtils.setField(account, "userId", 1L);
+        ReflectionTestUtils.setField(account, "balance", 1000);
+        ReflectionTestUtils.setField(account, "escrowBalance", 0);
+
+        given(creditAccountRepository.deductBalance(1L, 5000)).willReturn(0);
+        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
+
+        assertThatThrownBy(() -> creditService.deductCredit(1L, 5000))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE));
+    }
 }
