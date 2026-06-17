@@ -2,7 +2,7 @@ package com.back.baton.domain.talent.dto.request;
 
 import jakarta.validation.constraints.*;
 
-public record TalentCreateReq(
+public record TalentUpdateReq(
         @NotNull(message = "카테고리는 필수입니다.")
         Long categoryId,
 
