@@ -3,6 +3,8 @@ spring:
     name: baton
   profiles:
     active: local
+  config:
+    import: application-secret.yaml
 
 credit:
   initial-amount: 10000 # 초기 크레딧 금액 설정
@@ -12,4 +14,5 @@ escrow:
 
 user:
   initial-trust-score: 50.00
+
 

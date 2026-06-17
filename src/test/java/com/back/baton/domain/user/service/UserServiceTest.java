@@ -1,10 +1,15 @@
 package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.user.dto.response.UserSignupRes;
+import com.back.baton.domain.user.dto.response.UserTokenDto;
+import com.back.baton.domain.user.entity.RefreshToken;
 import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.entity.UserStatus;
+import com.back.baton.domain.user.repository.RefreshTokenRepository;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,13 +20,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
@@ -37,6 +45,21 @@ public class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+    private User validUser;
+    @BeforeEach
+    void setUp() {
+        validUser = User.builder()
+                .email("test@example.com")
+                .password("encodedPassword")
+                .nickname("nickname")
+                .introduction("introduction")
+                .build();
+    }
     @Test
     @DisplayName("회원가입 성공 - 비밀번호 검증을 통과하고 암호화되어 정상 저장된다")
     void create_1() {
@@ -89,10 +112,97 @@ public class UserServiceTest {
         assertThatThrownBy(() -> userService.signup(email, password, nickname, introduction, profileImgUrl))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode") // 에러코드 필드 검증 (본인 CustomException 구조에 맞게 변경 가능)
-                .isEqualTo(UserErrorCode.INVALID_PASSWORD);
+                .isEqualTo(UserErrorCode.INVALID_PASSWORD_FORMAT);
 
         // 패스워드가 틀렸으므로 암호화 및 저장 로직은 절대 실행되면 안 됨
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
+    }
+    @Test
+    @DisplayName("로그인 성공 - 기존 RefreshToken이 없는 경우 새로운 토큰을 생성(save)한다")
+    void login_success_1() {
+        // given
+        String email = "test@example.com";
+        String password = "rawPassword "; // 공백 포함
+
+        given(userRepository.findByEmail(email)).willReturn(Optional.of(validUser));
+        given(passwordEncoder.matches("rawPassword", validUser.getPassword())).willReturn(true); // strip 처리 검증
+
+        // 발급 시간 매칭을 위해 any(Date.class) 사용
+        given(jwtTokenProvider.createAccessToken(eq(validUser.getId()), eq("USER"), any(Date.class))).willReturn("access_token_value");
+        given(jwtTokenProvider.createRefreshToken(eq(validUser.getId()), any(Date.class))).willReturn("refresh_token_value");
+
+        // 기존 토큰이 비어있는 상태 시뮬레이션 (Optional.empty)
+        given(refreshTokenRepository.findByUserId(validUser.getId())).willReturn(Optional.empty());
+
+        // when
+        UserTokenDto result = userService.login(email, password);
+
+        // then
+        assertNotNull(result);
+        assertEquals("access_token_value", result.accessToken());
+        assertEquals("refresh_token_value", result.refreshToken());
+
+        // 새로운 RefreshToken 객체가 save() 되었는지 검증
+        verify(refreshTokenRepository, times(1)).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("로그인 성공 - 기존 RefreshToken이 이미 존재하는 경우 값을 갱신(update)한다")
+    void login_Success_2() {
+        // given
+        String email = "test@example.com";
+        String password = "rawPassword";
+
+        RefreshToken existingToken = spy(new RefreshToken(1L, "old_token", LocalDateTime.now()));
+
+        given(userRepository.findByEmail(email)).willReturn(Optional.of(validUser));
+        given(passwordEncoder.matches(password, validUser.getPassword())).willReturn(true);
+        given(jwtTokenProvider.createAccessToken(eq(validUser.getId()), eq("USER"), any(Date.class))).willReturn("new_access_token");
+        given(jwtTokenProvider.createRefreshToken(eq(validUser.getId()), any(Date.class))).willReturn("new_refresh_token");
+
+        // 기존 토큰이 이미 디비에 존재하는 상태 시뮬레이션
+        given(refreshTokenRepository.findByUserId(validUser.getId())).willReturn(Optional.of(existingToken));
+
+        // when
+        UserTokenDto result = userService.login(email, password);
+
+        // then
+        assertNotNull(result);
+        assertEquals("new_access_token", result.accessToken());
+        assertEquals("new_refresh_token", result.refreshToken());
+
+        // updateToken() 메서드가 정상 호출되어 내부 값이 바뀌었는지 검증
+        verify(existingToken, times(1)).update(eq("new_refresh_token"), any(LocalDateTime.class));
+        // 새 토큰이 아니므로 대전제에 따라 save()는 호출되지 않아야 함
+        verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - 유저 상태가 휴면(SUSPENDED)인 경우 예외가 발생한다")
+    void login_Fail_1() {
+        // given
+        validUser.setStatus(UserStatus.SUSPENDED);
+        given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(validUser));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            userService.login("test@example.com", "rawPassword");
+        });
+        assertEquals(UserErrorCode.SUSPENDED_STATUS, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - 비밀번호가 일치하지 않는 경우 INVALID_PASSWORD 예외가 발생한다")
+    void login_Fail_2() {
+        // given
+        given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(validUser));
+        given(passwordEncoder.matches(anyString(), eq(validUser.getPassword()))).willReturn(false);
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            userService.login("test@example.com", "wrongPassword");
+        });
+        assertEquals(UserErrorCode.INVALID_PASSWORD, exception.getErrorCode());
     }
 }
