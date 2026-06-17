@@ -42,4 +42,13 @@ public class TalentController {
         TalentUpdateRes response = talentService.updateTalent(talentId, authorId, request);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
+
+    @DeleteMapping("/{talentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteTalent(
+            @PathVariable Long talentId,
+            @RequestHeader("X-User-Id") Long authorId){ // TODO: @AuthenticationPrincipal
+                talentService.deleteTalent(talentId, authorId);
+                return ApiResponses.success(SuccessCode.TALENT_OK, null);
+    }
+
 }

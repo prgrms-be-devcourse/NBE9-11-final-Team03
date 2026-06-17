@@ -105,4 +105,11 @@ public class Talent extends BaseTimeEntity {
     public boolean isDeleted() {
         return this.deletedAt != null;
     }
+
+    // 이미 삭제면 최초 시각 유지
+    public void softDelete() {
+        if(this.deletedAt == null) {
+            this.deletedAt = LocalDateTime.now();
+        }
+    }
 }
