@@ -1,0 +1,58 @@
+name: Backend CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ] # 배포 대상 브랜치
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 1. [비밀정보 결합] GitHub Secrets에 숨겨둔 설정을 빌드 가상 환경에 파일로 복원합니다.
+      - name: Create application-secret.yaml
+        run: |
+          mkdir -p src/main/resources
+          echo "${{ secrets.SPRING_SECRET_YAML }}" > src/main/resources/application-secret.yaml
+
+      # 2. JDK 설정 및 스프링 빌드 (복원된 secret 파일을 포함하여 JAR 완제품 생성)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Gradle
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build -x test # 테스트에 DB 연결이 필요할 수 있으므로 빌드만 우선 진행
+
+      # 3. Docker Hub 가상 환경 로그인
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }} # ◀ GitHub Secrets에 도커 ID 등록 필요
+          password: ${{ secrets.DOCKERHUB_PASSWORD }} # ◀ GitHub Secrets에 도커 패스워드 또는 토큰 등록 필요
+
+      # 4. 도커 이미지 빌드 및 Private 레포지토리로 Push
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/app-backend:latest
+
+      # 5. EC2 서버에 접속하여 최신 이미지로 교체 (Nginx 포트 8080 연결 유지)
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/app
+            git pull origin main # compose-prod.yaml 파일 설정을 최신화하기 위해 pull 진행
+            
+            # 운영 전용 컴포즈 파일을 지정(-f)하여 백엔드만 새 이미지로 갱신
+            docker compose -f compose-prod.yaml pull backend
+            docker compose -f compose-prod.yaml up -d backend
