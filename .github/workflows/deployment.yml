@@ -63,5 +63,6 @@ jobs:
             git pull origin main # compose-prod.yaml 파일 설정을 최신화하기 위해 pull 진행
             
             # 운영 전용 컴포즈 파일을 지정(-f)하여 백엔드만 새 이미지로 갱신
+            docker compose -f compose-prod.yaml down
             docker compose -f compose-prod.yaml pull backend
             docker compose -f compose-prod.yaml up -d backend
