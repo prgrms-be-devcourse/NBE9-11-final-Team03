@@ -3,8 +3,8 @@ services:
     image: 'mysql:latest'
     restart: always
     environment:
-      MYSQL_DATABASE: mydatabase_prod
-      MYSQL_USER: myuser_prod
+      MYSQL_DATABASE: baton
+      MYSQL_USER: admin
       MYSQL_PASSWORD: ${LIVE_DB_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${LIVE_DB_ROOT_PASSWORD}
     ports:
@@ -18,6 +18,8 @@ services:
       - '8080:8080'
     environment:
       - SPRING_PROFILES_ACTIVE=prod,secret
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/baton?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=admin
       - DB_PROD_PASSWORD=${LIVE_DB_PASSWORD}
     depends_on:
       - mysql

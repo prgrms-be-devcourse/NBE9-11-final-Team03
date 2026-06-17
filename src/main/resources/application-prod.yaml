@@ -1,13 +1,20 @@
 spring:
   config:
     import: optional:classpath:application-secret.yaml
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
-      hibernate:
-        format_sql: false
+    # 🚀 운영 배포 환경을 위해 통로만 추가
 
-logging:
-  level:
-    org.hibernate.SQL: info # 프로덕션에서는 성능을 위해 불필요한 쿼리 로그 제거
+    datasource:
+      url: ${SPRING_DATASOURCE_URL}
+      username: ${SPRING_DATASOURCE_USERNAME}
+      password: ${SPRING_DATASOURCE_PASSWORD}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+
+    jpa:
+      hibernate:
+        ddl-auto: validate
+      properties:
+        hibernate:
+          format_sql: false
+  logging:
+    level:
+      org.hibernate.SQL: info
