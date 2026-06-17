@@ -85,7 +85,7 @@ public class TalentService {
             throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
         }
 
-        // TODO: 진행 중 거래(trade/match) 있으면 삭제 차단
+        // TODO: 진행 중 거래 match 도메인 생성 되면 삭제 차단
         talent.softDelete();
         // Dirty Checking: save() 없이 커밋 시 UPDATE
 
