@@ -2,10 +2,7 @@ package com.back.baton.domain.talent.controller;
 
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
-import com.back.baton.domain.talent.dto.response.TalentCreateRes;
-import com.back.baton.domain.talent.dto.response.TalentListRes;
-import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
+import com.back.baton.domain.talent.dto.response.*;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
@@ -59,6 +56,12 @@ public class TalentController {
             @RequestParam(defaultValue = "20") int size) {
 
         CursorPageRes<TalentListRes> response = talentService.getTalentList(cursor, size);
+        return ApiResponses.success(SuccessCode.TALENT_OK, response);
+    }
+
+    @GetMapping("/{talentId}")
+    public ResponseEntity<ApiResponse<TalentDetailRes>> getTalentDetail(@PathVariable Long talentId) {
+        TalentDetailRes response = talentService.getTalentDetail(talentId);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 

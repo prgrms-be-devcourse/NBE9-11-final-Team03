@@ -4,12 +4,10 @@ import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
-import com.back.baton.domain.talent.dto.response.TalentCreateRes;
-import com.back.baton.domain.talent.dto.response.TalentListRes;
-import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
+import com.back.baton.domain.talent.dto.response.*;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.user.entity.User;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -114,5 +112,22 @@ public class TalentService {
         Long nextCursor = hasNext ? content.get(content.size() - 1).talentId() : null;
 
         return CursorPageRes.of(content, hasNext, nextCursor);
+    }
+
+    // 재능 상세 조회 + 조회수 증가
+    @Transactional
+    public TalentDetailRes getTalentDetail(Long talentId) {
+        List<Object[]> rows = talentRepository.findDetailById(talentId);
+        if (rows.isEmpty()) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND); // 없음/삭제
+        }
+
+        Object[] row = rows.get(0);
+        Talent talent = (Talent) row[0];
+        User author = (User) row[1];
+
+        TalentDetailRes response = TalentDetailRes.from(talent, author);
+        talentRepository.increaseViewCount(talentId);
+        return response;
     }
 }
