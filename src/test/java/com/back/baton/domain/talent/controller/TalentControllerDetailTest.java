@@ -1,7 +1,7 @@
 package com.back.baton.domain.talent.controller;
 
 import com.back.baton.domain.talent.dto.response.TalentDetailRes;
-import com.back.baton.domain.talent.dto.response.TalentDetailRes.AuthorInfo;
+import com.back.baton.domain.talent.dto.response.AuthorInfo;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.exception.CustomException;

@@ -50,6 +50,7 @@ public class TalentController {
                 return ApiResponses.success(SuccessCode.TALENT_OK, null);
     }
 
+    // 재능 목록 조회 및 페이징
     @GetMapping
     public ResponseEntity<ApiResponse<CursorPageRes<TalentListRes>>> getTalentList(
             @RequestParam(required = false) Long cursor,        // 첫 요청은 생략 -> null
@@ -59,6 +60,7 @@ public class TalentController {
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 
+    // 재능 상세 조회
     @GetMapping("/{talentId}")
     public ResponseEntity<ApiResponse<TalentDetailRes>> getTalentDetail(@PathVariable Long talentId) {
         TalentDetailRes response = talentService.getTalentDetail(talentId);

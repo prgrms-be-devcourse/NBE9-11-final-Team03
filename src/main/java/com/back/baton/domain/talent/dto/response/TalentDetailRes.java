@@ -23,24 +23,6 @@ public record TalentDetailRes(
         LocalDateTime updatedAt,
         AuthorInfo author
 ) {
-    public record AuthorInfo(
-            Long authorId,
-            String nickname,
-            String profileImageUrl,
-            String introduction,
-            BigDecimal trustScore
-    ) {
-        public static AuthorInfo from(User author) {
-            return new AuthorInfo(
-                    author.getId(),
-                    author.getNickname(),
-                    author.getProfileImageUrl(),
-                    author.getIntroduction(),
-                    author.getTrustScore()
-            );
-        }
-    }
-
     // viewCount는 증가전 값
     public static TalentDetailRes from(Talent talent, User author) {
         return new TalentDetailRes(
