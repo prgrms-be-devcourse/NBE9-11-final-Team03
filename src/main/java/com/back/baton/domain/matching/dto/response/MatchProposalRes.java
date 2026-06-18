@@ -1,7 +1,7 @@
 package com.back.baton.domain.matching.dto.response;
 
 import com.back.baton.domain.matching.entity.MatchProposal;
-import com.back.baton.domain.matching.enums.MatchProposalStatus;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import java.time.LocalDateTime;
 
 public record MatchProposalRes(

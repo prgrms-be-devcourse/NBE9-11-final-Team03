@@ -51,7 +51,22 @@ public class CreditService {
         }
     }
 
-    // 크레딧 차감
+    // 크레딧 잠금 - 매칭 제안 수락 시 구매자 크레딧을 거래 완료까지 동결 (거래 취소 시 환불 가능)
+    @Transactional
+    public void holdForEscrow(Long userId, int amount) {
+        if (amount <= 0) {
+            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
+        }
+
+        int updatedRows = creditAccountRepository.holdForEscrow(userId, amount);
+        if (updatedRows == 0) {
+            creditAccountRepository.findByUserId(userId)
+                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND)); // 계좌가 존재하지 않는 경우
+            throw new CustomException(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE); // 계좌는 존재하지만 잔액이 부족한 경우
+        }
+    }
+
+    // 크레딧 차감 - 수수료 등 즉시 소멸되는 크레딧에 사용 (환불 불가)
     @Transactional
     public void deductCredit(Long userId, int amount) {
         if (amount <= 0) {

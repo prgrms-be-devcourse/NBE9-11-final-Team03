@@ -4,7 +4,7 @@ import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
 import com.back.baton.domain.matching.entity.MatchProposal;
-import com.back.baton.domain.matching.enums.MatchProposalStatus;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
@@ -242,6 +242,82 @@ class MatchProposalServiceTest {
                 .thenReturn(Optional.of(matchProposal));
 
         assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, providerId))
+                .isInstanceOf(CustomException.class);
+
+        verify(matchProposalRepository).findById(proposalId);
+    }
+
+    @Test
+    @DisplayName("판매자는 요청받은 매칭 제안을 거절할 수 있다")
+    void rejectMatchProposal() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        MatchProposalRes res = matchProposalService.rejectMatchProposal(proposalId, providerId);
+
+        assertThat(res.status()).isEqualTo(MatchProposalStatus.REJECTED);
+        assertThat(res.respondedAt()).isNotNull();
+
+        verify(matchProposalRepository).findById(proposalId);
+    }
+
+    @Test
+    @DisplayName("제안을 받은 판매자가 아니면 매칭 제안을 거절할 수 없다")
+    void rejectMatchProposal_accessDenied() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+        Long invalidProviderId = 999L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        assertThatThrownBy(() -> matchProposalService.rejectMatchProposal(proposalId, invalidProviderId))
+                .isInstanceOf(CustomException.class);
+
+        verify(matchProposalRepository).findById(proposalId);
+    }
+
+    @Test
+    @DisplayName("REQUESTED 상태가 아닌 매칭 제안은 거절할 수 없다")
+    void rejectMatchProposal_invalidStatus() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+        matchProposal.accept();
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        assertThatThrownBy(() -> matchProposalService.rejectMatchProposal(proposalId, providerId))
                 .isInstanceOf(CustomException.class);
 
         verify(matchProposalRepository).findById(proposalId);

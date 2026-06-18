@@ -1,6 +1,6 @@
 package com.back.baton.domain.matching.repository;
 
-import com.back.baton.domain.matching.enums.MatchProposalStatus;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.entity.MatchProposal;
 import org.springframework.data.jpa.repository.JpaRepository;
 
