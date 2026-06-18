@@ -38,6 +38,15 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
+    # 4-2. GitHub Secrets에서 시크릿 파일을 읽어와 생성하는 단계
+    # 빌드 및 테스트가 돌아가기 전에 resources 폴더 안에 실물 파일을 만들어 줍니다.
+    - name: Make application-secret.yaml
+      run: |
+       mkdir -p src/main/resources
+       mkdir -p src/test/resources
+       echo "${{ secrets.SPRING_SECRET_YAML }}" > src/main/resources/application-secret.yaml
+       echo "${{ secrets.SPRING_SECRET_YAML }}" > src/test/resources/application-secret.yaml
+
     # 5. 빌드 및 테스트 수행
     - name: Build with Gradle
       run: ./gradlew build
