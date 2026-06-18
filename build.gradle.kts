@@ -52,6 +52,9 @@ dependencies {
     annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:$queryDslVersion:jpa")
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
+
+    //jwt
+    implementation("com.auth0:java-jwt:4.4.0")
 }
 
 tasks.withType<Test> {
