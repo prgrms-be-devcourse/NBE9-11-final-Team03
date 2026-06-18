@@ -4,6 +4,7 @@ import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
 import com.back.baton.domain.matching.service.MatchProposalService;
 import com.back.baton.global.response.ApiResponse;
+import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +16,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/match-proposals")
@@ -31,9 +30,8 @@ public class MatchProposalController {
             @Valid @RequestBody MatchProposalCreateReq req
     ) {
         MatchProposalRes response = matchProposalService.createMatchProposal(requesterId, req);
-        return ResponseEntity
-                .created(URI.create("/api/v1/match-proposals/" + response.id()))
-                .body(ApiResponse.success(SuccessCode.MATCH_PROPOSAL_CREATED, response));
+
+        return ApiResponses.success(SuccessCode.MATCH_PROPOSAL_CREATED, response);
     }
 
     @PatchMapping("/{proposalId}/accept")
@@ -43,7 +41,7 @@ public class MatchProposalController {
     ) {
         MatchProposalRes response = matchProposalService.acceptMatchProposal(proposalId, providerId);
 
-        return ResponseEntity.ok(ApiResponse.success(SuccessCode.MATCH_PROPOSAL_ACCEPTED, response));
+        return ApiResponses.success(SuccessCode.MATCH_PROPOSAL_ACCEPTED, response);
     }
 
     @PatchMapping("/{proposalId}/reject")
@@ -53,6 +51,6 @@ public class MatchProposalController {
     ) {
         MatchProposalRes response = matchProposalService.rejectMatchProposal(proposalId, providerId);
 
-        return ResponseEntity.ok(ApiResponse.success(SuccessCode.MATCH_PROPOSAL_REJECTED, response));
+        return ApiResponses.success(SuccessCode.MATCH_PROPOSAL_REJECTED, response);
     }
 }
