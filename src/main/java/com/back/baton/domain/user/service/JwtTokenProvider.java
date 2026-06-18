@@ -2,6 +2,8 @@ package com.back.baton.domain.user.service;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TokenErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -32,5 +34,18 @@ public class JwtTokenProvider {
                 .withIssuedAt(now) // 페이로드: 시작 시간
                 .withExpiresAt(new Date(now.getTime() + refreshTokenValidTime)) // 페이로드: 만료 시간
                 .sign(Algorithm.HMAC256(secretKey));
+    }
+
+    public Long getUserIdFromToken(String tokenValue){
+        Long userId = null;
+        try{
+            userId = Long.parseLong(JWT.decode(tokenValue).getSubject());
+        }catch (Exception e){
+            throw new CustomException(TokenErrorCode.INVALID_TOKEN);
+        }
+        if(userId == null){
+            throw new CustomException(TokenErrorCode.INVALID_TOKEN);
+        }
+        return userId;
     }
 }

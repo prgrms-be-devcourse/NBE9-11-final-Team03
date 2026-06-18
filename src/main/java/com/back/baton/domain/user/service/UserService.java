@@ -8,6 +8,7 @@ import com.back.baton.domain.user.entity.UserStatus;
 import com.back.baton.domain.user.repository.RefreshTokenRepository;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -79,15 +80,7 @@ public class UserService {
     public UserTokenDto login(String email, String password) {
         // 1. User 검증
         User user = userRepository.findByEmail(email).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
-        if(user.getStatus().equals(UserStatus.SUSPENDED)){ // 휴면
-            throw new CustomException(UserErrorCode.SUSPENDED_STATUS);
-        }
-        if(user.getStatus().equals(UserStatus.DORMANT)){ // 정지
-            throw new CustomException(UserErrorCode.DORMANT_STATUS);
-        }
-        if(user.getStatus().equals(UserStatus.WITHDRAWN)){ // 탈퇴
-            throw new CustomException(UserErrorCode.WITHDRAWN_STATUS);
-        }
+        checkUserStatus(user.getStatus());
 
         // 2. 비밀번호 검증
         password = password.strip();
@@ -100,22 +93,71 @@ public class UserService {
         String accessTokenValue = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().toString(), now);
         String refreshTokenValue = jwtTokenProvider.createRefreshToken(user.getId(), now);
 
-        // 4. refreshToken RefreshToken Table에 저장
+        // 4. 리프레시 토큰 저장
+        saveRefreshToken(refreshTokenValue, now, user.getId());
+
+        return new UserTokenDto(accessTokenValue, refreshTokenValue);
+    }
+
+    public UserTokenDto reissue(String savedRefreshTokenValue) {
+        // 1. 가져온 refreshToken 검증
+        if(savedRefreshTokenValue==null){
+            throw new CustomException(TokenErrorCode.TOKEN_NOT_FOUND);
+        }
+        Long userId = jwtTokenProvider.getUserIdFromToken(savedRefreshTokenValue); // userId 추출
+        User user = userRepository.findById(userId).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
+        // 2. 유저 검증
+        checkUserStatus(user.getStatus());
+
+        // 3. 토큰 탈취 여부 검증 및 처리 - userId로 토큰 탐색, 탈취된 토큰이라면 삭제 처리
+        RefreshToken refreshToken= refreshTokenRepository.findByUserId(userId)
+                .orElseThrow(()-> new CustomException(TokenErrorCode.TOKEN_NOT_FOUND));
+
+        if (!refreshToken.getTokenValue().equals(savedRefreshTokenValue)) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new CustomException(TokenErrorCode.REUSED_TOKEN);
+        }
+
+        // 4. 토큰 발행 (RTR로 refreshToken도 발행)
+        Date now = new Date(); // 발급 시간 고정
+        String accessTokenValue = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().toString(), now);
+
+        // 4-2. RTR - 리프레시 토큰 재발행 및 저장
+        String refreshTokenValue = jwtTokenProvider.createRefreshToken(user.getId(), now);
+        saveRefreshToken(refreshTokenValue, now, user.getId());
+
+        return new UserTokenDto(accessTokenValue, refreshTokenValue);
+
+    }
+
+    private void checkUserStatus(UserStatus userStatus){ // 계정 상태에 따른 처리
+        if(userStatus.equals(UserStatus.SUSPENDED)){ // 휴면
+            throw new CustomException(UserErrorCode.SUSPENDED_STATUS);
+        }
+        if(userStatus.equals(UserStatus.DORMANT)){ // 정지
+            throw new CustomException(UserErrorCode.DORMANT_STATUS);
+        }
+        if(userStatus.equals(UserStatus.WITHDRAWN)){ // 탈퇴
+            throw new CustomException(UserErrorCode.WITHDRAWN_STATUS);
+        }
+    }
+
+    private void saveRefreshToken(String refreshTokenValue, Date now, Long userId){ // refreshToken 저장
         Date expiration = new Date (now.getTime() + 14 * 24 * 60 * 60 * 1000L); //refresh 만료 시간 계산
         LocalDateTime expiredAt = LocalDateTime.ofInstant( //type 변환
                 expiration.toInstant(),
                 ZoneId.systemDefault()
         );
-        refreshTokenRepository.findByUserId(user.getId()).ifPresentOrElse(
+        refreshTokenRepository.findByUserId(userId).ifPresentOrElse(
                 // 이전에 만료된 토큰이 존재하는 경우(찌꺼기)
                 existingToken -> existingToken.update(refreshTokenValue, expiredAt),
                 // 없는 경우
                 ()-> {
-                    RefreshToken refreshToken = new RefreshToken(user.getId(), refreshTokenValue, expiredAt);
+                    RefreshToken refreshToken = new RefreshToken(userId, refreshTokenValue, expiredAt);
                     refreshTokenRepository.save(refreshToken);
                 }
         );
-
-        return new UserTokenDto(accessTokenValue, refreshTokenValue);
     }
+
 }

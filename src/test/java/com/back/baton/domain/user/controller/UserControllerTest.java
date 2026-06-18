@@ -7,7 +7,10 @@ import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.service.UserService;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.SuccessCode;
+import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
+import jakarta.servlet.http.Cookie;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -146,5 +149,42 @@ class UserControllerTest{
                         .content(objectMapper.writeValueAsString(requestDto)))
                 // 프로젝트에 GlobalExceptionHandler가 설정되어 있다면 status().isBadRequest() 등으로 세부 핸들링 검증도 가능합니다.
                 .andExpect(status().is4xxClientError());
+    }
+    @Test
+    @DisplayName("토큰 재발급 성공: 쿠키에 refreshToken이 있으면 재발급 후 200 반환 및 새 쿠키 설정")
+    void reissue_Success() throws Exception {
+        // given
+        String originRefreshToken = "old-refresh-token";
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+
+        UserTokenDto mockDto = new UserTokenDto(newAccessToken, newRefreshToken);
+        given(userService.reissue(originRefreshToken)).willReturn(mockDto);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/auth/reissue")
+                        .cookie(new Cookie("refreshToken", originRefreshToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(SuccessCode.USER_REISSUE_SUCCESS.getCode())) // 프로젝트 구조에 맞게 검증
+                .andExpect(jsonPath("$.data.accessToken").value(newAccessToken))
+                // Set-Cookie 헤더 검증 (HttpOnly, Secure, SameSite 등 포함 여부)
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("refreshToken=" + newRefreshToken)))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("HttpOnly")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("Secure")))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("SameSite=Strict")));
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패: 쿠키에 refreshToken이 없는 경우 서비스에서 예외를 던지고 에러 응답을 반환한다")
+    void reissue_Fail_WhenCookieIsEmpty() throws Exception {
+        // given
+        // 컨트롤러에서 required = false이므로 null이 서비스로 넘어감 -> 서비스에서 TOKEN_NOT_FOUND 던짐 가정
+        given(userService.reissue(null)).willThrow(new CustomException(TokenErrorCode.TOKEN_NOT_FOUND));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/auth/reissue")) // 쿠키 없이 요청
+                .andExpect(status().isNotFound()) // 예외 핸들러가 반환하는 HttpStatus에 맞게 설정 (ex: isBadRequest or isUnauthorized)
+                .andExpect(jsonPath("$.code").value(TokenErrorCode.TOKEN_NOT_FOUND.getCode()));
     }
 }

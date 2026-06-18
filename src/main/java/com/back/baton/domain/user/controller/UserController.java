@@ -15,10 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -43,6 +40,19 @@ public class UserController {
         setCookie(response, "refreshToken", res.refreshToken(), refreshTokenValidTime);
 
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.USER_LOGIN_SUCCESS, new UserLoginRes(res.accessToken())));
+    }
+
+    @PostMapping("/reissue")
+    public ApiResponse<UserLoginRes> reissue(
+            @CookieValue(name = "refreshToken", required = false) String refreshTokenValue,
+            HttpServletResponse response
+    ){
+        UserTokenDto res = userService.reissue(refreshTokenValue);
+
+        long refreshTokenValidTime = 14 * 24 * 60 * 60 * 1000L; // 14일
+        setCookie(response, "refreshToken", res.refreshToken(), refreshTokenValidTime);
+
+        return ApiResponse.success(SuccessCode.USER_REISSUE_SUCCESS, new UserLoginRes(res.accessToken()));
     }
 
     private void setCookie(HttpServletResponse response, String name, String value, Long maxAge){
