@@ -35,7 +35,7 @@ class TradeServiceTest {
         tradeService.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
 
         then(tradeRepository).should().save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(TradeStatus.REQUESTED);
+        assertThat(captor.getValue().getStatus()).isEqualTo(TradeStatus.IN_PROGRESS);
     }
 
     @Test

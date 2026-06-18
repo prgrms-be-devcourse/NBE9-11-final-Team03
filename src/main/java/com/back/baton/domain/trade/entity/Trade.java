@@ -16,7 +16,7 @@ public class Trade extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "match_id", nullable = false)
+    @Column(name = "match_id", nullable = false, unique = true) // 하나의 match에 대해 하나의 trade만 존재 (거래가 취소되면 재거래 불가)
     private Long matchId;
 
     @Column(name = "talent_id", nullable = false)
@@ -36,7 +36,7 @@ public class Trade extends BaseTimeEntity {
     private TradeStatus status;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "trade_type", length = 20)
+    @Column(name = "trade_type", length = 20, nullable = false)
     private TradeType tradeType;
 
     public static Trade create(Long matchId, Long talentId, Long buyerId, Long sellerId, Integer creditPrice, TradeType tradeType) {
@@ -46,7 +46,7 @@ public class Trade extends BaseTimeEntity {
         trade.buyerId = buyerId;
         trade.sellerId = sellerId;
         trade.creditPrice = creditPrice;
-        trade.status = TradeStatus.REQUESTED;
+        trade.status = TradeStatus.IN_PROGRESS;
         trade.tradeType = tradeType;
         return trade;
     }

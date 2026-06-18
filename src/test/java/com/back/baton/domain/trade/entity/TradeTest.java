@@ -12,7 +12,7 @@ class TradeTest {
     void create_status() {
         Trade trade = Trade.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
 
-        assertThat(trade.getStatus()).isEqualTo(TradeStatus.REQUESTED);
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.IN_PROGRESS);
     }
 
     @Test
