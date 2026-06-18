@@ -6,8 +6,10 @@ import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.credit.repository.CreditTransactionRepository;
+import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.CreditErrorCode;
+import com.back.baton.global.response.code.UserErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +43,9 @@ class CreditServiceTest {
     @Mock
     private CreditTransactionRepository creditTransactionRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @Test
     @DisplayName("크레딧 계좌가 존재하면 잔액을 반환한다")
     void getBalance_success() {
@@ -49,6 +54,7 @@ class CreditServiceTest {
         ReflectionTestUtils.setField(creditAccount, "balance", 10000);
         ReflectionTestUtils.setField(creditAccount, "escrowBalance", 0);
 
+        given(userRepository.existsById(1L)).willReturn(true);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(creditAccount));
 
         CreditBalanceRes result = creditService.getBalance(1L);
@@ -59,11 +65,23 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
-    void getBalance_notFound() {
-        given(creditAccountRepository.findByUserId(999L)).willReturn(Optional.empty());
+    @DisplayName("존재하지 않는 유저이면 USER_NOT_FOUND 예외가 발생한다")
+    void getBalance_userNotFound() {
+        given(userRepository.existsById(999L)).willReturn(false);
 
         assertThatThrownBy(() -> creditService.getBalance(999L))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.USER_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("유저는 존재하지만 크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
+    void getBalance_creditAccountNotFound() {
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> creditService.getBalance(1L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
@@ -242,7 +260,7 @@ class CreditServiceTest {
         creditService.holdForEscrow(1L, 3000, 10L, "key-001");
 
         then(creditAccountRepository).should().holdForEscrow(1L, 3000);
-        then(creditTransactionRepository).should().save(any(CreditTransaction.class));
+        then(creditTransactionRepository).should().saveAndFlush(any(CreditTransaction.class));
     }
 
     @Test
@@ -257,7 +275,7 @@ class CreditServiceTest {
 
         creditService.holdForEscrow(1L, 3000, 10L, "key-001");
 
-        then(creditTransactionRepository).should().save(captor.capture());
+        then(creditTransactionRepository).should().saveAndFlush(captor.capture());
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(-3000);
         assertThat(saved.getRelatedTradeId()).isEqualTo(10L);
@@ -284,7 +302,7 @@ class CreditServiceTest {
         given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(false);
         given(creditAccountRepository.holdForEscrow(1L, 3000)).willReturn(1);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-        given(creditTransactionRepository.save(any())).willThrow(DataIntegrityViolationException.class);
+        given(creditTransactionRepository.saveAndFlush(any())).willThrow(DataIntegrityViolationException.class);
 
         assertThatThrownBy(() -> creditService.holdForEscrow(1L, 3000, 10L, "key-001"))
                 .isInstanceOf(CustomException.class)

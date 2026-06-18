@@ -6,8 +6,10 @@ import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.credit.repository.CreditTransactionRepository;
+import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.CreditErrorCode;
+import com.back.baton.global.response.code.UserErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,12 +26,17 @@ public class CreditService {
 
     private final CreditAccountRepository creditAccountRepository;
     private final CreditTransactionRepository creditTransactionRepository;
+    private final UserRepository userRepository;
 
     @Value("${credit.initial-amount}")
     private int initialCreditAmount;
 
     // 크레딧 잔액 조회
     public CreditBalanceRes getBalance(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
+        }
+
         CreditAccount creditAccount = creditAccountRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
@@ -71,6 +78,7 @@ public class CreditService {
     }
 
     // 크레딧 잠금 - 매칭 제안 수락 시 구매자 크레딧을 거래 완료까지 동결 (거래 취소 시 환불 가능)
+    // TODO: idempotencyKey 이중 차감 방지 로직 추가 구현
     @Transactional
     public void holdForEscrow(Long userId, int amount, Long relatedTradeId, String idempotencyKey) {
         if (amount <= 0) {
@@ -94,7 +102,7 @@ public class CreditService {
                 .getBalance();
 
         try {
-            creditTransactionRepository.save(CreditTransaction.create(
+            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     userId, relatedTradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter,
                     idempotencyKey, CreditTransactionType.ESCROW_HOLD.getDefaultReason()
             ));
