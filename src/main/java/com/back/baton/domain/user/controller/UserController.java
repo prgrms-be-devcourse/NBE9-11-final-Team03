@@ -30,7 +30,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(SuccessCode.USER_SIGNUP_SUCCESS,res));
     }
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<UserLoginRes>> login(@Valid @RequestBody UserLoginReq req, HttpServletResponse response){
+    public ApiResponse<UserLoginRes> login(@Valid @RequestBody UserLoginReq req, HttpServletResponse response){
 
         UserTokenDto res = userService.login(req.email(), req.password());
 
@@ -39,7 +39,7 @@ public class UserController {
         long refreshTokenValidTime = 14 * 24 * 60 * 60 * 1000L; // 14일
         setCookie(response, "refreshToken", res.refreshToken(), refreshTokenValidTime);
 
-        return ResponseEntity.ok(ApiResponse.success(SuccessCode.USER_LOGIN_SUCCESS, new UserLoginRes(res.accessToken())));
+        return ApiResponse.success(SuccessCode.USER_LOGIN_SUCCESS, new UserLoginRes(res.accessToken()));
     }
 
     @PostMapping("/reissue")
