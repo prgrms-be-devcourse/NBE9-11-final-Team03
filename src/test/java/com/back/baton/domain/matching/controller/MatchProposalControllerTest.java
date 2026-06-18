@@ -2,7 +2,7 @@ package com.back.baton.domain.matching.controller;
 
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
-import com.back.baton.domain.matching.enums.MatchProposalStatus;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.service.MatchProposalService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -106,6 +106,38 @@ class MatchProposalControllerTest {
                 .andExpect(jsonPath("$.data.id").value(proposalId))
                 .andExpect(jsonPath("$.data.providerId").value(providerId))
                 .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
+    }
+
+    @Test
+    @DisplayName("매칭 제안 거절 API - 성공")
+    void rejectMatchProposal_Success() throws Exception {
+        Long proposalId = 1L;
+        Long providerId = 2L;
+
+        MatchProposalRes res = new MatchProposalRes(
+                proposalId,
+                20L,
+                null,
+                1L,
+                providerId,
+                MatchProposalStatus.REJECTED,
+                "재능 구매 제안드립니다.",
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
+
+        when(matchProposalService.rejectMatchProposal(eq(proposalId), eq(providerId)))
+                .thenReturn(res);
+
+        mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/reject", proposalId)
+                        .param("providerId", String.valueOf(providerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-5"))
+                .andExpect(jsonPath("$.message").value("매칭 제안이 거절되었습니다."))
+                .andExpect(jsonPath("$.data.id").value(proposalId))
+                .andExpect(jsonPath("$.data.providerId").value(providerId))
+                .andExpect(jsonPath("$.data.status").value("REJECTED"));
     }
 
     @Test

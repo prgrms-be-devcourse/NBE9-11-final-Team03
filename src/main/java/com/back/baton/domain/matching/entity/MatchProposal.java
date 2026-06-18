@@ -1,6 +1,5 @@
 package com.back.baton.domain.matching.entity;
 
-import com.back.baton.domain.matching.enums.MatchProposalStatus;
 import com.back.baton.global.entity.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -79,6 +78,11 @@ public class MatchProposal extends BaseTimeEntity {
 
     public void accept() {
         this.status = MatchProposalStatus.ACCEPTED;
+        this.respondedAt = LocalDateTime.now();
+    }
+
+    public void reject() {
+        this.status = MatchProposalStatus.REJECTED;
         this.respondedAt = LocalDateTime.now();
     }
 }
