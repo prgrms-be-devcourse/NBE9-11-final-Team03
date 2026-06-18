@@ -4,7 +4,9 @@ import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
+import com.back.baton.domain.talent.dto.response.CursorPageRes;
 import com.back.baton.domain.talent.dto.response.TalentCreateRes;
+import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
@@ -14,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -21,6 +25,7 @@ public class TalentService {
 
     private final TalentRepository talentRepository;
     private final CategoryRepository categoryRepository;
+    private static final int MAX_PAGE_SIZE = 100;
 
     // 재능 등록
     @Transactional
@@ -90,5 +95,24 @@ public class TalentService {
         // Dirty Checking: save() 없이 커밋 시 UPDATE
 
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
+    }
+
+    //커서 페이징
+    public CursorPageRes<TalentListRes> getTalentList(Long cursor, int size) {
+        // size 상한,하한 방어
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+
+        List<TalentListRes> rows = talentRepository.findTalentList(cursor, pageSize);
+
+        // size+1개 받았으면 다음 페이지 존재
+        boolean hasNext = rows.size() > pageSize;
+
+        // 실제 반환은 size개까지만 (마지막 +1개는 잘라냄)
+        List<TalentListRes> content = hasNext ? List.copyOf(rows.subList(0, pageSize)) : rows;
+
+        // 다음 커서 = 이번 페이지 마지막 항목의 id (마지막 페이지면 null)
+        Long nextCursor = hasNext ? content.get(content.size() - 1).talentId() : null;
+
+        return CursorPageRes.of(content, hasNext, nextCursor);
     }
 }
