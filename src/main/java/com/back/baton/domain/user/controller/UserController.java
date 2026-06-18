@@ -11,6 +11,7 @@ import com.back.baton.global.response.code.SuccessCode;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -22,6 +23,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 public class UserController {
     private final UserService userService;
+
+    @Value("${cookie.secure:true}")
+    private boolean isSecure;
 
     @PostMapping("/signup")
     public ResponseEntity<ApiResponse<UserSignupRes>> signup(@Valid @RequestBody UserSignupReq req){
@@ -60,7 +64,7 @@ public class UserController {
         ResponseCookie cookie = ResponseCookie.from(name, value)
                 .path("/")
                 .httpOnly(true)
-                .secure(true)
+                .secure(isSecure)
                 .sameSite("Strict") // CSRF 방지 (Lax, Strict, None)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

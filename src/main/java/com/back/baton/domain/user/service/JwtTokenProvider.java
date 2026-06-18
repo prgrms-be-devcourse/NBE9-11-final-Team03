@@ -1,7 +1,9 @@
 package com.back.baton.domain.user.service;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.*;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,5 +49,15 @@ public class JwtTokenProvider {
             throw new CustomException(TokenErrorCode.INVALID_TOKEN);
         }
         return userId;
+    }
+    public void validateToken(String tokenValue){
+        try{
+            Algorithm algorithm = Algorithm.HMAC256(secretKey.getBytes());
+            JWTVerifier verifier = JWT.require(algorithm).build(); // 검증기 생성
+
+            verifier.verify(tokenValue); // 서명, 알고리즘, 유효시간 검증
+        }catch (Exception e){
+           throw new CustomException(TokenErrorCode.INVALID_TOKEN);
+        }
     }
 }

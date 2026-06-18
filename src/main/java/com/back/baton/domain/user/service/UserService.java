@@ -119,6 +119,15 @@ public class UserService {
             throw new CustomException(TokenErrorCode.REUSED_TOKEN);
         }
 
+        // 3-2: 만료된 토큰 처리
+        if(refreshToken.getExpiredAt().isBefore(LocalDateTime.now())){
+            refreshTokenRepository.delete(refreshToken);
+            throw new CustomException(TokenErrorCode.EXPIRED_TOKEN);
+        }
+        
+        // 3-3: 서명, 알고리즘, 만료 시간 검증
+        jwtTokenProvider.validateToken(savedRefreshTokenValue);
+
         // 4. 토큰 발행 (RTR로 refreshToken도 발행)
         Date now = new Date(); // 발급 시간 고정
         String accessTokenValue = jwtTokenProvider.createAccessToken(user.getId(), user.getRole().toString(), now);
