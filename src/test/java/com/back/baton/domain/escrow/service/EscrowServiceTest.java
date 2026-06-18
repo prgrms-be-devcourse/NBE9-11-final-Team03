@@ -3,6 +3,7 @@ package com.back.baton.domain.escrow.service;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,6 +11,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 
@@ -26,6 +28,11 @@ class EscrowServiceTest {
 
     @Mock
     private EscrowRepository escrowRepository;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(escrowService, "confirmationExpiryDays", 7);
+    }
 
     @Test
     @DisplayName("에스크로 생성 시 HELD 상태로 저장된다")
