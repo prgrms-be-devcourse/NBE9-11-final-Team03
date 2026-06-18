@@ -1,0 +1,289 @@
+
+> Task :dependencies
+
+------------------------------------------------------------
+Root project 'baton'
+------------------------------------------------------------
+
+runtimeClasspath - Runtime classpath of source set 'main'.
++--- org.springframework.boot:spring-boot-devtools -> 4.1.0
+|    +--- org.springframework.boot:spring-boot:4.1.0
+|    |    +--- org.springframework:spring-core:7.0.8
+|    |    |    +--- commons-logging:commons-logging:1.3.5 -> 1.3.6
+|    |    |    \--- org.jspecify:jspecify:1.0.0
+|    |    \--- org.springframework:spring-context:7.0.8
+|    |         +--- org.springframework:spring-aop:7.0.8
+|    |         |    +--- org.springframework:spring-beans:7.0.8
+|    |         |    |    \--- org.springframework:spring-core:7.0.8 (*)
+|    |         |    \--- org.springframework:spring-core:7.0.8 (*)
+|    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |         +--- org.springframework:spring-core:7.0.8 (*)
+|    |         +--- org.springframework:spring-expression:7.0.8
+|    |         |    \--- org.springframework:spring-core:7.0.8 (*)
+|    |         \--- io.micrometer:micrometer-observation:1.16.6 -> 1.17.0
+|    |              +--- org.jspecify:jspecify:1.0.0
+|    |              \--- io.micrometer:micrometer-commons:1.17.0
+|    |                   \--- org.jspecify:jspecify:1.0.0
+|    \--- org.springframework.boot:spring-boot-autoconfigure:4.1.0
+|         \--- org.springframework.boot:spring-boot:4.1.0 (*)
++--- org.springframework.boot:spring-boot-docker-compose -> 4.1.0
+|    +--- tools.jackson.core:jackson-databind:3.1.4
+|    |    +--- com.fasterxml.jackson.core:jackson-annotations:2.21
+|    |    +--- tools.jackson.core:jackson-core:3.1.4
+|    |    |    \--- tools.jackson:jackson-bom:3.1.4
+|    |    |         +--- com.fasterxml.jackson.core:jackson-annotations:2.21 (c)
+|    |    |         +--- tools.jackson.core:jackson-core:3.1.4 (c)
+|    |    |         \--- tools.jackson.core:jackson-databind:3.1.4 (c)
+|    |    \--- tools.jackson:jackson-bom:3.1.4 (*)
+|    \--- org.springframework.boot:spring-boot-autoconfigure:4.1.0 (*)
++--- org.springframework.boot:spring-boot-h2console -> 4.1.0
+|    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    +--- jakarta.servlet:jakarta.servlet-api:6.1.0
+|    \--- com.h2database:h2:2.4.240
++--- org.springframework.boot:spring-boot-starter-data-jpa -> 4.1.0
+|    +--- org.springframework.boot:spring-boot-starter:4.1.0
+|    |    +--- org.springframework.boot:spring-boot-starter-logging:4.1.0
+|    |    |    +--- ch.qos.logback:logback-classic:1.5.34
+|    |    |    |    +--- ch.qos.logback:logback-core:1.5.34
+|    |    |    |    \--- org.slf4j:slf4j-api:2.0.17 -> 2.0.18
+|    |    |    +--- org.apache.logging.log4j:log4j-to-slf4j:2.25.4
+|    |    |    |    +--- org.apache.logging.log4j:log4j-api:2.25.4
+|    |    |    |    \--- org.slf4j:slf4j-api:2.0.17 -> 2.0.18
+|    |    |    \--- org.slf4j:jul-to-slf4j:2.0.18
+|    |    |         \--- org.slf4j:slf4j-api:2.0.18
+|    |    +--- org.springframework.boot:spring-boot-autoconfigure:4.1.0 (*)
+|    |    +--- jakarta.annotation:jakarta.annotation-api:3.0.0
+|    |    \--- org.yaml:snakeyaml:2.6
+|    +--- org.springframework.boot:spring-boot-starter-jdbc:4.1.0
+|    |    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    |    +--- org.springframework.boot:spring-boot-jdbc:4.1.0
+|    |    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    |    +--- org.springframework.boot:spring-boot-sql:4.1.0
+|    |    |    |    \--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    |    +--- org.springframework.boot:spring-boot-transaction:4.1.0
+|    |    |    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    |    |    +--- org.springframework.boot:spring-boot-persistence:4.1.0
+|    |    |    |    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    |    |    |    \--- org.springframework:spring-tx:7.0.8
+|    |    |    |    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |    |    |         \--- org.springframework:spring-core:7.0.8 (*)
+|    |    |    |    \--- org.springframework:spring-tx:7.0.8 (*)
+|    |    |    \--- org.springframework:spring-jdbc:7.0.8
+|    |    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |         +--- org.springframework:spring-core:7.0.8 (*)
+|    |    |         \--- org.springframework:spring-tx:7.0.8 (*)
+|    |    \--- com.zaxxer:HikariCP:7.0.2
+|    |         \--- org.slf4j:slf4j-api:2.0.17 -> 2.0.18
+|    +--- org.springframework.boot:spring-boot-data-jpa:4.1.0
+|    |    +--- org.springframework.boot:spring-boot-data-commons:4.1.0
+|    |    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    |    +--- org.springframework.boot:spring-boot-persistence:4.1.0 (*)
+|    |    |    \--- org.springframework.data:spring-data-commons:4.1.0
+|    |    |         +--- org.springframework:spring-core:7.0.8 (*)
+|    |    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |         \--- org.slf4j:slf4j-api:2.0.18
+|    |    +--- org.springframework.boot:spring-boot-hibernate:4.1.0
+|    |    |    +--- org.springframework.boot:spring-boot-jpa:4.1.0
+|    |    |    |    +--- org.springframework.boot:spring-boot-jdbc:4.1.0 (*)
+|    |    |    |    +--- org.springframework.boot:spring-boot-transaction:4.1.0 (*)
+|    |    |    |    +--- jakarta.persistence:jakarta.persistence-api:3.2.0
+|    |    |    |    \--- org.springframework:spring-orm:7.0.8
+|    |    |    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |    |         +--- org.springframework:spring-core:7.0.8 (*)
+|    |    |    |         +--- org.springframework:spring-jdbc:7.0.8 (*)
+|    |    |    |         \--- org.springframework:spring-tx:7.0.8 (*)
+|    |    |    +--- org.hibernate.orm:hibernate-core:7.4.1.Final
+|    |    |    |    +--- org.jboss.logging:jboss-logging:3.6.1.Final -> 3.6.3.Final
+|    |    |    |    +--- org.hibernate.models:hibernate-models:1.1.1
+|    |    |    |    |    \--- org.jboss.logging:jboss-logging:3.6.3.Final
+|    |    |    |    +--- net.bytebuddy:byte-buddy:1.18.8 -> 1.18.10
+|    |    |    |    +--- jakarta.xml.bind:jakarta.xml.bind-api:4.0.4 -> 4.0.5
+|    |    |    |    |    \--- jakarta.activation:jakarta.activation-api:2.1.4
+|    |    |    |    +--- org.glassfish.jaxb:jaxb-runtime:4.0.7 -> 4.0.9
+|    |    |    |    |    \--- org.glassfish.jaxb:jaxb-core:4.0.9
+|    |    |    |    |         +--- jakarta.xml.bind:jakarta.xml.bind-api:4.0.5 (*)
+|    |    |    |    |         +--- jakarta.activation:jakarta.activation-api:2.1.4
+|    |    |    |    |         +--- org.eclipse.angus:angus-activation:2.0.3
+|    |    |    |    |         |    \--- jakarta.activation:jakarta.activation-api:2.1.4
+|    |    |    |    |         +--- org.glassfish.jaxb:txw2:4.0.9
+|    |    |    |    |         \--- com.sun.istack:istack-commons-runtime:4.1.2
+|    |    |    |    +--- jakarta.inject:jakarta.inject-api:2.0.1
+|    |    |    |    +--- org.antlr:antlr4-runtime:4.13.2
+|    |    |    |    +--- org.hibernate.orm:hibernate-platform:7.4.1.Final
+|    |    |    |    |    +--- org.antlr:antlr4-runtime:4.13.2 (c)
+|    |    |    |    |    +--- org.jboss.logging:jboss-logging:3.6.1.Final -> 3.6.3.Final (c)
+|    |    |    |    |    +--- net.bytebuddy:byte-buddy:1.18.8 -> 1.18.10 (c)
+|    |    |    |    |    +--- org.glassfish.jaxb:jaxb-runtime:4.0.7 -> 4.0.9 (c)
+|    |    |    |    |    +--- jakarta.xml.bind:jakarta.xml.bind-api:4.0.4 -> 4.0.5 (c)
+|    |    |    |    |    +--- jakarta.inject:jakarta.inject-api:2.0.1 (c)
+|    |    |    |    |    +--- com.zaxxer:HikariCP:7.0.2 (c)
+|    |    |    |    |    +--- org.hibernate.orm:hibernate-core:7.4.1.Final (c)
+|    |    |    |    |    +--- org.hibernate.models:hibernate-models:1.1.1 (c)
+|    |    |    |    |    +--- jakarta.persistence:jakarta.persistence-api:3.2.0 (c)
+|    |    |    |    |    \--- jakarta.transaction:jakarta.transaction-api:2.0.1 (c)
+|    |    |    |    +--- jakarta.persistence:jakarta.persistence-api:3.2.0
+|    |    |    |    \--- jakarta.transaction:jakarta.transaction-api:2.0.1
+|    |    |    \--- org.springframework:spring-orm:7.0.8 (*)
+|    |    +--- org.springframework.data:spring-data-jpa:4.1.0
+|    |    |    +--- org.springframework.data:spring-data-commons:4.1.0 (*)
+|    |    |    +--- org.springframework:spring-orm:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-context:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-aop:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-tx:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-core:7.0.8 (*)
+|    |    |    +--- org.antlr:antlr4-runtime:4.13.2
+|    |    |    +--- jakarta.annotation:jakarta.annotation-api:2.0.0 -> 3.0.0
+|    |    |    \--- org.slf4j:slf4j-api:2.0.18
+|    |    \--- org.springframework:spring-aspects:7.0.8
+|    |         \--- org.aspectj:aspectjweaver:1.9.25 -> 1.9.25.1
+|    \--- org.springframework.boot:spring-boot-jdbc:4.1.0 (*)
++--- org.springframework.boot:spring-boot-starter-validation -> 4.1.0
+|    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    \--- org.springframework.boot:spring-boot-validation:4.1.0
+|         +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|         +--- org.apache.tomcat.embed:tomcat-embed-el:11.0.22
+|         \--- org.hibernate.validator:hibernate-validator:9.1.0.Final
+|              +--- jakarta.validation:jakarta.validation-api:3.1.1
+|              +--- org.jboss.logging:jboss-logging:3.6.1.Final -> 3.6.3.Final
+|              \--- com.fasterxml:classmate:1.7.1 -> 1.7.3
++--- org.springframework.boot:spring-boot-starter-webmvc -> 4.1.0
+|    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    +--- org.springframework.boot:spring-boot-starter-jackson:4.1.0
+|    |    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    |    \--- org.springframework.boot:spring-boot-jackson:4.1.0
+|    |         +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |         \--- tools.jackson.core:jackson-databind:3.1.4 (*)
+|    +--- org.springframework.boot:spring-boot-starter-tomcat:4.1.0
+|    |    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    |    +--- org.springframework.boot:spring-boot-starter-tomcat-runtime:4.1.0
+|    |    |    +--- org.springframework.boot:spring-boot-tomcat:4.1.0
+|    |    |    |    +--- org.springframework.boot:spring-boot-web-server:4.1.0
+|    |    |    |    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    |    |    |    \--- org.springframework:spring-web:7.0.8
+|    |    |    |    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |    |    |         +--- org.springframework:spring-core:7.0.8 (*)
+|    |    |    |    |         \--- io.micrometer:micrometer-observation:1.16.6 -> 1.17.0 (*)
+|    |    |    |    +--- org.apache.tomcat.embed:tomcat-embed-core:11.0.22
+|    |    |    |    \--- jakarta.annotation:jakarta.annotation-api:3.0.0
+|    |    |    +--- org.springframework.boot:spring-boot-web-server:4.1.0 (*)
+|    |    |    +--- jakarta.annotation:jakarta.annotation-api:3.0.0
+|    |    |    +--- org.apache.tomcat.embed:tomcat-embed-core:11.0.22
+|    |    |    +--- org.apache.tomcat.embed:tomcat-embed-el:11.0.22
+|    |    |    \--- org.apache.tomcat.embed:tomcat-embed-websocket:11.0.22
+|    |    |         \--- org.apache.tomcat.embed:tomcat-embed-core:11.0.22
+|    |    \--- org.springframework.boot:spring-boot-tomcat:4.1.0 (*)
+|    +--- org.springframework.boot:spring-boot-http-converter:4.1.0
+|    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    \--- org.springframework:spring-web:7.0.8 (*)
+|    \--- org.springframework.boot:spring-boot-webmvc:4.1.0
+|         +--- org.springframework.boot:spring-boot-http-converter:4.1.0 (*)
+|         +--- org.springframework.boot:spring-boot-servlet:4.1.0
+|         |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|         |    \--- org.springframework:spring-web:7.0.8 (*)
+|         +--- org.springframework:spring-web:7.0.8 (*)
+|         \--- org.springframework:spring-webmvc:7.0.8
+|              +--- org.springframework:spring-aop:7.0.8 (*)
+|              +--- org.springframework:spring-beans:7.0.8 (*)
+|              +--- org.springframework:spring-context:7.0.8 (*)
+|              +--- org.springframework:spring-core:7.0.8 (*)
+|              +--- org.springframework:spring-expression:7.0.8 (*)
+|              \--- org.springframework:spring-web:7.0.8 (*)
++--- org.springframework.boot:spring-boot-starter-websocket -> 4.1.0
+|    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    +--- org.springframework.boot:spring-boot-starter-webmvc:4.1.0 (*)
+|    \--- org.springframework.boot:spring-boot-websocket:4.1.0
+|         +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|         +--- org.springframework:spring-messaging:7.0.8
+|         |    +--- org.springframework:spring-beans:7.0.8 (*)
+|         |    \--- org.springframework:spring-core:7.0.8 (*)
+|         \--- org.springframework:spring-websocket:7.0.8
+|              +--- org.springframework:spring-context:7.0.8 (*)
+|              +--- org.springframework:spring-core:7.0.8 (*)
+|              \--- org.springframework:spring-web:7.0.8 (*)
++--- org.springframework.boot:spring-boot-starter-security -> 4.1.0
+|    +--- org.springframework.boot:spring-boot-starter:4.1.0 (*)
+|    +--- org.springframework.boot:spring-boot-security:4.1.0
+|    |    +--- org.springframework.boot:spring-boot:4.1.0 (*)
+|    |    +--- org.springframework.security:spring-security-config:7.1.0
+|    |    |    +--- org.springframework.security:spring-security-core:7.1.0
+|    |    |    |    +--- org.springframework.security:spring-security-crypto:7.1.0
+|    |    |    |    +--- org.springframework:spring-aop:7.0.8 (*)
+|    |    |    |    +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |    |    +--- org.springframework:spring-context:7.0.8 (*)
+|    |    |    |    +--- org.springframework:spring-core:7.0.8 (*)
+|    |    |    |    +--- org.springframework:spring-expression:7.0.8 (*)
+|    |    |    |    \--- io.micrometer:micrometer-observation:1.17.0 (*)
+|    |    |    +--- org.springframework:spring-aop:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-beans:7.0.8 (*)
+|    |    |    +--- org.springframework:spring-context:7.0.8 (*)
+|    |    |    \--- org.springframework:spring-core:7.0.8 (*)
+|    |    \--- org.springframework.security:spring-security-web:7.1.0
+|    |         +--- org.springframework.security:spring-security-core:7.1.0 (*)
+|    |         +--- org.springframework:spring-core:7.0.8 (*)
+|    |         +--- org.springframework:spring-aop:7.0.8 (*)
+|    |         +--- org.springframework:spring-beans:7.0.8 (*)
+|    |         +--- org.springframework:spring-context:7.0.8 (*)
+|    |         +--- org.springframework:spring-expression:7.0.8 (*)
+|    |         \--- org.springframework:spring-web:7.0.8 (*)
+|    \--- org.springframework:spring-aop:7.0.8 (*)
++--- org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9
+|    +--- org.springdoc:springdoc-openapi-starter-webmvc-api:2.8.9
+|    |    +--- org.springdoc:springdoc-openapi-starter-common:2.8.9
+|    |    |    +--- org.springframework.boot:spring-boot-autoconfigure:3.5.0 -> 4.1.0 (*)
+|    |    |    +--- org.springframework.boot:spring-boot-starter-validation:3.5.0 -> 4.1.0 (*)
+|    |    |    \--- io.swagger.core.v3:swagger-core-jakarta:2.2.30
+|    |    |         +--- org.apache.commons:commons-lang3:3.17.0 -> 3.20.0
+|    |    |         +--- org.slf4j:slf4j-api:2.0.9 -> 2.0.18
+|    |    |         +--- io.swagger.core.v3:swagger-annotations-jakarta:2.2.30
+|    |    |         +--- io.swagger.core.v3:swagger-models-jakarta:2.2.30
+|    |    |         |    \--- com.fasterxml.jackson.core:jackson-annotations:2.18.2 -> 2.21
+|    |    |         +--- org.yaml:snakeyaml:2.3 -> 2.6
+|    |    |         +--- jakarta.xml.bind:jakarta.xml.bind-api:3.0.1 -> 4.0.5 (*)
+|    |    |         +--- jakarta.validation:jakarta.validation-api:3.0.2 -> 3.1.1
+|    |    |         +--- com.fasterxml.jackson.core:jackson-annotations:2.18.2 -> 2.21
+|    |    |         +--- com.fasterxml.jackson.core:jackson-databind:2.18.2 -> 2.21.4
+|    |    |         |    +--- com.fasterxml.jackson.core:jackson-annotations:2.21
+|    |    |         |    +--- com.fasterxml.jackson.core:jackson-core:2.21.4
+|    |    |         |    |    \--- com.fasterxml.jackson:jackson-bom:2.21.4
+|    |    |         |    |         +--- com.fasterxml.jackson.core:jackson-annotations:2.21 (c)
+|    |    |         |    |         +--- com.fasterxml.jackson.core:jackson-core:2.21.4 (c)
+|    |    |         |    |         +--- com.fasterxml.jackson.core:jackson-databind:2.21.4 (c)
+|    |    |         |    |         +--- com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.4 (c)
+|    |    |         |    |         \--- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.4 (c)
+|    |    |         |    \--- com.fasterxml.jackson:jackson-bom:2.21.4 (*)
+|    |    |         +--- com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.2 -> 2.21.4
+|    |    |         |    +--- com.fasterxml.jackson.core:jackson-databind:2.21.4 (*)
+|    |    |         |    +--- org.yaml:snakeyaml:2.5 -> 2.6
+|    |    |         |    +--- com.fasterxml.jackson.core:jackson-core:2.21.4 (*)
+|    |    |         |    \--- com.fasterxml.jackson:jackson-bom:2.21.4 (*)
+|    |    |         \--- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.2 -> 2.21.4
+|    |    |              +--- com.fasterxml.jackson.core:jackson-annotations:2.21
+|    |    |              +--- com.fasterxml.jackson.core:jackson-core:2.21.4 (*)
+|    |    |              +--- com.fasterxml.jackson.core:jackson-databind:2.21.4 (*)
+|    |    |              \--- com.fasterxml.jackson:jackson-bom:2.21.4 (*)
+|    |    \--- org.springframework:spring-webmvc:6.2.7 -> 7.0.8 (*)
+|    +--- org.webjars:swagger-ui:5.21.0
+|    \--- org.webjars:webjars-locator-lite:1.1.0 -> 1.1.3
+|         \--- org.jspecify:jspecify:1.0.0
++--- org.springframework.boot:spring-boot-starter-web -> 4.1.0
+|    +--- org.springframework.boot:spring-boot-starter-jackson:4.1.0 (*)
+|    +--- org.springframework.boot:spring-boot-starter-tomcat:4.1.0 (*)
+|    +--- org.springframework.boot:spring-boot-http-converter:4.1.0 (*)
+|    \--- org.springframework.boot:spring-boot-webmvc:4.1.0 (*)
++--- io.github.openfeign.querydsl:querydsl-jpa:7.3.0
+|    \--- io.github.openfeign.querydsl:querydsl-core:7.3.0
+|         \--- io.projectreactor:reactor-core:3.8.5 -> 3.8.6
+|              +--- org.reactivestreams:reactive-streams:1.0.4
+|              \--- org.jspecify:jspecify:1.0.0
++--- com.h2database:h2 -> 2.4.240
+\--- com.mysql:mysql-connector-j -> 9.7.0
+
+(c) - A dependency constraint, not a dependency. The dependency affected by the constraint occurs elsewhere in the tree.
+(*) - Indicates repeated occurrences of a transitive dependency subtree. Gradle expands transitive dependency subtrees only once per project; repeat occurrences only display the root of the subtree, followed by this annotation.
+
+A web-based, searchable dependency report is available by adding the --scan option.
+
+BUILD SUCCESSFUL in 5s
+1 actionable task: 1 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.5.1/userguide/configuration_cache_enabling.html

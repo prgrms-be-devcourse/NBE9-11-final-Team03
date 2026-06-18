@@ -31,7 +31,7 @@ class TalentServiceListTest {
     @Test
     @DisplayName("size+1개가 조회되면 hasNext=true, size개로 자르고 마지막 id를 nextCursor로 준다")
     void getTalentList_hasNext() {
-        // given: size=2인데 리포지토리가 3개(size+1) 반환 → 다음 페이지 있음
+        // given: size=2인데 리포지토리가 3개(size+1) 반환 -> 다음 페이지 있음
         int size = 2;
         List<TalentListRes> rows = List.of(row(5L), row(4L), row(3L));
         given(talentRepository.findTalentList(null, size)).willReturn(rows);
@@ -50,7 +50,7 @@ class TalentServiceListTest {
     @Test
     @DisplayName("size 이하로 조회되면 hasNext=false, nextCursor=null")
     void getTalentList_lastPage() {
-        // given: size=2인데 2개만 옴 → 마지막 페이지
+        // given: size=2인데 2개만 옴 -> 마지막 페이지
         int size = 2;
         given(talentRepository.findTalentList(null, size))
                 .willReturn(List.of(row(2L), row(1L)));
@@ -94,7 +94,7 @@ class TalentServiceListTest {
         assertThat(sizeCaptor.getValue()).isEqualTo(1);
     }
 
-    // 테스트용 목록 항목 (id만 의미 있음, 나머진 더미)
+    // 테스트용 목록 항목 (id만 의미 있음 나머진 더미)
     private TalentListRes row(Long id) {
         return new TalentListRes(id, "백엔드", "제목" + id, 100, 2,
                 BigDecimal.ZERO, 0, 0, LocalDateTime.now());

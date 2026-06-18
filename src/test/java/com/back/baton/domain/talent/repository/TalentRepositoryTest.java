@@ -39,7 +39,7 @@ class TalentRepositoryTest {
         t3.softDelete();                 // 삭제글
         talentRepository.save(t3);
 
-        // when: 첫 페이지(cursor=null), size=2 → 내부적으로 3개(size+1) 조회
+        // when: 첫 페이지(cursor=null), size=2 -> 내부적으로 3개(size+1) 조회
         List<TalentListRes> result = talentRepository.findTalentList(null, 2);
 
         // then
@@ -60,7 +60,7 @@ class TalentRepositoryTest {
         Talent t3 = save(category, "재능3");
         Talent t4 = save(category, "재능4");
 
-        // when: t4 id를 커서로 → 그보다 작은 id만 (t3, t2, t1)
+        // when: t4 id를 커서로 -> 그보다 작은 id만 (t3, t2, t1)
         List<TalentListRes> result = talentRepository.findTalentList(t4.getId(), 2);
 
         // then: id < t4, 최신순, size+1=3개
