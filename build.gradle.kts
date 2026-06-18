@@ -1,3 +1,5 @@
+import org.gradle.internal.impldep.org.eclipse.jgit.diff.DiffDriver.java
+
 plugins {
     java
     id("org.springframework.boot") version "4.1.0"
@@ -45,6 +47,13 @@ dependencies {
     //web mvc test
     implementation("org.springframework.boot:spring-boot-starter-web")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+    // QueryDSL (Hibernate 7 호환)
+    val queryDslVersion = "7.3.0"
+    implementation("io.github.openfeign.querydsl:querydsl-jpa:$queryDslVersion")
+    annotationProcessor("io.github.openfeign.querydsl:querydsl-apt:$queryDslVersion:jpa")
+    annotationProcessor("jakarta.annotation:jakarta.annotation-api")
+    annotationProcessor("jakarta.persistence:jakarta.persistence-api")
 }
 
 tasks.withType<Test> {
