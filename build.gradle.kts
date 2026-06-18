@@ -1,5 +1,3 @@
-import org.gradle.internal.impldep.org.eclipse.jgit.diff.DiffDriver.java
-
 plugins {
     java
     id("org.springframework.boot") version "4.1.0"
