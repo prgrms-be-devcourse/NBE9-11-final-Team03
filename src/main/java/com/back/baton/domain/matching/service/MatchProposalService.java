@@ -3,7 +3,7 @@ package com.back.baton.domain.matching.service;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
 import com.back.baton.domain.matching.entity.MatchProposal;
-import com.back.baton.domain.matching.enums.MatchProposalStatus;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentStatus;
@@ -60,8 +60,8 @@ public class MatchProposalService {
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
         // MatchProposal 상태 및 수락 권한 검증
-        validateAcceptableStatus(matchProposal);
-        validateProviderCanAccept(providerId, matchProposal);
+        validateRequestedStatus(matchProposal);
+        validateProviderAuthority(providerId, matchProposal);
 
         // TODO: Credit/Trade/Escrow 기능 구현 완료 후 연동 필요
         //  - 구매자 크레딧 잔액 확인
@@ -70,6 +70,20 @@ public class MatchProposalService {
         //  - 크레딧 거래 내역(CreditTransaction) 기록
         //  - 처리가 모두 성공한 뒤 매칭 제안을 ACCEPTED로 변경
         matchProposal.accept();
+
+        return MatchProposalRes.from(matchProposal);
+    }
+
+    @Transactional
+    public MatchProposalRes rejectMatchProposal(Long proposalId, Long providerId) {
+        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
+                .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
+
+        // MatchProposal 상태 및 거절 권한 검증
+        validateRequestedStatus(matchProposal);
+        validateProviderAuthority(providerId, matchProposal);
+
+        matchProposal.reject();
 
         return MatchProposalRes.from(matchProposal);
     }
@@ -103,13 +117,13 @@ public class MatchProposalService {
         }
     }
 
-    private void validateAcceptableStatus(MatchProposal matchProposal) {
+    private void validateRequestedStatus(MatchProposal matchProposal) {
         if (matchProposal.getStatus() != MatchProposalStatus.REQUESTED) {
             throw new CustomException(MatchingErrorCode.INVALID_MATCHING_STATUS);
         }
     }
 
-    private void validateProviderCanAccept(Long providerId, MatchProposal matchProposal) {
+    private void validateProviderAuthority(Long providerId, MatchProposal matchProposal) {
         if (!Objects.equals(matchProposal.getProviderId(), providerId)) {
             throw new CustomException(MatchingErrorCode.MATCH_PROPOSAL_ACCESS_DENIED);
         }

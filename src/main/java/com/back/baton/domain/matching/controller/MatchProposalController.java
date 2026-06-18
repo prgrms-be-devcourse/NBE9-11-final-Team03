@@ -45,4 +45,14 @@ public class MatchProposalController {
 
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.MATCH_PROPOSAL_ACCEPTED, response));
     }
+
+    @PatchMapping("/{proposalId}/reject")
+    public ResponseEntity<ApiResponse<MatchProposalRes>> rejectMatchProposal(
+            @PathVariable Long proposalId,
+            @RequestParam Long providerId // TODO: 인증 연동 후 로그인 사용자 ID로 대체
+    ) {
+        MatchProposalRes response = matchProposalService.rejectMatchProposal(proposalId, providerId);
+
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.MATCH_PROPOSAL_REJECTED, response));
+    }
 }

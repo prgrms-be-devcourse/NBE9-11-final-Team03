@@ -1,4 +1,4 @@
-package com.back.baton.domain.matching.enums;
+package com.back.baton.domain.matching.entity;
 
 public enum MatchProposalStatus {
     REQUESTED,
