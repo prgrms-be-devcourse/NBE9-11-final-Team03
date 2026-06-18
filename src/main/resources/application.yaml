@@ -4,7 +4,7 @@ spring:
   profiles:
     active: local
   config:
-    import: application-secret.yaml
+    import: optional:classpath:application-secret.yaml
 
 credit:
   initial-amount: 10000 # 초기 크레딧 금액 설정
