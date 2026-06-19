@@ -3,6 +3,7 @@ package com.back.baton.domain.talent.service;
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
+import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
 import com.back.baton.domain.talent.dto.response.*;
 import com.back.baton.domain.talent.entity.Talent;
@@ -129,5 +130,18 @@ public class TalentService {
         TalentDetailRes response = TalentDetailRes.from(talent, author);
         talentRepository.increaseViewCount(talentId);
         return response;
+    }
+
+    // 검색,필터 (페이징 후처리는 getTalentList와 동일 )
+    public CursorPageRes<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size) {
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+
+        List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize);
+
+        boolean hasNext = rows.size() > pageSize;
+        List<TalentListRes> content = hasNext ? List.copyOf(rows.subList(0, pageSize)) : rows;
+        Long nextCursor = hasNext ? content.get(content.size() - 1).talentId() : null;
+
+        return CursorPageRes.of(content, hasNext, nextCursor);
     }
 }

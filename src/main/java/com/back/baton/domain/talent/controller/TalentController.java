@@ -1,6 +1,7 @@
 package com.back.baton.domain.talent.controller;
 
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
+import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
 import com.back.baton.domain.talent.dto.response.*;
 import com.back.baton.domain.talent.service.TalentService;
@@ -57,6 +58,17 @@ public class TalentController {
             @RequestParam(defaultValue = "20") int size) {
 
         CursorPageRes<TalentListRes> response = talentService.getTalentList(cursor, size);
+        return ApiResponses.success(SuccessCode.TALENT_OK, response);
+    }
+
+    // 재능 검색 및 필터링
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<CursorPageRes<TalentListRes>>> searchTalents(
+            @ModelAttribute TalentSearchReq req,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int size) {
+
+        CursorPageRes<TalentListRes> response = talentService.searchTalents(req, cursor, size);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 
