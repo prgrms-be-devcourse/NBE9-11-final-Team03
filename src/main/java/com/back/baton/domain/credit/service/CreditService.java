@@ -78,9 +78,12 @@ public class CreditService {
     }
 
     // 크레딧 잠금 - 매칭 제안 수락 시 구매자 크레딧을 거래 완료까지 동결 (거래 취소 시 환불 가능)
-    // TODO: idempotencyKey 이중 차감 방지 로직 추가 구현
     @Transactional
     public void holdForEscrow(Long userId, int amount, Long relatedTradeId, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
+        }
+
         if (amount <= 0) {
             throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
         }
