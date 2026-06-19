@@ -13,6 +13,7 @@ public enum SuccessCode {
     MATCH_PROPOSAL_ACCEPTED(HttpStatus.OK, "200-4", "매칭 제안이 수락되었습니다."),
     MATCH_PROPOSAL_REJECTED(HttpStatus.OK, "200-5", "매칭 제안이 거절되었습니다."),
     MATCH_RECOMMENDATIONS_FOUND(HttpStatus.OK, "200-6", "매칭 추천 상대 목록 조회에 성공했습니다."),
+    MATCH_RECOMMENDATION_DETAIL_FOUND(HttpStatus.OK, "200-7", "매칭 추천 상대 정보 조회에 성공했습니다."),
 
     TRADE_OK(HttpStatus.OK, "200-6", "거래 조회에 성공했습니다."),
 

@@ -1,5 +1,6 @@
 package com.back.baton.domain.matching.service;
 
+import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
@@ -74,6 +75,43 @@ public class MatchRecommendationService {
                     return recommendation;
                 })
                 .toList();
+    }
+
+    public MatchRecommendationDetailRes getMatchRecommendationDetail(
+            Long requesterTalentId,
+            Long providerTalentId,
+            Long userId
+    ) {
+        Talent requesterTalent = getTalent(requesterTalentId);
+
+        validateTalentAvailable(requesterTalent);
+        validateRequesterOwnsTalent(userId, requesterTalent);
+
+        MatchRecommendationDetailRes detail =
+                matchRecommendationQueryRepository.findMatchRecommendationDetail(
+                                requesterTalent.getCategory().getId(),
+                                providerTalentId)
+                        .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+
+        if (Objects.equals(detail.providerId(), userId)) {
+            throw new CustomException(MatchingErrorCode.SELF_MATCHING_NOT_ALLOWED);
+        }
+
+        boolean unavailable = matchProposalRepository.existsActiveProposal(
+                userId,
+                requesterTalentId,
+                providerTalentId,
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
+        );
+
+        if (!unavailable) {
+            return detail;
+        }
+
+        return detail.withProposalDisabled(PROPOSAL_REQUEST_DISABLED_REASON);
     }
 
     private Talent getTalent(Long talentId) {
