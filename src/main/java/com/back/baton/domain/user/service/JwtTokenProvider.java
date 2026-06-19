@@ -3,9 +3,10 @@ package com.back.baton.domain.user.service;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.exceptions.*;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -58,6 +59,26 @@ public class JwtTokenProvider {
             verifier.verify(tokenValue); // 서명, 알고리즘, 유효시간 검증
         }catch (Exception e){
            throw new CustomException(TokenErrorCode.INVALID_TOKEN);
+        }
+    }
+
+    public DecodedJWT resolveToken(HttpServletRequest request){ // 헤더에서 acessToken 추출 및 검증, 반환
+        String authorization = request.getHeader("Authorization");
+        String accessToken = null;
+        if(authorization==null || authorization.isEmpty()){
+            return null;
+        }
+        if(!authorization.startsWith("Bearer ")){
+            return null;
+        }
+        accessToken = authorization.replace("Bearer ", "");
+
+        try{
+            Algorithm algorithm = Algorithm.HMAC256(secretKey.getBytes());
+            JWTVerifier verifier = JWT.require(algorithm).build(); // 검증기 생성
+            return verifier.verify(accessToken); // 서명, 알고리즘, 유효시간 검증 및 반환
+        }catch (Exception e){
+            return null;
         }
     }
 }

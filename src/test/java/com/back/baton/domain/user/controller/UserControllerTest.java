@@ -5,6 +5,7 @@ import com.back.baton.domain.user.dto.request.UserSignupReq;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.service.JwtTokenProvider;
 import com.back.baton.domain.user.service.UserService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.SuccessCode;
@@ -42,6 +43,9 @@ class UserControllerTest{
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("회원가입 성공 - 유효한 DTO 요청 시 201 CREATED를 반환한다")
