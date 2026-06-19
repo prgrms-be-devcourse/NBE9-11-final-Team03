@@ -7,6 +7,7 @@ import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.EscrowErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class TradeService {
         validateTradeParticipant(trade, userId);
 
         Escrow escrow = escrowRepository.findByTradeId(tradeId)
-                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
 
         return TradeRes.of(trade, escrow);
     }

@@ -9,6 +9,7 @@ import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.EscrowErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,7 +77,7 @@ class TradeServiceTest {
     @DisplayName("구매자가 거래를 조회하면 거래와 에스크로 정보를 반환한다")
     void getTrade_buyer() {
         Long buyerId = 2L;
-        Trade trade = createTrade(1L, buyerId, 3L);
+        Trade trade = createTrade(buyerId, 3L);
         Escrow escrow = createEscrow(1L, buyerId, 3L);
 
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
@@ -96,7 +97,7 @@ class TradeServiceTest {
     @DisplayName("판매자가 거래를 조회하면 거래와 에스크로 정보를 반환한다")
     void getTrade_seller() {
         Long sellerId = 3L;
-        Trade trade = createTrade(1L, 2L, sellerId);
+        Trade trade = createTrade(2L, sellerId);
         Escrow escrow = createEscrow(1L, 2L, sellerId);
 
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
@@ -123,10 +124,10 @@ class TradeServiceTest {
     }
 
     @Test
-    @DisplayName("에스크로가 없는 거래를 조회하면 TRADE_NOT_FOUND 예외가 발생한다")
+    @DisplayName("에스크로가 없는 거래를 조회하면 ESCROW_NOT_FOUND 예외가 발생한다")
     void getTrade_escrowNotFound() {
         Long buyerId = 2L;
-        Trade trade = createTrade(1L, buyerId, 3L);
+        Trade trade = createTrade(buyerId, 3L);
 
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
@@ -134,14 +135,14 @@ class TradeServiceTest {
         assertThatThrownBy(() -> tradeService.getTrade(1L, buyerId))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
     }
 
     @Test
     @DisplayName("거래 참여자가 아닌 사용자가 조회하면 TRADE_ACCESS_DENIED 예외가 발생한다")
     void getTrade_accessDenied() {
         Long outsiderId = 999L;
-        Trade trade = createTrade(1L, 2L, 3L);
+        Trade trade = createTrade(2L, 3L);
 
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
 
@@ -153,9 +154,9 @@ class TradeServiceTest {
         verify(escrowRepository, never()).findByTradeId(any());
     }
 
-    private Trade createTrade(Long tradeId, Long buyerId, Long sellerId) {
+    private Trade createTrade(Long buyerId, Long sellerId) {
         Trade trade = Trade.create(1L, 10L, buyerId, sellerId, 5000, TradeType.PURCHASE);
-        ReflectionTestUtils.setField(trade, "id", tradeId);
+        ReflectionTestUtils.setField(trade, "id", 1L);
         return trade;
     }
 
