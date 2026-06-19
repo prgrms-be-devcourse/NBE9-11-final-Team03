@@ -58,6 +58,11 @@ public class Escrow extends BaseTimeEntity {
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
 
+    public void refund() {
+        this.status = EscrowStatus.REFUNDED;
+        this.settledAt = LocalDateTime.now();
+    }
+
     public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, LocalDateTime expiresAt) {
         Escrow escrow = new Escrow();
         escrow.tradeId = tradeId;

@@ -39,4 +39,24 @@ class EscrowTest {
         assertThat(escrow.getAmount()).isEqualTo(5000);
         assertThat(escrow.getExpiresAt()).isEqualTo(expiresAt);
     }
+
+    @Test
+    @DisplayName("에스크로 환불 시 상태가 REFUNDED로 변경된다")
+    void refund_status() {
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, LocalDateTime.now().plusDays(7));
+
+        escrow.refund();
+
+        assertThat(escrow.getStatus()).isEqualTo(EscrowStatus.REFUNDED);
+    }
+
+    @Test
+    @DisplayName("에스크로 환불 시 settledAt이 설정된다")
+    void refund_settledAt() {
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, LocalDateTime.now().plusDays(7));
+
+        escrow.refund();
+
+        assertThat(escrow.getSettledAt()).isNotNull();
+    }
 }

@@ -114,6 +114,36 @@ public class CreditService {
         }
     }
 
+    // 크레딧 환불 - 거래 취소 시 에스크로에서 구매자에게 크레딧 반환
+    @Transactional
+    public void refundFromEscrow(Long userId, int amount, Long relatedTradeId, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
+        }
+
+        if (amount <= 0) {
+            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
+        }
+
+        if (creditTransactionRepository.existsByIdempotencyKey(idempotencyKey)) {
+            return;
+        }
+
+        int updatedRows = creditAccountRepository.releaseEscrow(userId, amount);
+        if (updatedRows == 0) {
+            throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
+        }
+
+        int balanceAfter = creditAccountRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
+                .getBalance();
+
+        creditTransactionRepository.save(CreditTransaction.create(
+                userId, relatedTradeId, CreditTransactionType.REFUND, amount, balanceAfter,
+                idempotencyKey, CreditTransactionType.REFUND.getDefaultReason()
+        ));
+    }
+
     // 크레딧 차감 - 수수료 등 즉시 소멸되는 크레딧에 사용 (환불 불가)
     @Transactional
     public void deductCredit(Long userId, int amount) {

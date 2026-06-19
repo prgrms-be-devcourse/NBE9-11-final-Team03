@@ -14,7 +14,8 @@ public enum SuccessCode {
     MATCH_PROPOSAL_REJECTED(HttpStatus.OK, "200-5", "매칭 제안이 거절되었습니다."),
     MATCH_RECOMMENDATIONS_FOUND(HttpStatus.OK, "200-6", "매칭 추천 상대 목록 조회에 성공했습니다."),
 
-    TRADE_OK(HttpStatus.OK, "200-6", "거래 조회에 성공했습니다."),
+    TRADE_OK(HttpStatus.OK, "200-7", "거래 조회에 성공했습니다."),
+    TRADE_CANCELLED(HttpStatus.OK, "200-8", "거래가 취소되었습니다."),
 
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-2", "토큰 재발행에 성공했습니다."),
