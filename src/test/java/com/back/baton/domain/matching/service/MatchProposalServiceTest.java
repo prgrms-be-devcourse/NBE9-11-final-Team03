@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,11 +57,14 @@ class MatchProposalServiceTest {
         when(talentRepository.findById(req.providerTalentId()))
                 .thenReturn(Optional.of(providerTalent));
 
-        when(matchProposalRepository.existsByRequesterIdAndRequesterTalentIdAndProviderTalentIdAndStatus(
+        when(matchProposalRepository.existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
                 req.providerTalentId(),
-                MatchProposalStatus.REQUESTED
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
         )).thenReturn(false);
 
         when(matchProposalRepository.save(any(MatchProposal.class)))
@@ -77,11 +81,14 @@ class MatchProposalServiceTest {
         assertThat(res.respondedAt()).isNull();
 
         verify(talentRepository).findById(req.providerTalentId());
-        verify(matchProposalRepository).existsByRequesterIdAndRequesterTalentIdAndProviderTalentIdAndStatus(
+        verify(matchProposalRepository).existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
                 req.providerTalentId(),
-                MatchProposalStatus.REQUESTED
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
         );
         verify(matchProposalRepository).save(any(MatchProposal.class));
     }
@@ -152,21 +159,27 @@ class MatchProposalServiceTest {
         when(talentRepository.findById(req.providerTalentId()))
                 .thenReturn(Optional.of(providerTalent));
 
-        when(matchProposalRepository.existsByRequesterIdAndRequesterTalentIdAndProviderTalentIdAndStatus(
+        when(matchProposalRepository.existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
                 req.providerTalentId(),
-                MatchProposalStatus.REQUESTED
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
         )).thenReturn(true);
 
         assertThatThrownBy(() -> matchProposalService.createMatchProposal(requesterId, req))
                 .isInstanceOf(CustomException.class);
 
-        verify(matchProposalRepository).existsByRequesterIdAndRequesterTalentIdAndProviderTalentIdAndStatus(
+        verify(matchProposalRepository).existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
                 req.providerTalentId(),
-                MatchProposalStatus.REQUESTED
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
         );
         verify(matchProposalRepository, never()).save(any(MatchProposal.class));
     }

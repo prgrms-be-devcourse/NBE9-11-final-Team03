@@ -42,5 +42,5 @@ out/
 # Mac OS
 .DS_Store
 
-# QueryDSL Generated Classes (자동 생성 파일 제외)
-**/src/main/generated/
+# QueryDSL generated sources
+src/main/generated/
