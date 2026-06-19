@@ -16,15 +16,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MatchRecommendationService {
 
+    private static final String PROPOSAL_REQUEST_DISABLED_REASON = "이미 진행 중인 제안이 있습니다.";
+
     private final TalentRepository talentRepository;
-    private final MatchProposalRepository matchProposalRepository;
     private final MatchRecommendationQueryRepository matchRecommendationQueryRepository;
+    private final MatchProposalRepository matchProposalRepository;
 
     public List<MatchRecommendationRes> getMatchRecommendations(Long talentId, Long userId) {
         Talent requesterTalent = getTalent(talentId);
@@ -32,17 +35,45 @@ public class MatchRecommendationService {
         validateTalentAvailable(requesterTalent);
         validateRequesterOwnsTalent(userId, requesterTalent);
 
-        List<Long> excludedTalentIds = matchProposalRepository.findRequestedProviderTalentIds(
-                userId,
-                requesterTalent.getId(),
-                MatchProposalStatus.REQUESTED
+        List<MatchRecommendationRes> recommendations =
+                matchRecommendationQueryRepository.findMatchRecommendations(
+                        requesterTalent.getCategory().getId(),
+                        userId
+                );
+
+        Set<Long> unavailableProviderTalentIds = Set.copyOf(
+                matchProposalRepository.findUnavailableProviderTalentIds(
+                        userId,
+                        requesterTalent.getId(),
+                        List.of(
+                                MatchProposalStatus.REQUESTED,
+                                MatchProposalStatus.ACCEPTED
+                        )
+                )
         );
 
-        return matchRecommendationQueryRepository.findMatchRecommendations(
-                requesterTalent.getCategory().getId(),
-                userId,
-                excludedTalentIds
-        );
+        return recommendations.stream()
+                .map(recommendation -> {
+                    if (unavailableProviderTalentIds.contains(recommendation.talentId())) {
+                        return new MatchRecommendationRes(
+                                recommendation.talentId(),
+                                recommendation.providerId(),
+                                recommendation.categoryId(),
+                                recommendation.categoryName(),
+                                recommendation.title(),
+                                recommendation.content(),
+                                recommendation.creditPrice(),
+                                recommendation.estimatedHours(),
+                                recommendation.avgRating(),
+                                recommendation.completeCount(),
+                                false,
+                                PROPOSAL_REQUEST_DISABLED_REASON
+                        );
+                    }
+
+                    return recommendation;
+                })
+                .toList();
     }
 
     private Talent getTalent(Long talentId) {

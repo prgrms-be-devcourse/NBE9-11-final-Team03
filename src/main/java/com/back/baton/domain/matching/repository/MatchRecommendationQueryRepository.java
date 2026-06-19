@@ -5,13 +5,12 @@ import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.talent.entity.QTalent;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Objects;
 
 @Repository
 @RequiredArgsConstructor
@@ -21,8 +20,7 @@ public class MatchRecommendationQueryRepository {
 
     public List<MatchRecommendationRes> findMatchRecommendations(
             Long categoryId,
-            Long requesterId,
-            List<Long> excludedTalentIds
+            Long requesterId
     ) {
         QTalent talent = QTalent.talent;
         QCategory category = QCategory.category;
@@ -38,16 +36,18 @@ public class MatchRecommendationQueryRepository {
                         talent.creditPrice,
                         talent.estimatedHours,
                         talent.avgRating,
-                        talent.completeCount
+                        talent.completeCount,
+                        Expressions.constant(true),
+                        Expressions.nullExpression(String.class)
                 ))
                 .from(talent)
                 .join(talent.category, category)
                 .where(
                         category.id.eq(categoryId),
+                        category.active.isTrue(),
                         talent.authorId.ne(requesterId),
                         talent.status.eq(TalentStatus.ACTIVE),
-                        talent.deletedAt.isNull(),
-                        notInExcludedTalentIds(excludedTalentIds)
+                        talent.deletedAt.isNull()
                 )
                 .orderBy(
                         talent.avgRating.desc(),
@@ -55,18 +55,7 @@ public class MatchRecommendationQueryRepository {
                         talent.viewCount.desc(),
                         talent.id.desc()
                 )
+                .limit(3)
                 .fetch();
-    }
-
-    private BooleanExpression notInExcludedTalentIds(List<Long> excludedTalentIds) {
-        if (excludedTalentIds == null) {
-            return null;
-        }
-
-        List<Long> nonNullExcludedTalentIds = excludedTalentIds.stream()
-                .filter(Objects::nonNull)
-                .toList();
-
-        return nonNullExcludedTalentIds.isEmpty() ? null : QTalent.talent.id.notIn(nonNullExcludedTalentIds);
     }
 }

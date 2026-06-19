@@ -12,6 +12,8 @@ public record MatchRecommendationRes(
         Integer creditPrice,
         Integer estimatedHours,
         BigDecimal avgRating,
-        int completeCount
+        int completeCount,
+        boolean proposalRequestEnabled,
+        String proposalRequestDisabledReason
 ) {
 }

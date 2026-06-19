@@ -3,12 +3,12 @@ package com.back.baton.domain.matching.repository;
 import com.back.baton.domain.matching.entity.MatchProposal;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.global.config.JpaAuditingConfig;
+import com.back.baton.global.config.QueryDslConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
-import com.back.baton.global.config.QueryDslConfig;
 
 import java.util.List;
 
@@ -22,8 +22,8 @@ class MatchProposalRepositoryTest {
     private MatchProposalRepository matchProposalRepository;
 
     @Test
-    @DisplayName("REQUESTED 상태의 providerTalentId만 조회한다")
-    void findRequestedProviderTalentIds() {
+    @DisplayName("지정한 상태에 해당하는 providerTalentId만 조회한다")
+    void findUnavailableProviderTalentIds() {
         Long requesterId = 2L;
         Long requesterTalentId = 1L;
 
@@ -47,18 +47,56 @@ class MatchProposalRepositoryTest {
         matchProposalRepository.save(requestedProposal);
         matchProposalRepository.save(acceptedProposal);
 
-        List<Long> result = matchProposalRepository.findRequestedProviderTalentIds(
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
                 requesterTalentId,
-                MatchProposalStatus.REQUESTED
+                List.of(MatchProposalStatus.REQUESTED)
         );
 
         assertThat(result).containsExactly(10L);
     }
 
     @Test
+    @DisplayName("여러 상태에 해당하는 providerTalentId를 조회한다")
+    void findUnavailableProviderTalentIds_withMultipleStatuses() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+
+        MatchProposal requestedProposal = MatchProposal.create(
+                10L,
+                requesterTalentId,
+                requesterId,
+                3L,
+                "요청 중인 제안입니다."
+        );
+
+        MatchProposal acceptedProposal = MatchProposal.create(
+                20L,
+                requesterTalentId,
+                requesterId,
+                4L,
+                "수락된 제안입니다."
+        );
+        acceptedProposal.accept();
+
+        matchProposalRepository.save(requestedProposal);
+        matchProposalRepository.save(acceptedProposal);
+
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
+        );
+
+        assertThat(result).containsExactlyInAnyOrder(10L, 20L);
+    }
+
+    @Test
     @DisplayName("다른 요청자의 제안은 조회하지 않는다")
-    void findRequestedProviderTalentIds_excludeOtherRequester() {
+    void findUnavailableProviderTalentIds_excludeOtherRequester() {
         Long requesterId = 2L;
         Long requesterTalentId = 1L;
 
@@ -81,10 +119,10 @@ class MatchProposalRepositoryTest {
         matchProposalRepository.save(myProposal);
         matchProposalRepository.save(otherRequesterProposal);
 
-        List<Long> result = matchProposalRepository.findRequestedProviderTalentIds(
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
                 requesterTalentId,
-                MatchProposalStatus.REQUESTED
+                List.of(MatchProposalStatus.REQUESTED)
         );
 
         assertThat(result).containsExactly(10L);
@@ -92,7 +130,7 @@ class MatchProposalRepositoryTest {
 
     @Test
     @DisplayName("다른 요청자 재능의 제안은 조회하지 않는다")
-    void findRequestedProviderTalentIds_excludeOtherRequesterTalent() {
+    void findUnavailableProviderTalentIds_excludeOtherRequesterTalent() {
         Long requesterId = 2L;
         Long requesterTalentId = 1L;
 
@@ -115,10 +153,10 @@ class MatchProposalRepositoryTest {
         matchProposalRepository.save(myTalentProposal);
         matchProposalRepository.save(otherTalentProposal);
 
-        List<Long> result = matchProposalRepository.findRequestedProviderTalentIds(
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
                 requesterTalentId,
-                MatchProposalStatus.REQUESTED
+                List.of(MatchProposalStatus.REQUESTED)
         );
 
         assertThat(result).containsExactly(10L);

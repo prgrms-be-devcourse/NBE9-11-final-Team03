@@ -34,10 +34,10 @@ class MatchRecommendationServiceTest {
     private TalentRepository talentRepository;
 
     @Mock
-    private MatchProposalRepository matchProposalRepository;
+    private MatchRecommendationQueryRepository matchRecommendationQueryRepository;
 
     @Mock
-    private MatchRecommendationQueryRepository matchRecommendationQueryRepository;
+    private MatchProposalRepository matchProposalRepository;
 
     @InjectMocks
     private MatchRecommendationService matchRecommendationService;
@@ -52,8 +52,6 @@ class MatchRecommendationServiceTest {
         Category category = createCategory(categoryId);
         Talent requesterTalent = createTalent(requesterTalentId, requesterId, category);
 
-        List<Long> excludedTalentIds = List.of(2L);
-
         List<MatchRecommendationRes> recommendations = List.of(
                 new MatchRecommendationRes(
                         3L,
@@ -65,43 +63,114 @@ class MatchRecommendationServiceTest {
                         120,
                         2,
                         BigDecimal.valueOf(4.00),
-                        1
+                        1,
+                        true,
+                        null
                 )
         );
 
         when(talentRepository.findById(requesterTalentId))
                 .thenReturn(Optional.of(requesterTalent));
 
-        when(matchProposalRepository.findRequestedProviderTalentIds(
-                requesterId,
-                requesterTalentId,
-                MatchProposalStatus.REQUESTED
-        )).thenReturn(excludedTalentIds);
-
         when(matchRecommendationQueryRepository.findMatchRecommendations(
                 categoryId,
-                requesterId,
-                excludedTalentIds
+                requesterId
         )).thenReturn(recommendations);
+
+        when(matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
+        )).thenReturn(List.of());
 
         List<MatchRecommendationRes> result =
                 matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
 
         assertThat(result).hasSize(1);
-        assertThat(result.get(0).talentId()).isEqualTo(3L);
-        assertThat(result.get(0).providerId()).isEqualTo(4L);
+
+        MatchRecommendationRes recommendation = result.getFirst();
+
+        assertThat(recommendation.talentId()).isEqualTo(3L);
+        assertThat(recommendation.providerId()).isEqualTo(4L);
+        assertThat(recommendation.proposalRequestEnabled()).isTrue();
+        assertThat(recommendation.proposalRequestDisabledReason()).isNull();
 
         verify(talentRepository).findById(requesterTalentId);
-        verify(matchProposalRepository).findRequestedProviderTalentIds(
-                requesterId,
-                requesterTalentId,
-                MatchProposalStatus.REQUESTED
-        );
+
         verify(matchRecommendationQueryRepository).findMatchRecommendations(
                 categoryId,
-                requesterId,
-                excludedTalentIds
+                requesterId
         );
+
+        verify(matchProposalRepository).findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
+        );
+    }
+
+    @Test
+    @DisplayName("이미 진행 중인 제안이 있는 추천 상대는 제안 요청이 비활성화된다")
+    void getMatchRecommendations_disabledProposalRequest() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+        Long categoryId = 10L;
+        Long providerTalentId = 3L;
+
+        Category category = createCategory(categoryId);
+        Talent requesterTalent = createTalent(requesterTalentId, requesterId, category);
+
+        List<MatchRecommendationRes> recommendations = List.of(
+                new MatchRecommendationRes(
+                        providerTalentId,
+                        4L,
+                        categoryId,
+                        "백엔드",
+                        "MySQL 튜닝 도와드립니다",
+                        "MySQL 기본 쿼리와 인덱스를 도와드립니다.",
+                        120,
+                        2,
+                        BigDecimal.valueOf(4.00),
+                        1,
+                        true,
+                        null
+                )
+        );
+
+        when(talentRepository.findById(requesterTalentId))
+                .thenReturn(Optional.of(requesterTalent));
+
+        when(matchRecommendationQueryRepository.findMatchRecommendations(
+                categoryId,
+                requesterId
+        )).thenReturn(recommendations);
+
+        when(matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
+        )).thenReturn(List.of(providerTalentId));
+
+        List<MatchRecommendationRes> result =
+                matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
+
+        assertThat(result).hasSize(1);
+
+        MatchRecommendationRes recommendation = result.getFirst();
+
+        assertThat(recommendation.talentId()).isEqualTo(providerTalentId);
+        assertThat(recommendation.proposalRequestEnabled()).isFalse();
+        assertThat(recommendation.proposalRequestDisabledReason())
+                .isEqualTo("이미 진행 중인 제안이 있습니다.");
     }
 
     @Test

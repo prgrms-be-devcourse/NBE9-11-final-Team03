@@ -45,7 +45,9 @@ class MatchRecommendationControllerTest {
                         120,
                         2,
                         BigDecimal.valueOf(4.00),
-                        1
+                        1,
+                        true,
+                        null
                 )
         );
 
@@ -65,7 +67,9 @@ class MatchRecommendationControllerTest {
                 .andExpect(jsonPath("$.data[0].title").value("MySQL 튜닝 도와드립니다"))
                 .andExpect(jsonPath("$.data[0].creditPrice").value(120))
                 .andExpect(jsonPath("$.data[0].estimatedHours").value(2))
-                .andExpect(jsonPath("$.data[0].completeCount").value(1));
+                .andExpect(jsonPath("$.data[0].completeCount").value(1))
+                .andExpect(jsonPath("$.data[0].proposalRequestEnabled").value(true))
+                .andExpect(jsonPath("$.data[0].proposalRequestDisabledReason").isEmpty());
 
         verify(matchRecommendationService).getMatchRecommendations(talentId, userId);
     }

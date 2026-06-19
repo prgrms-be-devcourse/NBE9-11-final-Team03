@@ -55,8 +55,7 @@ class MatchRecommendationQueryRepositoryTest {
 
         List<MatchRecommendationRes> result = matchRecommendationQueryRepository.findMatchRecommendations(
                 backend.getId(),
-                requesterId,
-                List.of()
+                requesterId
         );
 
         assertThat(result).extracting(MatchRecommendationRes::talentId)
@@ -64,27 +63,6 @@ class MatchRecommendationQueryRepositoryTest {
 
         assertThat(result).extracting(MatchRecommendationRes::providerId)
                 .containsExactly(3L, 4L);
-    }
-
-    @Test
-    @DisplayName("excludedTalentIds에 포함된 재능은 추천 목록에서 제외한다")
-    void findMatchRecommendations_excludedTalentIds() {
-        Long requesterId = 2L;
-
-        Category backend = saveCategory("백엔드", 1);
-
-        saveTalent(requesterId, backend, "요청자 본인 재능", 0, 0, BigDecimal.ZERO);
-        Talent excludedTalent = saveTalent(3L, backend, "이미 제안한 재능", 10, 3, BigDecimal.valueOf(4.50));
-        Talent recommendedTalent = saveTalent(4L, backend, "추천 가능한 재능", 5, 1, BigDecimal.valueOf(4.00));
-
-        List<MatchRecommendationRes> result = matchRecommendationQueryRepository.findMatchRecommendations(
-                backend.getId(),
-                requesterId,
-                List.of(excludedTalent.getId())
-        );
-
-        assertThat(result).extracting(MatchRecommendationRes::talentId)
-                .containsExactly(recommendedTalent.getId());
     }
 
     @Test
@@ -102,8 +80,7 @@ class MatchRecommendationQueryRepositoryTest {
 
         List<MatchRecommendationRes> result = matchRecommendationQueryRepository.findMatchRecommendations(
                 backend.getId(),
-                requesterId,
-                List.of()
+                requesterId
         );
 
         assertThat(result).extracting(MatchRecommendationRes::talentId)
