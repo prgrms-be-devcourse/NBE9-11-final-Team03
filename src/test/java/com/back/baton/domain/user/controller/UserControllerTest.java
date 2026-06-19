@@ -5,7 +5,7 @@ import com.back.baton.domain.user.dto.request.UserSignupReq;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.User;
-import com.back.baton.domain.user.service.JwtTokenProvider;
+import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.domain.user.service.UserService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.SuccessCode;

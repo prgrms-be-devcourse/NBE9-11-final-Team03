@@ -10,6 +10,7 @@ import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

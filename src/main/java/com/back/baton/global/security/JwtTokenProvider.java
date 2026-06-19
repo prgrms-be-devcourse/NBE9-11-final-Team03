@@ -1,4 +1,4 @@
-package com.back.baton.domain.user.service;
+package com.back.baton.global.security;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;

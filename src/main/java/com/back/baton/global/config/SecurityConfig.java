@@ -1,6 +1,6 @@
 package com.back.baton.global.config;
 
-import com.back.baton.domain.user.service.JwtTokenProvider;
+import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.global.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

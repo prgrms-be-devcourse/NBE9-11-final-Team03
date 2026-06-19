@@ -1,7 +1,7 @@
 package com.back.baton.global.filter;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.back.baton.domain.user.service.JwtTokenProvider;
+import com.back.baton.global.security.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
