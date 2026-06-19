@@ -2,13 +2,22 @@ package com.back.baton.domain.credit.service;
 
 import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
 import com.back.baton.domain.credit.entity.CreditAccount;
+import com.back.baton.domain.credit.entity.CreditTransaction;
+import com.back.baton.domain.credit.entity.CreditTransactionType;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
+import com.back.baton.domain.credit.repository.CreditTransactionRepository;
+import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.CreditErrorCode;
+import com.back.baton.global.response.code.UserErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.dao.DataIntegrityViolationException;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -16,12 +25,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreditService {
 
     private final CreditAccountRepository creditAccountRepository;
+    private final CreditTransactionRepository creditTransactionRepository;
+    private final UserRepository userRepository;
 
     @Value("${credit.initial-amount}")
     private int initialCreditAmount;
 
     // 크레딧 잔액 조회
     public CreditBalanceRes getBalance(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
+        }
+
         CreditAccount creditAccount = creditAccountRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
@@ -34,13 +49,16 @@ public class CreditService {
         if (creditAccountRepository.findByUserId(userId).isPresent()) {
             throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_ALREADY_EXISTS);
         }
-        CreditAccount account = CreditAccount.create(userId, initialCreditAmount);
-        creditAccountRepository.save(account);
+        creditAccountRepository.save(CreditAccount.create(userId, initialCreditAmount));
+        creditTransactionRepository.save(CreditTransaction.create(
+                userId, null, CreditTransactionType.WELCOME, initialCreditAmount, initialCreditAmount,
+                UUID.randomUUID().toString(), CreditTransactionType.WELCOME.getDefaultReason()
+        ));
     }
 
     // 크레딧 적립
     @Transactional
-    public void earnCredit(Long userId, int amount) {
+    public void earnCredit(Long userId, int amount, CreditTransactionType type) {
         if (amount <= 0) {
             throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
         }
@@ -49,20 +67,50 @@ public class CreditService {
         if (updatedRows == 0) {
             throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
         }
+
+        int balanceAfter = creditAccountRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
+                .getBalance();
+
+        creditTransactionRepository.save(CreditTransaction.create(
+                userId, null, type, amount, balanceAfter, UUID.randomUUID().toString(), type.getDefaultReason()
+        ));
     }
 
     // 크레딧 잠금 - 매칭 제안 수락 시 구매자 크레딧을 거래 완료까지 동결 (거래 취소 시 환불 가능)
     @Transactional
-    public void holdForEscrow(Long userId, int amount) {
+    public void holdForEscrow(Long userId, int amount, Long relatedTradeId, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
+        }
+
         if (amount <= 0) {
             throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
+        }
+
+        // 멱등성 체크
+        if (creditTransactionRepository.existsByIdempotencyKey(idempotencyKey)) {
+            return;
         }
 
         int updatedRows = creditAccountRepository.holdForEscrow(userId, amount);
         if (updatedRows == 0) {
             creditAccountRepository.findByUserId(userId)
-                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND)); // 계좌가 존재하지 않는 경우
-            throw new CustomException(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE); // 계좌는 존재하지만 잔액이 부족한 경우
+                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+            throw new CustomException(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE);
+        }
+
+        int balanceAfter = creditAccountRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
+                .getBalance();
+
+        try {
+            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
+                    userId, relatedTradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter,
+                    idempotencyKey, CreditTransactionType.ESCROW_HOLD.getDefaultReason()
+            ));
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_HOLD_REQUEST); // idempotencyKey unique 제약 위반 예외 처리
         }
     }
 
@@ -76,8 +124,17 @@ public class CreditService {
         int updatedRows = creditAccountRepository.deductBalance(userId, amount);
         if (updatedRows == 0) {
             creditAccountRepository.findByUserId(userId)
-                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND)); // 계좌가 존재하지 않는 경우
-            throw new CustomException(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE); // 계좌는 존재하지만 잔액이 부족한 경우
+                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+            throw new CustomException(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE);
         }
+
+        int balanceAfter = creditAccountRepository.findByUserId(userId)
+                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
+                .getBalance();
+
+        creditTransactionRepository.save(CreditTransaction.create(
+                userId, null, CreditTransactionType.PURCHASE_DEBIT, -amount, balanceAfter,
+                UUID.randomUUID().toString(), CreditTransactionType.PURCHASE_DEBIT.getDefaultReason()
+        ));
     }
 }
