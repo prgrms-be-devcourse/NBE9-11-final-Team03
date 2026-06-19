@@ -58,8 +58,8 @@ public class TradeService {
         escrow.refund();
 
         creditService.refundFromEscrow(
-                trade.getBuyerId(),
-                trade.getCreditPrice(),
+                escrow.getPayerId(),
+                escrow.getAmount(),
                 tradeId,
                 "TRADE-CANCEL-" + tradeId
         );

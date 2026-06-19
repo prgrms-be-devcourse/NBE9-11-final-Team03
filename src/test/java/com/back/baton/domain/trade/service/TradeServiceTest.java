@@ -173,7 +173,7 @@ class TradeServiceTest {
 
         assertThat(result.tradeStatus()).isEqualTo(TradeStatus.CANCELLED);
         assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.REFUNDED);
-        verify(creditService).refundFromEscrow(buyerId, 5000, 1L, "TRADE-CANCEL-1");
+        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L, "TRADE-CANCEL-1");
     }
 
     @Test
