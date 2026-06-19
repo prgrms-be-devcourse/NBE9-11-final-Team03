@@ -3,13 +3,12 @@ package com.back.baton.domain.talent.service;
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
+import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
-import com.back.baton.domain.talent.dto.response.TalentCreateRes;
-import com.back.baton.domain.talent.dto.response.TalentListRes;
-import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
+import com.back.baton.domain.talent.dto.response.*;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.user.entity.User;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -104,6 +103,45 @@ public class TalentService {
 
         List<TalentListRes> rows = talentRepository.findTalentList(cursor, pageSize);
 
+        // size+1개 받았으면 다음 페이지 존재
+        boolean hasNext = rows.size() > pageSize;
+
+        // 실제 반환은 size개까지만 (마지막 +1개는 잘라냄)
+        List<TalentListRes> content = hasNext ? List.copyOf(rows.subList(0, pageSize)) : rows;
+
+        // 다음 커서 = 이번 페이지 마지막 항목의 id (마지막 페이지면 null)
+        Long nextCursor = hasNext ? content.get(content.size() - 1).talentId() : null;
+
+        return CursorPageRes.of(content, hasNext, nextCursor);
+    }
+
+    // 재능 상세 조회 + 조회수 증가
+    @Transactional
+    public TalentDetailRes getTalentDetail(Long talentId) {
+        List<Object[]> rows = talentRepository.findDetailById(talentId);
+        if (rows.isEmpty()) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND); // 없음/삭제
+        }
+
+        Object[] row = rows.get(0);
+        Talent talent = (Talent) row[0];
+        User author = (User) row[1];
+
+        TalentDetailRes response = TalentDetailRes.from(talent, author);
+        talentRepository.increaseViewCount(talentId);
+        return response;
+    }
+
+    // 검색,필터
+    public CursorPageRes<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size) {
+        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize);
+        return convertToCursorPage(rows, pageSize);
+    }
+
+    // 커서 페이징 후처리 공통화
+    // TODO(BATON-78): getTalentList도 헬퍼를 사용하도록 리팩토링
+    private CursorPageRes<TalentListRes> convertToCursorPage(List<TalentListRes> rows, int pageSize) {
         // size+1개 받았으면 다음 페이지 존재
         boolean hasNext = rows.size() > pageSize;
 

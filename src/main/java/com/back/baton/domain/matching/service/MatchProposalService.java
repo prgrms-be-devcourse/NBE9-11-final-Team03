@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -131,11 +132,14 @@ public class MatchProposalService {
 
     private void validateDuplicatedProposal(Long requesterId, MatchProposalCreateReq req) {
         boolean exists = matchProposalRepository
-                .existsByRequesterIdAndRequesterTalentIdAndProviderTalentIdAndStatus(
+                .existsActiveProposal(
                         requesterId,
                         req.requesterTalentId(),
                         req.providerTalentId(),
-                        MatchProposalStatus.REQUESTED
+                        List.of(
+                                MatchProposalStatus.REQUESTED,
+                                MatchProposalStatus.ACCEPTED
+                        )
                 );
 
         if (exists) {

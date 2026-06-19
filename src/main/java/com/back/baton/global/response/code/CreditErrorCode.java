@@ -6,7 +6,9 @@ public enum CreditErrorCode implements ErrorCode {
     CREDIT_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "CREDIT-404-001", "크레딧 계좌를 찾을 수 없습니다."),
     CREDIT_ACCOUNT_ALREADY_EXISTS(HttpStatus.CONFLICT, "CREDIT-409-001", "이미 크레딧 계좌가 존재합니다."),
     INVALID_CREDIT_AMOUNT(HttpStatus.BAD_REQUEST, "CREDIT-400-001", "크레딧 금액은 0보다 커야 합니다."),
-    INSUFFICIENT_CREDIT_BALANCE(HttpStatus.BAD_REQUEST, "CREDIT-400-002", "크레딧 잔액이 부족합니다.");
+    INSUFFICIENT_CREDIT_BALANCE(HttpStatus.BAD_REQUEST, "CREDIT-400-002", "크레딧 잔액이 부족합니다."),
+    DUPLICATE_ESCROW_HOLD_REQUEST(HttpStatus.CONFLICT, "CREDIT-409-002", "이미 처리 중인 에스크로 예치 요청입니다."),
+    INVALID_IDEMPOTENCY_KEY(HttpStatus.BAD_REQUEST, "CREDIT-400-003", "멱등성 키는 비어있을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
