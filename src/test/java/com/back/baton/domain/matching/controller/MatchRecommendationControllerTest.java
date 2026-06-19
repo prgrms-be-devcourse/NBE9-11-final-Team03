@@ -1,5 +1,6 @@
 package com.back.baton.domain.matching.controller;
 
+import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.service.MatchRecommendationService;
 import org.junit.jupiter.api.DisplayName;
@@ -12,9 +13,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,8 +51,8 @@ class MatchRecommendationControllerTest {
                 )
         );
 
-        when(matchRecommendationService.getMatchRecommendations(eq(talentId), eq(userId)))
-                .thenReturn(res);
+        given(matchRecommendationService.getMatchRecommendations(talentId, userId))
+                .willReturn(res);
 
         mockMvc.perform(get("/api/v1/match-recommendations")
                         .param("talentId", String.valueOf(talentId))
@@ -71,6 +71,68 @@ class MatchRecommendationControllerTest {
                 .andExpect(jsonPath("$.data[0].proposalRequestEnabled").value(true))
                 .andExpect(jsonPath("$.data[0].proposalRequestDisabledReason").isEmpty());
 
-        verify(matchRecommendationService).getMatchRecommendations(talentId, userId);
+        then(matchRecommendationService).should()
+                .getMatchRecommendations(talentId, userId);
+    }
+
+    @Test
+    @DisplayName("매칭 추천 상대 상세 조회 API - 성공")
+    void getMatchRecommendationDetail_success() throws Exception {
+        Long requesterTalentId = 1L;
+        Long providerTalentId = 2L;
+        Long userId = 1L;
+
+        MatchRecommendationDetailRes response = new MatchRecommendationDetailRes(
+                providerTalentId,
+                3L,
+                1L,
+                "디자인",
+                "Figma 와이어프레임 제작",
+                "초기 서비스 아이디어를 Figma 저충실도 와이어프레임으로 만듭니다.",
+                100,
+                4,
+                BigDecimal.valueOf(4.6),
+                8,
+                12,
+                "이미자",
+                "Figma 기반 와이어프레임과 포트폴리오 UI를 주로 작업합니다.",
+                "https://example.com/profile.png",
+                BigDecimal.valueOf(85),
+                true,
+                null
+        );
+
+        given(matchRecommendationService.getMatchRecommendationDetail(
+                requesterTalentId,
+                providerTalentId,
+                userId
+        )).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/match-recommendations/{providerTalentId}", providerTalentId)
+                        .param("requesterTalentId", String.valueOf(requesterTalentId))
+                        .param("userId", String.valueOf(userId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-7"))
+                .andExpect(jsonPath("$.message").value("매칭 추천 상대 정보 조회에 성공했습니다."))
+                .andExpect(jsonPath("$.data.talentId").value(providerTalentId))
+                .andExpect(jsonPath("$.data.providerId").value(3L))
+                .andExpect(jsonPath("$.data.categoryId").value(1L))
+                .andExpect(jsonPath("$.data.categoryName").value("디자인"))
+                .andExpect(jsonPath("$.data.title").value("Figma 와이어프레임 제작"))
+                .andExpect(jsonPath("$.data.content").value("초기 서비스 아이디어를 Figma 저충실도 와이어프레임으로 만듭니다."))
+                .andExpect(jsonPath("$.data.creditPrice").value(100))
+                .andExpect(jsonPath("$.data.estimatedHours").value(4))
+                .andExpect(jsonPath("$.data.avgRating").value(4.6))
+                .andExpect(jsonPath("$.data.completeCount").value(8))
+                .andExpect(jsonPath("$.data.viewCount").value(12))
+                .andExpect(jsonPath("$.data.nickname").value("이미자"))
+                .andExpect(jsonPath("$.data.introduction").value("Figma 기반 와이어프레임과 포트폴리오 UI를 주로 작업합니다."))
+                .andExpect(jsonPath("$.data.profileImageUrl").value("https://example.com/profile.png"))
+                .andExpect(jsonPath("$.data.trustScore").value(85))
+                .andExpect(jsonPath("$.data.proposalRequestEnabled").value(true))
+                .andExpect(jsonPath("$.data.proposalRequestDisabledReason").isEmpty());
+
+        then(matchRecommendationService).should()
+                .getMatchRecommendationDetail(requesterTalentId, providerTalentId, userId);
     }
 }

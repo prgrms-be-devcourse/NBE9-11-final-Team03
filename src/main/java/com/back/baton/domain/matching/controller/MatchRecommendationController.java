@@ -1,5 +1,6 @@
 package com.back.baton.domain.matching.controller;
 
+import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.service.MatchRecommendationService;
 import com.back.baton.global.response.ApiResponse;
@@ -8,6 +9,7 @@ import com.back.baton.global.response.code.SuccessCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,5 +31,21 @@ public class MatchRecommendationController {
         List<MatchRecommendationRes> response = matchRecommendationService.getMatchRecommendations(talentId, userId);
 
         return ApiResponses.success(SuccessCode.MATCH_RECOMMENDATIONS_FOUND, response);
+    }
+
+    @GetMapping("/{providerTalentId}")
+    public ResponseEntity<ApiResponse<MatchRecommendationDetailRes>> getMatchRecommendationDetail(
+            @PathVariable Long providerTalentId,
+            @RequestParam Long requesterTalentId,
+            @RequestParam Long userId // TODO: 인증 연동 후 로그인 사용자 ID로 대체
+    ) {
+        MatchRecommendationDetailRes response =
+                matchRecommendationService.getMatchRecommendationDetail(
+                        requesterTalentId,
+                        providerTalentId,
+                        userId
+                );
+
+        return ApiResponses.success(SuccessCode.MATCH_RECOMMENDATION_DETAIL_FOUND, response);
     }
 }
