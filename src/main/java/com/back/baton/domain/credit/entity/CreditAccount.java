@@ -18,7 +18,7 @@ public class CreditAccount extends BaseTimeEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private Long userId; // TODO: Users 연관관계 설정
+    private Long userId;
 
     @Column(nullable = false)
     private int balance;
