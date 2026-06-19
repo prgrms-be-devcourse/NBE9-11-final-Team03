@@ -13,6 +13,8 @@ public enum SuccessCode {
     MATCH_PROPOSAL_ACCEPTED(HttpStatus.OK, "200-4", "매칭 제안이 수락되었습니다."),
     MATCH_PROPOSAL_REJECTED(HttpStatus.OK, "200-5", "매칭 제안이 거절되었습니다."),
 
+    TRADE_OK(HttpStatus.OK, "200-6", "거래 조회에 성공했습니다."),
+
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-2", "토큰 재발행에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다.");
