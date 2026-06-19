@@ -132,14 +132,23 @@ public class TalentService {
         return response;
     }
 
-    // 검색,필터 (페이징 후처리는 getTalentList와 동일 )
+    // 검색,필터
     public CursorPageRes<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-
         List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize);
+        return convertToCursorPage(rows, pageSize);
+    }
 
+    // 커서 페이징 후처리 공통화
+    // TODO(BATON-78): getTalentList도 헬퍼를 사용하도록 리팩토링
+    private CursorPageRes<TalentListRes> convertToCursorPage(List<TalentListRes> rows, int pageSize) {
+        // size+1개 받았으면 다음 페이지 존재
         boolean hasNext = rows.size() > pageSize;
+
+        // 실제 반환은 size개까지만 (마지막 +1개는 잘라냄)
         List<TalentListRes> content = hasNext ? List.copyOf(rows.subList(0, pageSize)) : rows;
+
+        // 다음 커서 = 이번 페이지 마지막 항목의 id (마지막 페이지면 null)
         Long nextCursor = hasNext ? content.get(content.size() - 1).talentId() : null;
 
         return CursorPageRes.of(content, hasNext, nextCursor);

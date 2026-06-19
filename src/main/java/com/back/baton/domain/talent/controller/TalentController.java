@@ -64,7 +64,7 @@ public class TalentController {
     // 재능 검색 및 필터링
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<CursorPageRes<TalentListRes>>> searchTalents(
-            @ModelAttribute TalentSearchReq req,
+            @Valid @ModelAttribute TalentSearchReq req,
             @RequestParam(required = false) Long cursor,
             @RequestParam(defaultValue = "20") int size) {
 
