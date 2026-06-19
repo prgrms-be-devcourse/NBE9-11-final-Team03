@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,5 +30,15 @@ public class TradeController {
     ) {
         TradeRes response = tradeService.getTrade(tradeId, userId);
         return ApiResponses.success(SuccessCode.TRADE_OK, response);
+    }
+
+    @PatchMapping("/{tradeId}/cancel")
+    @Operation(summary = "거래 취소", description = "진행 중인 거래를 취소합니다.")
+    public ResponseEntity<ApiResponse<TradeRes>> cancelTrade(
+            @PathVariable Long tradeId,
+            @RequestParam Long userId // TODO: JWT에서 userId 추출
+    ) {
+        TradeRes response = tradeService.cancelTrade(tradeId, userId);
+        return ApiResponses.success(SuccessCode.TRADE_CANCELLED, response);
     }
 }

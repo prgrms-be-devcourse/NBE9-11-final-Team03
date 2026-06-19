@@ -1,5 +1,6 @@
 package com.back.baton.domain.trade.service;
 
+import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.response.TradeRes;
@@ -22,6 +23,7 @@ public class TradeService {
 
     private final TradeRepository tradeRepository;
     private final EscrowRepository escrowRepository;
+    private final CreditService creditService;
 
     @Transactional
     public Trade create(Long matchId, Long talentId, Long buyerId, Long sellerId, Integer creditPrice, TradeType tradeType) {
@@ -41,9 +43,43 @@ public class TradeService {
         return TradeRes.of(trade, escrow);
     }
 
+    @Transactional
+    public TradeRes cancelTrade(Long tradeId, Long userId) {
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+
+        validateTradeParticipant(trade, userId);
+        validateCancellable(trade);
+
+        Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+        trade.cancel();
+        escrow.refund();
+
+        creditService.refundFromEscrow(
+                escrow.getPayerId(),
+                escrow.getAmount(),
+                tradeId,
+                "TRADE-CANCEL-" + tradeId
+        );
+
+        return TradeRes.of(trade, escrow);
+    }
+
     private void validateTradeParticipant(Trade trade, Long userId) {
         if (!Objects.equals(trade.getBuyerId(), userId) && !Objects.equals(trade.getSellerId(), userId)) {
             throw new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED);
+        }
+    }
+
+    private void validateCancellable(Trade trade) {
+        switch (trade.getStatus()) {
+            case UNDER_REVIEW -> throw new CustomException(TradeErrorCode.TRADE_UNDER_REVIEW);
+            case COMPLETED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_COMPLETED);
+            case CANCELLED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_CANCELLED);
+            case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_IN_DISPUTE);
+            default -> {} // IN_PROGRESS 만 취소 가능
         }
     }
 }

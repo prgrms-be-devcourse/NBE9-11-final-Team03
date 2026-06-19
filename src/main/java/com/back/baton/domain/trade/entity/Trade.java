@@ -50,4 +50,8 @@ public class Trade extends BaseTimeEntity {
         trade.tradeType = tradeType;
         return trade;
     }
+
+    public void cancel() {
+        this.status = TradeStatus.CANCELLED;
+    }
 }
