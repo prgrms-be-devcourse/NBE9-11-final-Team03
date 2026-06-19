@@ -6,6 +6,7 @@ import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ class TalentControllerDetailTest {
 
     @Autowired MockMvc mockMvc;
     @MockitoBean TalentService talentService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("상세 조회 성공 - 200과 data.author.* 포함")

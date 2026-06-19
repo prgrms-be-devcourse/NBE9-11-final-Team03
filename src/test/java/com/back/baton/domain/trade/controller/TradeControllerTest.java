@@ -8,6 +8,7 @@ import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.exception.GlobalExceptionHandler;
 import com.back.baton.global.response.code.TradeErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,9 @@ class TradeControllerTest {
 
     @MockitoBean
     private TradeService tradeService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("거래 상태 조회 API - 성공")

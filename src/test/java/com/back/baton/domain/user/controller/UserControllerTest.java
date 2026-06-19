@@ -10,6 +10,7 @@ import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.SuccessCode;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import jakarta.servlet.http.Cookie;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.DisplayName;
@@ -42,6 +43,9 @@ class UserControllerTest{
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("회원가입 성공 - 유효한 DTO 요청 시 201 CREATED를 반환한다")

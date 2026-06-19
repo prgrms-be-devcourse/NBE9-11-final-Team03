@@ -3,6 +3,7 @@ package com.back.baton.domain.talent.controller;
 import com.back.baton.domain.talent.dto.response.CursorPageRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.service.TalentService;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ class TalentControllerListTest {
 
     @Autowired MockMvc mockMvc;
     @MockitoBean TalentService talentService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("목록 조회 성공 - 200과 커서 페이지 응답을 반환한다")

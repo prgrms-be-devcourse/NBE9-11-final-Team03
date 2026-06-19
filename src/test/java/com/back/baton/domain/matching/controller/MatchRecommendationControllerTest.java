@@ -2,6 +2,7 @@ package com.back.baton.domain.matching.controller;
 
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.service.MatchRecommendationService;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ class MatchRecommendationControllerTest {
 
     @MockitoBean
     private MatchRecommendationService matchRecommendationService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("매칭 추천 상대 조회 API - 성공")

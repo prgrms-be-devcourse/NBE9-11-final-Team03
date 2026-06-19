@@ -1,5 +1,8 @@
 package com.back.baton.global.config;
 
+import com.back.baton.global.security.JwtTokenProvider;
+import com.back.baton.global.filter.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -7,22 +10,30 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
+    private final JwtTokenProvider jwtTokenProvider;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        //TODO: auth 개발 완료 후 접근 권한 수정
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/**").permitAll() // auth 기능 완료 전까지 임시 조치
-                );
+                    .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/reissue").permitAll()
+//                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                    .anyRequest().permitAll()
+                )
+                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
+        ;
 
         return http.build();
     }

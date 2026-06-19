@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.CreditErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ class CreditControllerTest {
 
     @MockitoBean
     private CreditService creditService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("크레딧 계좌가 존재하면 200과 잔액 정보를 반환한다")
