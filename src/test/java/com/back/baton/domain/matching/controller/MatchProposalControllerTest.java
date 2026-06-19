@@ -4,6 +4,7 @@ import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.service.MatchProposalService;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,9 @@ class MatchProposalControllerTest {
 
     @MockitoBean
     private MatchProposalService matchProposalService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("매칭 제안 생성 API - 성공")

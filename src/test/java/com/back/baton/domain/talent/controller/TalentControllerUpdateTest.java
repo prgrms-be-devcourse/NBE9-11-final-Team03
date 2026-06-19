@@ -5,6 +5,7 @@ import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +28,8 @@ class TalentControllerUpdateTest {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper om;
     @MockitoBean TalentService talentService;
-
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
     @Test
     @DisplayName("정상 수정이면 200과 변경된 데이터를 반환한다")
     void update_success() throws Exception {

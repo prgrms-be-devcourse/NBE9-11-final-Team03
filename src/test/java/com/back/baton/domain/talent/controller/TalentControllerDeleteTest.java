@@ -3,6 +3,7 @@ package com.back.baton.domain.talent.controller;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,9 @@ class TalentControllerDeleteTest {
 
     @Autowired MockMvc mockMvc;
     @MockitoBean TalentService talentService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("정상 삭제면 200과 성공 코드 반환한다")

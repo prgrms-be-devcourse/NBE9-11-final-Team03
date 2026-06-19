@@ -3,6 +3,7 @@ package com.back.baton.domain.talent.controller;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.response.TalentCreateRes;
 import com.back.baton.domain.talent.service.TalentService;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ class TalentControllerTest {
     @Autowired
     private ObjectMapper om;
     @MockitoBean TalentService talentService;
+
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Test
     @DisplayName("정상 요청이면 201과 함께 Location, 응답 본문을 반환한다")
