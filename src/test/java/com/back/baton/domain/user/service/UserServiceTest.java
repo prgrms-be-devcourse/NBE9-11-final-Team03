@@ -1,13 +1,21 @@
 package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.user.dto.response.UserSignupRes;
+import com.back.baton.domain.user.dto.response.UserTokenDto;
+import com.back.baton.domain.user.entity.RefreshToken;
 import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.entity.UserStatus;
+import com.back.baton.domain.user.repository.RefreshTokenRepository;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -15,13 +23,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
@@ -37,6 +48,22 @@ public class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+    private User validUser;
+    @BeforeEach
+    void setUp() {
+        validUser = User.builder()
+                .email("test@example.com")
+                .password("encodedPassword")
+                .nickname("nickname")
+                .introduction("introduction")
+                .build();
+
+    }
     @Test
     @DisplayName("회원가입 성공 - 비밀번호 검증을 통과하고 암호화되어 정상 저장된다")
     void create_1() {
@@ -89,10 +116,228 @@ public class UserServiceTest {
         assertThatThrownBy(() -> userService.signup(email, password, nickname, introduction, profileImgUrl))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode") // 에러코드 필드 검증 (본인 CustomException 구조에 맞게 변경 가능)
-                .isEqualTo(UserErrorCode.INVALID_PASSWORD);
+                .isEqualTo(UserErrorCode.INVALID_PASSWORD_FORMAT);
 
         // 패스워드가 틀렸으므로 암호화 및 저장 로직은 절대 실행되면 안 됨
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
+    }
+    @Test
+    @DisplayName("로그인 성공 - 기존 RefreshToken이 없는 경우 새로운 토큰을 생성(save)한다")
+    void login_success_1() {
+        // given
+        String email = "test@example.com";
+        String password = "rawPassword "; // 공백 포함
+
+        given(userRepository.findByEmail(email)).willReturn(Optional.of(validUser));
+        given(passwordEncoder.matches("rawPassword", validUser.getPassword())).willReturn(true); // strip 처리 검증
+
+        // 발급 시간 매칭을 위해 any(Date.class) 사용
+        given(jwtTokenProvider.createAccessToken(eq(validUser.getId()), eq("USER"), any(Date.class))).willReturn("access_token_value");
+        given(jwtTokenProvider.createRefreshToken(eq(validUser.getId()), any(Date.class))).willReturn("refresh_token_value");
+
+        // 기존 토큰이 비어있는 상태 시뮬레이션 (Optional.empty)
+        given(refreshTokenRepository.findByUserId(validUser.getId())).willReturn(Optional.empty());
+
+        // when
+        UserTokenDto result = userService.login(email, password);
+
+        // then
+        assertNotNull(result);
+        assertEquals("access_token_value", result.accessToken());
+        assertEquals("refresh_token_value", result.refreshToken());
+
+        // 새로운 RefreshToken 객체가 save() 되었는지 검증
+        verify(refreshTokenRepository, times(1)).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("로그인 성공 - 기존 RefreshToken이 이미 존재하는 경우 값을 갱신(update)한다")
+    void login_Success_2() {
+        // given
+        String email = "test@example.com";
+        String password = "rawPassword";
+
+        RefreshToken existingToken = spy(new RefreshToken(1L, "old_token", LocalDateTime.now()));
+
+        given(userRepository.findByEmail(email)).willReturn(Optional.of(validUser));
+        given(passwordEncoder.matches(password, validUser.getPassword())).willReturn(true);
+        given(jwtTokenProvider.createAccessToken(eq(validUser.getId()), eq("USER"), any(Date.class))).willReturn("new_access_token");
+        given(jwtTokenProvider.createRefreshToken(eq(validUser.getId()), any(Date.class))).willReturn("new_refresh_token");
+
+        // 기존 토큰이 이미 디비에 존재하는 상태 시뮬레이션
+        given(refreshTokenRepository.findByUserId(validUser.getId())).willReturn(Optional.of(existingToken));
+
+        // when
+        UserTokenDto result = userService.login(email, password);
+
+        // then
+        assertNotNull(result);
+        assertEquals("new_access_token", result.accessToken());
+        assertEquals("new_refresh_token", result.refreshToken());
+
+        // updateToken() 메서드가 정상 호출되어 내부 값이 바뀌었는지 검증
+        verify(existingToken, times(1)).update(eq("new_refresh_token"), any(LocalDateTime.class));
+        // 새 토큰이 아니므로 대전제에 따라 save()는 호출되지 않아야 함
+        verify(refreshTokenRepository, never()).save(any(RefreshToken.class));
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - 유저 상태가 휴면(SUSPENDED)인 경우 예외가 발생한다")
+    void login_Fail_1() {
+        // given
+        validUser.setStatus(UserStatus.SUSPENDED);
+        given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(validUser));
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            userService.login("test@example.com", "rawPassword");
+        });
+        assertEquals(UserErrorCode.SUSPENDED_STATUS, exception.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("로그인 실패 - 비밀번호가 일치하지 않는 경우 INVALID_PASSWORD 예외가 발생한다")
+    void login_Fail_2() {
+        // given
+        given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(validUser));
+        given(passwordEncoder.matches(anyString(), eq(validUser.getPassword()))).willReturn(false);
+
+        // when & then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            userService.login("test@example.com", "wrongPassword");
+        });
+        assertEquals(UserErrorCode.INVALID_PASSWORD, exception.getErrorCode());
+    }
+    @Test
+    @DisplayName("토큰 재발급 성공: 요청 토큰이 DB의 최신 토큰과 일치하면 새 토큰 세트를 반환하고 DB를 갱신한다")
+    void reissue_Success() {
+        // given
+        String savedToken = "valid-refresh-token";
+        Long userId = validUser.getId();
+        RefreshToken mockRefreshToken = spy(new RefreshToken(userId, savedToken, LocalDateTime.now().plusDays(14)));
+        String newAccessToken = "new-access-token";
+        String newRefreshToken = "new-refresh-token";
+        given(jwtTokenProvider.getUserIdFromToken(savedToken)).willReturn(userId);
+        given(userRepository.findById(userId)).willReturn(Optional.of(validUser)); // @BeforeEach의 mockUser 사용
+        given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(mockRefreshToken));
+
+        given(jwtTokenProvider.createAccessToken(eq(userId), eq("USER"), any(Date.class))).willReturn(newAccessToken);
+        given(jwtTokenProvider.createRefreshToken(eq(userId), any(Date.class))).willReturn(newRefreshToken);
+
+        // when
+        UserTokenDto result = userService.reissue(savedToken);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.accessToken()).isEqualTo(newAccessToken);
+        assertThat(result.refreshToken()).isEqualTo(newRefreshToken);
+
+        verify(mockRefreshToken).update(eq(newRefreshToken), any(LocalDateTime.class));
+        verify(refreshTokenRepository, never()).delete(any(RefreshToken.class));
+    }
+
+    // --- [ 실패 케이스 ] ---
+
+    @Test
+    @DisplayName("토큰 재발급 실패: 파라미터가 Null인 경우 TOKEN_NOT_FOUND 예외가 발생한다")
+    void reissue_Fail_WhenTokenIsNull() {
+        // given
+        String nullToken = null;
+
+        // when & then
+        assertThatThrownBy(() -> userService.reissue(nullToken))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", TokenErrorCode.TOKEN_NOT_FOUND);
+
+        verifyNoInteractions(jwtTokenProvider);
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패: 유저가 DB에 존재하지 않는 경우 USER_NOT_FOUND 예외가 발생한다")
+    void reissue_Fail_WhenUserNotFound() {
+        // given
+        String savedToken = "valid-refresh-token";
+        Long userId = validUser.getId();
+        given(jwtTokenProvider.getUserIdFromToken(savedToken)).willReturn(userId);
+        given(userRepository.findById(userId)).willReturn(Optional.empty()); // 유저가 없는 상황 Mocking
+
+        // when & then
+        assertThatThrownBy(() -> userService.reissue(savedToken))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.USER_NOT_FOUND);
+
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class, names = {"SUSPENDED", "DORMANT", "WITHDRAWN"})
+    @DisplayName("토큰 재발급 실패: 유저가 활성화(ACTIVE) 상태가 아니면 상태에 맞는 예외가 발생한다")
+    void reissue_Fail_WhenUserStatusIsNotActive(UserStatus status) {
+        // given
+        // 테스트 메서드 안에서 @BeforeEach로 생성된 mockUser의 상태를 파라미터 값으로 변경합니다.
+        String savedToken = "valid-refresh-token";
+        Long userId = validUser.getId();
+        validUser.setStatus(status);
+
+        given(jwtTokenProvider.getUserIdFromToken(savedToken)).willReturn(userId);
+        given(userRepository.findById(userId)).willReturn(Optional.of(validUser));
+
+        UserErrorCode expectedErrorCode = switch (status) {
+            case SUSPENDED -> UserErrorCode.SUSPENDED_STATUS;
+            case DORMANT -> UserErrorCode.DORMANT_STATUS;
+            case WITHDRAWN -> UserErrorCode.WITHDRAWN_STATUS;
+            default -> null;
+        };
+
+        // when & then
+        assertThatThrownBy(() -> userService.reissue(savedToken))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", expectedErrorCode);
+
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    @DisplayName("토큰 재발급 실패: 유저 ID로 저장된 리프레시 토큰 데이터가 없으면 TOKEN_NOT_FOUND 예외가 발생한다")
+    void reissue_Fail_WhenRefreshTokenNotFoundInDb() {
+        // given
+        String savedToken = "valid-refresh-token";
+        Long userId = validUser.getId();
+        given(jwtTokenProvider.getUserIdFromToken(savedToken)).willReturn(userId);
+        given(userRepository.findById(userId)).willReturn(Optional.of(validUser));
+        given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.empty()); // DB에 토큰 없음
+
+        // when & then
+        assertThatThrownBy(() -> userService.reissue(savedToken))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", TokenErrorCode.TOKEN_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("★토큰 탈취(RTR 자폭) 검증: 요청된 토큰이 DB의 최신 토큰 값과 다르면, 해당 토큰을 즉시 삭제하고 REUSED_REFRESH_TOKEN 예외를 던진다")
+    void reissue_Fail_And_KillSwitch_WhenTokenValueMismatched() {
+        // given
+        String stolenToken = "stolen-old-refresh-token"; // 해커가 찌른 옛날 토큰
+        String latestDbToken = "latest-db-refresh-token"; // DB에 덮어써져 있는 최신 토큰
+        Long userId = validUser.getId();
+
+        RefreshToken mockRefreshToken = new RefreshToken(userId, latestDbToken, LocalDateTime.now().plusDays(14));
+
+        // stolenToken으로 찔렀을 때의 연쇄 흐름 Mocking
+        given(jwtTokenProvider.getUserIdFromToken(stolenToken)).willReturn(userId);
+        given(userRepository.findById(userId)).willReturn(Optional.of(validUser));
+        given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(mockRefreshToken));
+
+        // when & then
+        assertThatThrownBy(() -> userService.reissue(stolenToken))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", TokenErrorCode.REUSED_TOKEN);
+
+        // 자폭(Delete) 쿼리가 나갔는지 핵심 검증
+        verify(refreshTokenRepository).delete(mockRefreshToken);
+        verify(jwtTokenProvider, never()).createAccessToken(anyLong(), anyString(), any(Date.class));
     }
 }

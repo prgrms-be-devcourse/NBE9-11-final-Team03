@@ -68,4 +68,8 @@ public class User extends BaseTimeEntity {
     public void upgradeToAdmin() {
         this.role = UserRole.ADMIN;
     }
+
+    public void setStatus(UserStatus status){ // 테스트 위해 임시로 구현
+        this.status = status;
+    }
 }
