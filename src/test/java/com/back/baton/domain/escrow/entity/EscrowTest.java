@@ -1,11 +1,15 @@
 package com.back.baton.domain.escrow.entity;
 
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.EscrowErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class EscrowTest {
 
@@ -58,5 +62,29 @@ class EscrowTest {
         escrow.refund();
 
         assertThat(escrow.getSettledAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("HELD 상태가 아닌 에스크로를 환불하면 INVALID_ESCROW_STATUS 예외가 발생한다")
+    void refund_invalidStatus_refunded() {
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, LocalDateTime.now().plusDays(7));
+        ReflectionTestUtils.setField(escrow, "status", EscrowStatus.REFUNDED);
+
+        assertThatThrownBy(escrow::refund)
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.INVALID_ESCROW_STATUS);
+    }
+
+    @Test
+    @DisplayName("RELEASED 상태의 에스크로를 환불하면 INVALID_ESCROW_STATUS 예외가 발생한다")
+    void refund_invalidStatus_released() {
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, LocalDateTime.now().plusDays(7));
+        ReflectionTestUtils.setField(escrow, "status", EscrowStatus.RELEASED);
+
+        assertThatThrownBy(escrow::refund)
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.INVALID_ESCROW_STATUS);
     }
 }
