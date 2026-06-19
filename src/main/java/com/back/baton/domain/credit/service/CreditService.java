@@ -131,17 +131,23 @@ public class CreditService {
 
         int updatedRows = creditAccountRepository.releaseEscrow(userId, amount);
         if (updatedRows == 0) {
-            throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
+            creditAccountRepository.findByUserId(userId)
+                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+            throw new CustomException(CreditErrorCode.INSUFFICIENT_ESCROW_BALANCE);
         }
 
         int balanceAfter = creditAccountRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId, relatedTradeId, CreditTransactionType.REFUND, amount, balanceAfter,
-                idempotencyKey, CreditTransactionType.REFUND.getDefaultReason()
-        ));
+        try {
+            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
+                    userId, relatedTradeId, CreditTransactionType.REFUND, amount, balanceAfter,
+                    idempotencyKey, CreditTransactionType.REFUND.getDefaultReason()
+            ));
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_REFUND_REQUEST);
+        }
     }
 
     // 크레딧 차감 - 수수료 등 즉시 소멸되는 크레딧에 사용 (환불 불가)

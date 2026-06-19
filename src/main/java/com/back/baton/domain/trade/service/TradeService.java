@@ -45,7 +45,7 @@ public class TradeService {
 
     @Transactional
     public TradeRes cancelTrade(Long tradeId, Long userId) {
-        Trade trade = tradeRepository.findById(tradeId)
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
                 .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
 
         validateTradeParticipant(trade, userId);

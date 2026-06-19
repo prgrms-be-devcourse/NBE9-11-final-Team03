@@ -166,7 +166,7 @@ class TradeServiceTest {
         Trade trade = createTrade(buyerId, 3L);
         Escrow escrow = createEscrow(buyerId, 3L);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
         TradeRes result = tradeService.cancelTrade(1L, buyerId);
@@ -183,7 +183,7 @@ class TradeServiceTest {
         Trade trade = createTrade(2L, sellerId);
         Escrow escrow = createEscrow(2L, sellerId);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
         TradeRes result = tradeService.cancelTrade(1L, sellerId);
@@ -199,7 +199,7 @@ class TradeServiceTest {
         Trade trade = createTrade(buyerId, 3L);
         ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
 
         assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))
                 .isInstanceOf(CustomException.class)
@@ -213,7 +213,7 @@ class TradeServiceTest {
     @Test
     @DisplayName("존재하지 않는 거래를 취소하면 TRADE_NOT_FOUND 예외가 발생한다")
     void cancelTrade_tradeNotFound() {
-        given(tradeRepository.findById(999L)).willReturn(Optional.empty());
+        given(tradeRepository.findByIdWithLock(999L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> tradeService.cancelTrade(999L, 2L))
                 .isInstanceOf(CustomException.class)
@@ -230,7 +230,7 @@ class TradeServiceTest {
         Long outsiderId = 999L;
         Trade trade = createTrade(2L, 3L);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
 
         assertThatThrownBy(() -> tradeService.cancelTrade(1L, outsiderId))
                 .isInstanceOf(CustomException.class)
@@ -248,7 +248,7 @@ class TradeServiceTest {
         Trade trade = createTrade(buyerId, 3L);
         ReflectionTestUtils.setField(trade, "status", TradeStatus.COMPLETED);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
 
         assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))
                 .isInstanceOf(CustomException.class)
@@ -266,7 +266,7 @@ class TradeServiceTest {
         Trade trade = createTrade(buyerId, 3L);
         ReflectionTestUtils.setField(trade, "status", TradeStatus.CANCELLED);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
 
         assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))
                 .isInstanceOf(CustomException.class)
@@ -283,7 +283,7 @@ class TradeServiceTest {
         Trade trade = createTrade(buyerId, 3L);
         ReflectionTestUtils.setField(trade, "status", TradeStatus.DISPUTED);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
 
         assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))
                 .isInstanceOf(CustomException.class)
@@ -300,7 +300,7 @@ class TradeServiceTest {
         Long buyerId = 2L;
         Trade trade = createTrade(buyerId, 3L);
 
-        given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))

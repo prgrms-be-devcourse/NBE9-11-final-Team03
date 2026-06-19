@@ -33,7 +33,7 @@ public class TradeController {
     }
 
     @PatchMapping("/{tradeId}/cancel")
-    @Operation(summary = "거래 취소", description = "진행 중이거나 검토 중인 거래를 취소합니다.")
+    @Operation(summary = "거래 취소", description = "진행 중인 거래를 취소합니다.")
     public ResponseEntity<ApiResponse<TradeRes>> cancelTrade(
             @PathVariable Long tradeId,
             @RequestParam Long userId // TODO: JWT에서 userId 추출
