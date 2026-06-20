@@ -49,14 +49,17 @@ public class TalentAttachmentService {
         validateOwner(talent, authorId);
 
         TalentAttachment attachment = TalentAttachment.create(talent, req.url(), req.description());
-        return AttachmentRes.from(talentAttachmentRepository.save(attachment));
+        TalentAttachment saved = talentAttachmentRepository.save(attachment);
+
+        // 저장 응답도 표시용 URL로 통일 (목록 조회와 동일 의미)
+        return AttachmentRes.of(saved, toDisplayUrl(saved.getUrl()));
     }
 
     // 첨부 목록 조회 (공개 - 소유권 검사 없음)
     public List<AttachmentRes> getAttachments(Long talentId) {
         getActiveTalent(talentId); // 존재/삭제 검증만
         return talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId).stream()
-                .map(AttachmentRes::from)
+                .map(attachment -> AttachmentRes.of(attachment, toDisplayUrl(attachment.getUrl())))
                 .toList();
     }
 
@@ -76,6 +79,15 @@ public class TalentAttachmentService {
 
         // TODO: S3 객체 삭제(deleteObject)는 공통 S3 Service에 메서드 추가 - 지금은 DB 레코드만 제거
         talentAttachmentRepository.delete(attachment);
+    }
+
+    // 저장된 url을 표시용 URL로 변환
+    // http(s)://로 시작하면 외부 링크 -> 그대로 아니면 S3 key  presigned GET 변환
+    private String toDisplayUrl(String url) {
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            return url;
+        }
+        return s3Service.generatePresignedGetUrl(url);
     }
 
     // 공통 검증 (존재 -> 삭제 -> 소유권)

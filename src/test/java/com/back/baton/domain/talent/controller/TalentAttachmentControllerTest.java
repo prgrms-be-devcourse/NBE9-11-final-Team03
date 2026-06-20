@@ -45,7 +45,7 @@ class TalentAttachmentControllerTest {
 
     private static final String BASE = "/api/v1/talents/1/attachments";
 
-    // ===== presigned URL 발급 =====
+    // presigned URL 발급
 
     @Test
     @DisplayName("presigned URL 발급 성공 - 200, uploadUrl/key 반환")
@@ -109,7 +109,7 @@ class TalentAttachmentControllerTest {
                 .andExpect(jsonPath("$.code").value("TALENT-403-002"));
     }
 
-    // ===== 첨부 저장 =====
+    // 첨부 저장
 
     @Test
     @DisplayName("첨부 저장 성공 - 201")
@@ -143,7 +143,7 @@ class TalentAttachmentControllerTest {
                 .andExpect(jsonPath("$.code").value("COMMON-400-002"));
     }
 
-    // ===== 목록 조회 (공개) =====
+    // 목록 조회 (공개)
 
     @Test
     @DisplayName("첨부 목록 조회 성공 - 200, 인증 헤더 불필요")
@@ -171,8 +171,7 @@ class TalentAttachmentControllerTest {
                 .andExpect(jsonPath("$.code").value("TALENT-404-001"));
     }
 
-    // ===== 삭제 =====
-
+    // 삭제
     @Test
     @DisplayName("첨부 삭제 성공 - 200")
     void deleteAttachment_success() throws Exception {

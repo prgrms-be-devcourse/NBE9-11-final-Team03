@@ -40,7 +40,7 @@ class TalentAttachmentServiceTest {
     @Mock TalentRepository talentRepository;
     @Mock S3Service s3Service;
 
-    // ===== Presigned URL 발급 =====
+    // Presigned URL 발급
 
     @Test
     @DisplayName("본인 재능이면 presigned URL과 key를 발급한다")
@@ -95,10 +95,10 @@ class TalentAttachmentServiceTest {
                 TalentErrorCode.TALENT_NOT_FOUND);
     }
 
-    // ===== 첨부 저장 =====
+    // 첨부 저장
 
     @Test
-    @DisplayName("본인 재능이면 첨부를 저장하고 응답을 반환한다")
+    @DisplayName("본인 재능이면 첨부를 저장하고 표시용 presigned URL을 반환한다")
     void saveAttachment_success() {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
@@ -106,15 +106,19 @@ class TalentAttachmentServiceTest {
         given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
         given(talentAttachmentRepository.save(any(TalentAttachment.class)))
                 .willAnswer(inv -> inv.getArgument(0));
+        // 저장된 값이 S3 key이므로 presigned GET 변환이 일어남
+        given(s3Service.generatePresignedGetUrl("talents/1/uuid-photo.png"))
+                .willReturn("https://bucket.s3.../talents/1/uuid-photo.png?signed-get");
 
         var req = new AttachmentSaveReq("talents/1/uuid-photo.png", "샘플 이미지");
 
         AttachmentRes res = talentAttachmentService.saveAttachment(talentId, authorId, req);
 
-        assertThat(res.url()).isEqualTo("talents/1/uuid-photo.png");
+        assertThat(res.url()).isEqualTo("https://bucket.s3.../talents/1/uuid-photo.png?signed-get");
         assertThat(res.description()).isEqualTo("샘플 이미지");
         assertThat(res.talentId()).isEqualTo(talentId);
         then(talentAttachmentRepository).should().save(any(TalentAttachment.class));
+        then(s3Service).should().generatePresignedGetUrl("talents/1/uuid-photo.png");
     }
 
     @Test
@@ -128,10 +132,10 @@ class TalentAttachmentServiceTest {
         then(talentAttachmentRepository).should(never()).save(any());
     }
 
-    // ===== 목록 조회 =====
+    // 목록 조회
 
     @Test
-    @DisplayName("재능의 첨부 목록을 id순으로 반환한다 (공개)")
+    @DisplayName("재능의 첨부 목록을 id순으로 반환하고 key는 presigned GET URL로 변환한다 (공개)")
     void getAttachments_success() {
         Long talentId = 1L;
         Talent talent = talent(7L);
@@ -139,14 +143,17 @@ class TalentAttachmentServiceTest {
         given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
         given(talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId))
                 .willReturn(List.of(
-                        attachment(talent, "url1", "첫번째"),
-                        attachment(talent, "url2", "두번째")
+                        attachment(talent, "talents/1/key1.png", "첫번째"),
+                        attachment(talent, "talents/1/key2.png", "두번째")
                 ));
+        given(s3Service.generatePresignedGetUrl("talents/1/key1.png")).willReturn("https://signed/1");
+        given(s3Service.generatePresignedGetUrl("talents/1/key2.png")).willReturn("https://signed/2");
 
         List<AttachmentRes> res = talentAttachmentService.getAttachments(talentId);
 
         assertThat(res).hasSize(2);
-        assertThat(res).extracting(AttachmentRes::url).containsExactly("url1", "url2");
+        assertThat(res).extracting(AttachmentRes::url)
+                .containsExactly("https://signed/1", "https://signed/2");
     }
 
     @Test
@@ -158,7 +165,7 @@ class TalentAttachmentServiceTest {
                 TalentErrorCode.TALENT_NOT_FOUND);
     }
 
-    // ===== 삭제 =====
+    // 삭제
 
     @Test
     @DisplayName("본인 재능의 첨부를 삭제한다")
@@ -220,7 +227,48 @@ class TalentAttachmentServiceTest {
         then(talentAttachmentRepository).should(never()).delete(any());
     }
 
-    // ===== 헬퍼 =====
+    @Test
+    @DisplayName("저장된 값이 외부 링크(http/https)면 변환 없이 그대로 반환하고 S3를 호출하지 않는다")
+    void getAttachments_externalLink_notConverted() {
+        Long talentId = 1L;
+        Talent talent = talent(7L);
+        ReflectionTestUtils.setField(talent, "id", talentId);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId))
+                .willReturn(List.of(
+                        attachment(talent, "https://github.com/user/repo", "참고 링크")
+                ));
+
+        List<AttachmentRes> res = talentAttachmentService.getAttachments(talentId);
+
+        assertThat(res).extracting(AttachmentRes::url)
+                .containsExactly("https://github.com/user/repo");
+        then(s3Service).should(never()).generatePresignedGetUrl(anyString());
+    }
+
+    @Test
+    @DisplayName("외부 링크와 S3 key가 섞여 있으면 key만 presigned 변환한다")
+    void getAttachments_mixedUrls() {
+        Long talentId = 1L;
+        Talent talent = talent(7L);
+        ReflectionTestUtils.setField(talent, "id", talentId);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId))
+                .willReturn(List.of(
+                        attachment(talent, "talents/1/key.png", "S3 업로드"),
+                        attachment(talent, "https://figma.com/file/abc", "외부 링크")
+                ));
+        given(s3Service.generatePresignedGetUrl("talents/1/key.png")).willReturn("https://signed/key");
+
+        List<AttachmentRes> res = talentAttachmentService.getAttachments(talentId);
+
+        assertThat(res).extracting(AttachmentRes::url)
+                .containsExactly("https://signed/key", "https://figma.com/file/abc");
+        then(s3Service).should().generatePresignedGetUrl("talents/1/key.png");
+        then(s3Service).should(never()).generatePresignedGetUrl("https://figma.com/file/abc");
+    }
+
+    // 헬퍼
 
     private Talent talent(Long authorId) {
         return Talent.create(authorId, mock(Category.class), "제목", "내용", 2, 100);
