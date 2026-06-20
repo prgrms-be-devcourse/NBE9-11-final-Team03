@@ -60,6 +60,10 @@ dependencies {
 
     //jwt
     implementation("com.auth0:java-jwt:4.4.0")
+
+    // AWS S3
+    implementation(platform("software.amazon.awssdk:bom:2.31.0"))
+    implementation("software.amazon.awssdk:s3")
 }
 
 tasks.withType<Test> {
