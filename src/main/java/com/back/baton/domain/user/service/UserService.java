@@ -170,4 +170,7 @@ public class UserService {
         );
     }
 
+    public void logout(Long userId){
+        refreshTokenRepository.deleteByUserIdCustom(userId); // refreshToken 삭제
+    }
 }

@@ -7,6 +7,7 @@ import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.service.UserService;
 import com.back.baton.global.response.ApiResponse;
+import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,6 +19,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -60,8 +64,8 @@ public class UserController {
     public ApiResponse<UserLoginRes> login(@Valid @RequestBody UserLoginReq req, HttpServletResponse response) {
         UserTokenDto res = userService.login(req.email(), req.password());
 
-        long refreshTokenValidTime = 14 * 24 * 60 * 60 * 1000L;
-        setCookie(response, "refreshToken", res.refreshToken(), refreshTokenValidTime);
+        // accessToken -> 인메모리 저장, refreshToken -> 쿠키 저장
+        setCookie(response, "refreshToken", res.refreshToken(), null);
 
         return ApiResponse.success(SuccessCode.USER_LOGIN_SUCCESS, new UserLoginRes(res.accessToken()));
     }
@@ -76,20 +80,42 @@ public class UserController {
             HttpServletResponse response
     ) {
         UserTokenDto res = userService.reissue(refreshTokenValue);
-
-        long refreshTokenValidTime = 14 * 24 * 60 * 60 * 1000L;
-        setCookie(response, "refreshToken", res.refreshToken(), refreshTokenValidTime);
+        setCookie(response, "refreshToken", res.refreshToken(), null);
 
         return ApiResponse.success(SuccessCode.USER_REISSUE_SUCCESS, new UserLoginRes(res.accessToken()));
     }
 
-    private void setCookie(HttpServletResponse response, String name, String value, Long maxAge) {
-        ResponseCookie cookie = ResponseCookie.from(name, value)
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(name = "refreshToken", required = false) String refreshTokenValue,
+            @AuthenticationPrincipal UserDetails principal,
+            HttpServletResponse response
+    ){
+        Long userId = Long.parseLong(principal.getUsername()); // 지금 로그인한 유저
+
+        // 1. 유저 쿠키 삭제
+        if(refreshTokenValue!=null){
+            setCookie(response, "refreshToken",null,0L);
+        }
+
+        // 2. refreshToken Table에서 refreshToken 삭제
+        userService.logout(userId);
+        return ApiResponses.success(SuccessCode.USER_LOGOUT_SUCCESS,null);
+    }
+
+    private void setCookie(HttpServletResponse response, String name, String value, Long maxAge){
+        // 로그인 유지 별도 구현하는 경우 maxAge 설정
+
+        ResponseCookie.ResponseCookieBuilder cookieBuilder = ResponseCookie.from(name, value)
                 .path("/")
                 .httpOnly(true)
                 .secure(isSecure)
-                .sameSite("Strict")
-                .build();
+                .sameSite("Strict") ;// CSRF 방지 (Lax, Strict, None)
+
+        if(maxAge!=null){
+            cookieBuilder.maxAge(maxAge);
+        }
+        ResponseCookie cookie = cookieBuilder.build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }
