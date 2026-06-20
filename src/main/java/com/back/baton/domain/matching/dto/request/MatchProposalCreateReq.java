@@ -19,7 +19,12 @@ public record MatchProposalCreateReq(
         @NotNull(message = "제공자 재능 ID는 필수입니다.")
         Long providerTalentId,
 
-        @Schema(description = "매칭 제안 메시지. 1000자 이하", example = "해당 재능을 구매하고 싶습니다.", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(
+                description = "매칭 제안 메시지. 1000자 이하",
+                example = "해당 재능을 구매하고 싶습니다.",
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                maxLength = 1000
+        )
         @NotBlank(message = "신청 메시지는 필수입니다.")
         @Size(max = 1000, message = "신청 메시지는 1000자 이하로 입력해 주세요.")
         String requestMessage
