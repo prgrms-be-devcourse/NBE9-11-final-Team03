@@ -1,6 +1,8 @@
 package com.back.baton.domain.escrow.entity;
 
 import com.back.baton.global.entity.BaseTimeEntity;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.EscrowErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -57,6 +59,14 @@ public class Escrow extends BaseTimeEntity {
 
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
+
+    public void refund() {
+        if (this.status != EscrowStatus.HELD) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.status = EscrowStatus.REFUNDED;
+        this.settledAt = LocalDateTime.now();
+    }
 
     public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, LocalDateTime expiresAt) {
         Escrow escrow = new Escrow();
