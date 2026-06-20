@@ -1,6 +1,8 @@
 package com.back.baton.global.s3;
 
 import java.time.Duration;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.S3ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class S3Service {
     private int presignedGetExpiryHours;
 
     public String generatePresignedPutUrl(String fileKey) {
+        validateFileKey(fileKey);
         PutObjectRequest putRequest = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(fileKey)
@@ -40,6 +43,7 @@ public class S3Service {
     }
 
     public String generatePresignedGetUrl(String fileKey) {
+        validateFileKey(fileKey);
         GetObjectRequest getRequest = GetObjectRequest.builder()
                 .bucket(bucket)
                 .key(fileKey)
@@ -51,5 +55,11 @@ public class S3Service {
                 .build();
 
         return s3Presigner.presignGetObject(presignRequest).url().toString();
+    }
+
+    private void validateFileKey(String fileKey) {
+        if (fileKey == null || fileKey.isBlank()) {
+            throw new CustomException(S3ErrorCode.INVALID_FILE_KEY);
+        }
     }
 }
