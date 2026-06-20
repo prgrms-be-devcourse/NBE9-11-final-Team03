@@ -16,7 +16,7 @@ public class S3Service {
 
     private final S3Presigner s3Presigner;
 
-    @Value("${spring.cloud.aws.s3.bucket}")
+    @Value("${spring.cloud.aws.s3.bucket:test-bucket}")
     private String bucket;
 
     @Value("${s3.presigned-put-expiry-minutes}")
