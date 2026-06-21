@@ -22,11 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
@@ -86,6 +81,10 @@ public class UserController {
     }
 
     @PostMapping("/logout")
+    @Operation(
+            summary = "로그아웃",
+            description = "refreshToken을 쿠키 및 refreshToken 테이블에서 삭제합니다."
+    )
     public ResponseEntity<ApiResponse<Void>> logout(
             @CookieValue(name = "refreshToken", required = false) String refreshTokenValue,
             @AuthenticationPrincipal UserDetails principal,
