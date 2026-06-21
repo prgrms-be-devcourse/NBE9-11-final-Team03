@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -19,7 +20,10 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "chat_message")
+@Table(name = "chat_message",
+        indexes = {
+                @Index(name = "채팅 메시지 조회 인덱스", columnList = "room_id, deleted_at, created_at")
+        })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatMessage extends BaseTimeEntity {
 
@@ -69,18 +73,6 @@ public class ChatMessage extends BaseTimeEntity {
                 chatRoom,
                 senderId,
                 ChatMessageType.TEXT,
-                content
-        );
-    }
-
-    public static ChatMessage createSystemMessage(
-            ChatRoom chatRoom,
-            String content
-    ) {
-        return new ChatMessage(
-                chatRoom,
-                0L,
-                ChatMessageType.SYSTEM,
                 content
         );
     }

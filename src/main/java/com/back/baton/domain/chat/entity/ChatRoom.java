@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -16,7 +17,10 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "chat_room")
+@Table(name = "chat_room",
+        indexes = {
+                @Index(name = "채팅방 조회 인덱스", columnList = "talent_id, buyer_id, seller_id, status, deleted_at")
+        })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends BaseTimeEntity {
 

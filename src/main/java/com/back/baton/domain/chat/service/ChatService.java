@@ -31,13 +31,12 @@ public class ChatService {
     @Transactional
     public ChatRoomRes getOrCreateMatchRoom(
             Long talentId,
-            Long buyerId,
-            Long sellerId
+            Long buyerId
     ) {
         Talent talent = getTalent(talentId);
+        Long sellerId = talent.getAuthorId();
 
         validateSelfChat(buyerId, sellerId);
-        validateSellerOwnsTalent(sellerId, talent);
 
         ChatRoom chatRoom = chatRoomRepository.findActiveRoom(
                         talentId,
@@ -98,12 +97,6 @@ public class ChatService {
     private void validateSelfChat(Long buyerId, Long sellerId) {
         if (Objects.equals(buyerId, sellerId)) {
             throw new CustomException(ChatErrorCode.SELF_CHAT_NOT_ALLOWED);
-        }
-    }
-
-    private void validateSellerOwnsTalent(Long sellerId, Talent talent) {
-        if (!Objects.equals(talent.getAuthorId(), sellerId)) {
-            throw new CustomException(ChatErrorCode.CHAT_ROOM_ACCESS_DENIED);
         }
     }
 

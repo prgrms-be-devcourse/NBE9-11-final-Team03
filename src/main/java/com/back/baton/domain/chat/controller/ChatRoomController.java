@@ -34,8 +34,7 @@ public class ChatRoomController {
     ) {
         ChatRoomRes response = chatService.getOrCreateMatchRoom(
                 req.talentId(),
-                req.buyerId(),
-                req.sellerId()
+                req.buyerId()
         );
 
         return ApiResponses.success(SuccessCode.CHAT_ROOM_CREATED, response);
