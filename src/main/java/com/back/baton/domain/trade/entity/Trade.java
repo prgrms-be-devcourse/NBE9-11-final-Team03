@@ -54,4 +54,8 @@ public class Trade extends BaseTimeEntity {
     public void cancel() {
         this.status = TradeStatus.CANCELLED;
     }
+
+    public void submitResult() {
+        this.status = TradeStatus.UNDER_REVIEW;
+    }
 }
