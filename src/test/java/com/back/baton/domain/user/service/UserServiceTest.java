@@ -341,4 +341,17 @@ public class UserServiceTest {
         verify(refreshTokenRepository).delete(mockRefreshToken);
         verify(jwtTokenProvider, never()).createAccessToken(anyLong(), anyString(), any(Date.class));
     }
+    @Test
+    @DisplayName("로그아웃 시 해당 유저 ID의 리프레시 토큰 벌크 삭제 메서드를 호출한다")
+    void logout_service_success() {
+        // given
+        Long userId = 1L;
+
+        // when
+        userService.logout(userId);
+
+        // then
+        // 우리가 리팩토링했던 @Modifying 벌크 삭제 쿼리 메서드가 단 1회 정상 호출되었는지 검증
+        verify(refreshTokenRepository, times(1)).deleteByUserIdCustom(userId);
+    }
 }
