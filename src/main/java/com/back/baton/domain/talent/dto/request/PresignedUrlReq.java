@@ -10,6 +10,6 @@ public record PresignedUrlReq(
 
         // 이미지 MIME 타입만 허용
         @NotBlank(message = "콘텐츠 타입은 필수입니다.")
-        @Pattern(regexp = "^image/.+", message = "이미지 파일만 업로드할 수 있습니다.")
+        @Pattern(regexp = "^(?!image/svg\\+xml$)image/.+", message = "이미지 파일만 업로드할 수 있습니다. (SVG 제외)")
         String contentType
 ) {}

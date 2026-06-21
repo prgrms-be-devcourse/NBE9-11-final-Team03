@@ -15,6 +15,7 @@ import com.back.baton.global.s3.S3Service;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -168,19 +169,37 @@ class TalentAttachmentServiceTest {
     // 삭제
 
     @Test
-    @DisplayName("본인 재능의 첨부를 삭제한다")
+    @DisplayName("본인 재능의 첨부를 삭제하면 DB 삭제 후 S3 객체도 삭제한다")
     void deleteAttachment_success() {
         Long talentId = 1L, attachmentId = 10L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
         given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
 
-        TalentAttachment attachment = attachment(talent, "url", "desc");
+        TalentAttachment attachment = attachment(talent, "talents/1/key.png", "desc");
         given(talentAttachmentRepository.findById(attachmentId)).willReturn(Optional.of(attachment));
 
         talentAttachmentService.deleteAttachment(talentId, attachmentId, authorId);
 
         then(talentAttachmentRepository).should().delete(attachment);
+        then(s3Service).should().deleteObject("talents/1/key.png");
+    }
+
+    @Test
+    @DisplayName("외부 링크 첨부 삭제 시 DB만 지우고 S3 객체 삭제는 호출하지 않는다")
+    void deleteAttachment_externalLink_skipsS3() {
+        Long talentId = 1L, attachmentId = 10L, authorId = 7L;
+        Talent talent = talent(authorId);
+        ReflectionTestUtils.setField(talent, "id", talentId);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+
+        TalentAttachment attachment = attachment(talent, "https://github.com/user/repo", "외부 링크");
+        given(talentAttachmentRepository.findById(attachmentId)).willReturn(Optional.of(attachment));
+
+        talentAttachmentService.deleteAttachment(talentId, attachmentId, authorId);
+
+        then(talentAttachmentRepository).should().delete(attachment);
+        then(s3Service).should(never()).deleteObject(anyString());
     }
 
     @Test
@@ -266,6 +285,63 @@ class TalentAttachmentServiceTest {
                 .containsExactly("https://signed/key", "https://figma.com/file/abc");
         then(s3Service).should().generatePresignedGetUrl("talents/1/key.png");
         then(s3Service).should(never()).generatePresignedGetUrl("https://figma.com/file/abc");
+    }
+
+    // svg 검증
+    @Test
+    @DisplayName("저장 시 S3 key가 본인 재능 경로가 아니면 ATTACHMENT_FORBIDDEN(403) - BOLA 차단")
+    void saveAttachment_foreignKey_forbidden() {
+        Long talentId = 1L, authorId = 7L;
+        Talent talent = talent(authorId);
+        ReflectionTestUtils.setField(talent, "id", talentId);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+
+        // 남의 재능(999) 경로 key를 본인 재능(1)에 등록 시도
+        var req = new AttachmentSaveReq("talents/999/private.png", "탈취 시도");
+
+        assertErrorCode(() -> talentAttachmentService.saveAttachment(talentId, authorId, req),
+                TalentErrorCode.ATTACHMENT_FORBIDDEN);
+        then(talentAttachmentRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("저장 시 외부 링크(http/https)는 prefix 검증 없이 그대로 저장한다")
+    void saveAttachment_externalLink_ok() {
+        Long talentId = 1L, authorId = 7L;
+        Talent talent = talent(authorId);
+        ReflectionTestUtils.setField(talent, "id", talentId);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentAttachmentRepository.save(any(TalentAttachment.class)))
+                .willAnswer(inv -> inv.getArgument(0));
+
+        var req = new AttachmentSaveReq("https://figma.com/file/abc", "외부 링크");
+
+        AttachmentRes res = talentAttachmentService.saveAttachment(talentId, authorId, req);
+
+        assertThat(res.url()).isEqualTo("https://figma.com/file/abc");
+        then(talentAttachmentRepository).should().save(any(TalentAttachment.class));
+    }
+
+    @Test
+    @DisplayName("발급 시 파일명에 경로 탐색 문자가 있으면 순수 파일명만 추출해 key를 만든다")
+    void createPresignedUrl_pathTraversal_sanitized() {
+        Long talentId = 1L, authorId = 7L;
+        Talent talent = talent(authorId);
+        ReflectionTestUtils.setField(talent, "id", talentId);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(s3Service.generatePresignedPutUrl(anyString())).willReturn("https://signed");
+
+        var req = new PresignedUrlReq("../../etc/passwd.png", "image/png");
+
+        talentAttachmentService.createPresignedUrl(talentId, authorId, req);
+
+        // key가 talents/1/ 경로를 벗어나지 않고, 순수 파일명(passwd.png)으로 끝나는지 검증
+        ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
+        then(s3Service).should().generatePresignedPutUrl(keyCaptor.capture());
+        String key = keyCaptor.getValue();
+        assertThat(key).startsWith("talents/1/");
+        assertThat(key).endsWith("-passwd.png");
+        assertThat(key).doesNotContain("..");
     }
 
     // 헬퍼

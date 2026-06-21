@@ -197,4 +197,17 @@ class TalentAttachmentControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("TALENT-403-002"));
     }
+
+    @Test
+    @DisplayName("contentType이 SVG면 400 (XSS 위험으로 제외)")
+    void createPresignedUrl_svgRejected() throws Exception {
+        var req = new PresignedUrlReq("logo.svg", "image/svg+xml");
+
+        mockMvc.perform(post(BASE + "/presigned-url")
+                        .header("X-User-Id", "7")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON-400-002"));
+    }
 }
