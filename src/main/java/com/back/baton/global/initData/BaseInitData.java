@@ -2,7 +2,7 @@ package com.back.baton.global.initData;
 
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.repository.UserRepository;
-import com.back.baton.domain.user.service.UserService;
+import com.back.baton.domain.user.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
@@ -22,7 +22,7 @@ public class BaseInitData {
     @Lazy
     private BaseInitData self;
     @Autowired
-    private UserService userService;
+    private AuthService authService;
     @Autowired
     private UserRepository userRepository;
     @Autowired
@@ -52,7 +52,7 @@ public class BaseInitData {
 
         // 테스트용 유저 10명
         for(int i=1; i<=10; i++){
-            userService.signup("user"+i+"@test.com", "password1234!", "user"+i, "간단한 설명",null);
+            authService.signup("user"+i+"@test.com", "password1234!", "user"+i, "간단한 설명",null);
         }
     }
 }

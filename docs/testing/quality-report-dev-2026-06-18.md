@@ -55,16 +55,16 @@
 
 ## 5. 도메인별 테스트 현황
 
-| 도메인 | 테스트 클래스 | 테스트 수 | 상태 | 주요 검증 내용 |
-|---|---|---:|---|---|
-| Application | `BatonApplicationTests` | 1 | 통과 | Spring context 로딩 |
-| User | `UserControllerTest`, `UserServiceTest` | 4 | 통과 | 회원가입 성공, DTO 검증, 비밀번호 정책 |
-| Talent | Controller / Service / Repository 테스트 | 27 | 통과 | 재능 등록, 조회, 수정, 삭제, 권한, soft delete |
-| Credit | `CreditControllerTest`, `CreditServiceTest` | 17 | 통과 | 잔액 조회, 계좌 없음, 충전/차감/에스크로 보류 |
-| Matching | Controller / Entity / Service 테스트 | 17 | 통과 | 매칭 제안 생성, 수락, 상태 검증, 중복 검증 |
-| Escrow | `EscrowTest`, `EscrowServiceTest` | 6 | 통과 | 에스크로 생성, 상태, 만료일, 정산 금액 |
-| Trade | `TradeTest`, `TradeServiceTest` | 4 | 통과 | 거래 생성, 상태, 필드 저장 |
-| Global | `GlobalExceptionHandlerTest` | 4 | 통과 | 공통 예외 응답 처리 |
+| 도메인         | 테스트 클래스                                     | 테스트 수 | 상태 | 주요 검증 내용 |
+|-------------|---------------------------------------------|---:|---|---|
+| Application | `BatonApplicationTests`                     | 1 | 통과 | Spring context 로딩 |
+| User        | `AuthControllerTest`, `AuthServiceTest`     | 4 | 통과 | 회원가입 성공, DTO 검증, 비밀번호 정책 |
+| Talent      | Controller / Service / Repository 테스트       | 27 | 통과 | 재능 등록, 조회, 수정, 삭제, 권한, soft delete |
+| Credit      | `CreditControllerTest`, `CreditServiceTest` | 17 | 통과 | 잔액 조회, 계좌 없음, 충전/차감/에스크로 보류 |
+| Matching    | Controller / Entity / Service 테스트           | 17 | 통과 | 매칭 제안 생성, 수락, 상태 검증, 중복 검증 |
+| Escrow      | `EscrowTest`, `EscrowServiceTest`           | 6 | 통과 | 에스크로 생성, 상태, 만료일, 정산 금액 |
+| Trade       | `TradeTest`, `TradeServiceTest`             | 4 | 통과 | 거래 생성, 상태, 필드 저장 |
+| Global      | `GlobalExceptionHandlerTest`                | 4 | 통과 | 공통 예외 응답 처리 |
 
 ## 6. 주요 테스트 시나리오
 

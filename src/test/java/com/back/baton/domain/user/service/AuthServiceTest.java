@@ -36,9 +36,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class UserServiceTest {
+public class AuthServiceTest {
     @InjectMocks
-    private UserService userService;
+    private AuthService authService;
 
     @Mock
     private UserRepository userRepository;
@@ -76,7 +76,7 @@ public class UserServiceTest {
         String profileImgUrl = "https://image.com/profile.png";
 
         // strip()이 적용된 패스워드와 추출된 username("baton") 검증이 통과한다고 가정
-        ReflectionTestUtils.setField(userService, "initialTrustScore", new BigDecimal("50.00"));
+        ReflectionTestUtils.setField(authService, "initialTrustScore", new BigDecimal("50.00"));
 
         given(passwordValidator.validate(eq("securePassword123!"), eq("baton")))
                 .willReturn(true);
@@ -86,7 +86,7 @@ public class UserServiceTest {
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
-        UserSignupRes response = userService.signup(email, password, nickname, introduction, profileImgUrl);
+        UserSignupRes response = authService.signup(email, password, nickname, introduction, profileImgUrl);
 
         // then
         assertThat(response).isNotNull();
@@ -114,7 +114,7 @@ public class UserServiceTest {
                 .willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> userService.signup(email, password, nickname, introduction, profileImgUrl))
+        assertThatThrownBy(() -> authService.signup(email, password, nickname, introduction, profileImgUrl))
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode") // 에러코드 필드 검증 (본인 CustomException 구조에 맞게 변경 가능)
                 .isEqualTo(UserErrorCode.INVALID_PASSWORD_FORMAT);
@@ -141,7 +141,7 @@ public class UserServiceTest {
         given(refreshTokenRepository.findByUserId(validUser.getId())).willReturn(Optional.empty());
 
         // when
-        UserTokenDto result = userService.login(email, password);
+        UserTokenDto result = authService.login(email, password);
 
         // then
         assertNotNull(result);
@@ -170,7 +170,7 @@ public class UserServiceTest {
         given(refreshTokenRepository.findByUserId(validUser.getId())).willReturn(Optional.of(existingToken));
 
         // when
-        UserTokenDto result = userService.login(email, password);
+        UserTokenDto result = authService.login(email, password);
 
         // then
         assertNotNull(result);
@@ -192,7 +192,7 @@ public class UserServiceTest {
 
         // when & then
         CustomException exception = assertThrows(CustomException.class, () -> {
-            userService.login("test@example.com", "rawPassword");
+            authService.login("test@example.com", "rawPassword");
         });
         assertEquals(UserErrorCode.SUSPENDED_STATUS, exception.getErrorCode());
     }
@@ -206,7 +206,7 @@ public class UserServiceTest {
 
         // when & then
         CustomException exception = assertThrows(CustomException.class, () -> {
-            userService.login("test@example.com", "wrongPassword");
+            authService.login("test@example.com", "wrongPassword");
         });
         assertEquals(UserErrorCode.INVALID_PASSWORD, exception.getErrorCode());
     }
@@ -227,7 +227,7 @@ public class UserServiceTest {
         given(jwtTokenProvider.createRefreshToken(eq(userId), any(Date.class))).willReturn(newRefreshToken);
 
         // when
-        UserTokenDto result = userService.reissue(savedToken);
+        UserTokenDto result = authService.reissue(savedToken);
 
         // then
         assertThat(result).isNotNull();
@@ -247,7 +247,7 @@ public class UserServiceTest {
         String nullToken = null;
 
         // when & then
-        assertThatThrownBy(() -> userService.reissue(nullToken))
+        assertThatThrownBy(() -> authService.reissue(nullToken))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", TokenErrorCode.TOKEN_NOT_FOUND);
 
@@ -266,7 +266,7 @@ public class UserServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.empty()); // 유저가 없는 상황 Mocking
 
         // when & then
-        assertThatThrownBy(() -> userService.reissue(savedToken))
+        assertThatThrownBy(() -> authService.reissue(savedToken))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.USER_NOT_FOUND);
 
@@ -294,7 +294,7 @@ public class UserServiceTest {
         };
 
         // when & then
-        assertThatThrownBy(() -> userService.reissue(savedToken))
+        assertThatThrownBy(() -> authService.reissue(savedToken))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", expectedErrorCode);
 
@@ -312,7 +312,7 @@ public class UserServiceTest {
         given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.empty()); // DB에 토큰 없음
 
         // when & then
-        assertThatThrownBy(() -> userService.reissue(savedToken))
+        assertThatThrownBy(() -> authService.reissue(savedToken))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", TokenErrorCode.TOKEN_NOT_FOUND);
     }
@@ -333,7 +333,7 @@ public class UserServiceTest {
         given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(mockRefreshToken));
 
         // when & then
-        assertThatThrownBy(() -> userService.reissue(stolenToken))
+        assertThatThrownBy(() -> authService.reissue(stolenToken))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", TokenErrorCode.REUSED_TOKEN);
 
@@ -348,7 +348,7 @@ public class UserServiceTest {
         Long userId = 1L;
 
         // when
-        userService.logout(userId);
+        authService.logout(userId);
 
         // then
         // 우리가 리팩토링했던 @Modifying 벌크 삭제 쿼리 메서드가 단 1회 정상 호출되었는지 검증

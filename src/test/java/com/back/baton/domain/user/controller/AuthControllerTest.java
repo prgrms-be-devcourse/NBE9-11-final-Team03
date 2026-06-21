@@ -6,7 +6,7 @@ import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.entity.UserRole;
-import com.back.baton.domain.user.service.UserService;
+import com.back.baton.domain.user.service.AuthService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.filter.JwtAuthenticationFilter;
 import com.back.baton.global.response.code.SuccessCode;
@@ -51,13 +51,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ActiveProfiles("test")
-@WebMvcTest(UserController.class)
+@WebMvcTest(AuthController.class)
 @AutoConfigureMockMvc(addFilters = true)
 @Import({
         JwtTokenProvider.class,
-        UserControllerTest.TestSecurityConfig.class
+        AuthControllerTest.TestSecurityConfig.class
 })
-class UserControllerTest{
+class AuthControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
@@ -65,7 +65,7 @@ class UserControllerTest{
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private UserService userService;
+    private AuthService authService;
 
     @MockitoBean // 또는 @MockBean
     private JwtTokenProvider jwtTokenProvider;
@@ -127,7 +127,7 @@ class UserControllerTest{
                 .trustScore(new BigDecimal(50.00))
                 .build();
 
-        given(userService.signup(anyString(), anyString(), anyString(), anyString(), anyString()))
+        given(authService.signup(anyString(), anyString(), anyString(), anyString(), anyString()))
                 .willReturn(new UserSignupRes(mockUser));
         // when
         ResultActions resultActions = mockMvc.perform(post("/api/v1/auth/signup")
@@ -173,9 +173,9 @@ class UserControllerTest{
         String path = "/api/v1/auth/login";
         UserLoginReq requestDto = new UserLoginReq("test@example.com", "rawPassword123");
 
-        // UserService의 login 결과를 가짜(Mock)로 준비
+        // authService login 결과를 가짜(Mock)로 준비
         UserTokenDto mockTokenOutput = new UserTokenDto("mock_access_token_value", "mock_refresh_token_value");
-        given(userService.login(eq("test@example.com"), eq("rawPassword123"))).willReturn(mockTokenOutput);
+        given(authService.login(eq("test@example.com"), eq("rawPassword123"))).willReturn(mockTokenOutput);
 
         // when & then
         mockMvc.perform(post(path)
@@ -202,7 +202,7 @@ class UserControllerTest{
         UserLoginReq requestDto = new UserLoginReq("test@example.com", "wrongPassword");
 
         // 의도적으로 서비스에서 예외가 터지도록 Mocking 환경 세팅
-        given(userService.login(anyString(), anyString()))
+        given(authService.login(anyString(), anyString()))
                 .willThrow(new CustomException(UserErrorCode.INVALID_PASSWORD));
 
         // when & then
@@ -221,7 +221,7 @@ class UserControllerTest{
         String newRefreshToken = "new-refresh-token";
 
         UserTokenDto mockDto = new UserTokenDto(newAccessToken, newRefreshToken);
-        given(userService.reissue(originRefreshToken)).willReturn(mockDto);
+        given(authService.reissue(originRefreshToken)).willReturn(mockDto);
 
         // when & then
         mockMvc.perform(post("/api/v1/auth/reissue")
@@ -242,7 +242,7 @@ class UserControllerTest{
     void reissue_Fail_WhenCookieIsEmpty() throws Exception {
         // given
         // 컨트롤러에서 required = false이므로 null이 서비스로 넘어감 -> 서비스에서 TOKEN_NOT_FOUND 던짐 가정
-        given(userService.reissue(null)).willThrow(new CustomException(TokenErrorCode.TOKEN_NOT_FOUND));
+        given(authService.reissue(null)).willThrow(new CustomException(TokenErrorCode.TOKEN_NOT_FOUND));
 
         // when & then
         mockMvc.perform(post("/api/v1/auth/reissue")) // 쿠키 없이 요청
@@ -268,7 +268,7 @@ class UserControllerTest{
                 .andDo(print());
 
         // 비즈니스 로직 검증: 서비스 레이어 삭제 메서드가 유저 ID 1로 호출되었는지 확인
-        verify(userService, times(1)).logout(1L);
+        verify(authService, times(1)).logout(1L);
     }
 
     @Test
@@ -287,7 +287,7 @@ class UserControllerTest{
                 .andDo(print());
 
         // 핵심 보안 요구사항 검증: 쿠키가 없었더라도 DB 토큰 삭제 기능은 무조건 실행되어야 함
-        verify(userService, times(1)).logout(1L);
+        verify(authService, times(1)).logout(1L);
     }
 
 
@@ -306,7 +306,7 @@ class UserControllerTest{
                     .andExpect(status().isForbidden()); // 시큐리티 authenticated()에 의해 컨트롤러 진입 전 차단(401)
 
             // 보안 검증: 인증 실패로 튕겼으므로 서비스 레이어의 logout()은 절대 호출되면 안 됨
-            verify(userService, never()).logout(anyLong());
+            verify(authService, never()).logout(anyLong());
         }
 
         @Test
@@ -318,7 +318,7 @@ class UserControllerTest{
                             .contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isForbidden());
 
-            verify(userService, never()).logout(anyLong());
+            verify(authService, never()).logout(anyLong());
         }
     }
 }
