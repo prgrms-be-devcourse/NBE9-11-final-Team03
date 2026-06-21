@@ -50,4 +50,17 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
             @Param("providerId") Long providerId,
             @Param("status") MatchProposalStatus status
     );
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+    update MatchProposal mp
+    SET mp.status = :status
+    WHERE mp.requesterId = :requesterId
+    """)
+    void updateStatusWhenRequesterWithdrawn(
+            @Param("requesterId") Long requesterId,
+            @Param("status") MatchProposalStatus status
+    );
+
+
 }

@@ -41,6 +41,9 @@ public class UserService {
         // 3. 만일 이 사람에게 들어온 제안이 있다면 전부 거절 처리
         matchProposalRepository.updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED); // 받은 제안 전부 거절 처리
 
+        // 3-2. 보낸 제안이 있다면 전부 취소 처리
+        matchProposalRepository.updateStatusWhenRequesterWithdrawn(userId, MatchProposalStatus.CANCELLED);
+
         // 그 외 탈퇴 후 정보 파기 정책을 추가한다면 여기서 구현
 
         // 4. 탈퇴 회원 테이블에 추가 (이메일 암호화)
