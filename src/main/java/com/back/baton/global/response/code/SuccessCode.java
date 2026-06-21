@@ -18,6 +18,10 @@ public enum SuccessCode {
     TRADE_OK(HttpStatus.OK, "200-7", "거래 조회에 성공했습니다."),
     TRADE_CANCELLED(HttpStatus.OK, "200-8", "거래가 취소되었습니다."),
 
+    CHAT_ROOM_CREATED(HttpStatus.OK, "200-10", "채팅방 생성 또는 조회에 성공했습니다."),
+    CHAT_MESSAGE_SENT(HttpStatus.OK, "200-11", "채팅 메시지 전송에 성공했습니다."),
+    CHAT_MESSAGES_FOUND(HttpStatus.OK, "200-12", "채팅 메시지 목록 조회에 성공했습니다."),
+
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-2", "토큰 재발행에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다.");
