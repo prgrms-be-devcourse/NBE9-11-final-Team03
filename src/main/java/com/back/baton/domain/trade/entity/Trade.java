@@ -58,4 +58,8 @@ public class Trade extends BaseTimeEntity {
     public void submitResult() {
         this.status = TradeStatus.UNDER_REVIEW;
     }
+
+    public void complete() {
+        this.status = TradeStatus.COMPLETED;
+    }
 }

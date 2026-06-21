@@ -10,7 +10,8 @@ public enum CreditErrorCode implements ErrorCode {
     DUPLICATE_ESCROW_HOLD_REQUEST(HttpStatus.CONFLICT, "CREDIT-409-002", "이미 처리 중인 에스크로 예치 요청입니다."),
     DUPLICATE_ESCROW_REFUND_REQUEST(HttpStatus.CONFLICT, "CREDIT-409-003", "이미 처리 중인 에스크로 환불 요청입니다."),
     INVALID_IDEMPOTENCY_KEY(HttpStatus.BAD_REQUEST, "CREDIT-400-003", "멱등성 키는 비어있을 수 없습니다."),
-    INSUFFICIENT_ESCROW_BALANCE(HttpStatus.BAD_REQUEST, "CREDIT-400-004", "에스크로 잔액이 부족합니다.");
+    INSUFFICIENT_ESCROW_BALANCE(HttpStatus.BAD_REQUEST, "CREDIT-400-004", "에스크로 잔액이 부족합니다."),
+    DUPLICATE_ESCROW_SETTLE_REQUEST(HttpStatus.CONFLICT, "CREDIT-409-004", "이미 처리된 에스크로 정산 요청입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

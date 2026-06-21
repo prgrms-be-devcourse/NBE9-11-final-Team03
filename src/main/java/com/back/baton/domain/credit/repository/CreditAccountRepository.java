@@ -27,4 +27,8 @@ public interface CreditAccountRepository extends JpaRepository<CreditAccount, Lo
     @Modifying(clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.escrowBalance = c.escrowBalance - :amount, c.balance = c.balance + :amount WHERE c.userId = :userId AND c.escrowBalance >= :amount")
     int releaseEscrow(@Param("userId") Long userId, @Param("amount") int amount);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE CreditAccount c SET c.escrowBalance = c.escrowBalance - :amount WHERE c.userId = :userId AND c.escrowBalance >= :amount")
+    int deductEscrowBalance(@Param("userId") Long userId, @Param("amount") int amount);
 }

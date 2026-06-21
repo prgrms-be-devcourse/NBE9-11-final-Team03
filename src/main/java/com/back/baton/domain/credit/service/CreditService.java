@@ -150,6 +150,57 @@ public class CreditService {
         }
     }
 
+    // 크레딧 정산 - 구매 확정 시 구매자 에스크로 차감 후 판매자에게 지급
+    @Transactional
+    public void settleEscrow(Long buyerId, Long sellerId, int amount, int settlementAmount, Long tradeId, String idempotencyKey) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
+        }
+        if (amount <= 0) {
+            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
+        }
+
+        if (creditTransactionRepository.existsByIdempotencyKey(idempotencyKey + "-buyer")) {
+            return;
+        }
+
+        // 구매자 크레딧 잔액 조회
+        CreditAccount buyerAccount = creditAccountRepository.findByUserId(buyerId)
+                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+        int buyerBalanceAfter = buyerAccount.getBalance();
+
+        // 구매자 escrowBalance 차감
+        int buyerUpdatedRows = creditAccountRepository.deductEscrowBalance(buyerId, amount);
+        if (buyerUpdatedRows == 0) {
+            throw new CustomException(CreditErrorCode.INSUFFICIENT_ESCROW_BALANCE);
+        }
+
+        // 판매자 balance 적립
+        int sellerUpdatedRows = creditAccountRepository.addBalance(sellerId, settlementAmount);
+        if (sellerUpdatedRows == 0) {
+            throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
+        }
+
+        // 판매자 잔액 조회
+        int sellerBalanceAfter = creditAccountRepository.findByUserId(sellerId)
+                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
+                .getBalance();
+
+        // 거래 내역 기록
+        try {
+            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
+                    buyerId, tradeId, CreditTransactionType.ESCROW_RELEASE, -amount, buyerBalanceAfter,
+                    idempotencyKey + "-buyer", CreditTransactionType.ESCROW_RELEASE.getDefaultReason()
+            ));
+            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
+                    sellerId, tradeId, CreditTransactionType.ESCROW_RELEASE, settlementAmount, sellerBalanceAfter,
+                    idempotencyKey + "-seller", CreditTransactionType.ESCROW_RELEASE.getDefaultReason()
+            ));
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_SETTLE_REQUEST);
+        }
+    }
+
     // 크레딧 차감 - 수수료 등 즉시 소멸되는 크레딧에 사용 (환불 불가)
     @Transactional
     public void deductCredit(Long userId, int amount) {
