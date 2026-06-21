@@ -5,6 +5,7 @@ import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.service.TradeService;
+import com.back.baton.domain.trade.service.TradeSubmissionService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.exception.GlobalExceptionHandler;
 import com.back.baton.global.response.code.TradeErrorCode;
@@ -35,7 +36,10 @@ class TradeControllerTest {
     @MockitoBean
     private TradeService tradeService;
 
-    @MockitoBean // 또는 @MockBean
+    @MockitoBean
+    private TradeSubmissionService tradeSubmissionService;
+
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test

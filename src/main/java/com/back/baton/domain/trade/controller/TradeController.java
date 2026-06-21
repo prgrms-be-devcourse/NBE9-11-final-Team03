@@ -1,18 +1,26 @@
 package com.back.baton.domain.trade.controller;
 
+import com.back.baton.domain.trade.dto.request.PresignedUrlReq;
+import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
+import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
+import com.back.baton.domain.trade.dto.response.TradeSubmissionRes;
 import com.back.baton.domain.trade.service.TradeService;
+import com.back.baton.domain.trade.service.TradeSubmissionService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class TradeController {
 
     private final TradeService tradeService;
+    private final TradeSubmissionService tradeSubmissionService;
 
     @GetMapping("/{tradeId}")
     @Operation(
@@ -53,5 +62,37 @@ public class TradeController {
     ) {
         TradeRes response = tradeService.cancelTrade(tradeId, userId);
         return ApiResponses.success(SuccessCode.TRADE_CANCELLED, response);
+    }
+
+    @PostMapping("/{tradeId}/submission/presigned-url")
+    @Operation(
+            summary = "결과물 업로드 URL 발급",
+            description = "판매자가 결과물을 S3에 업로드하기 위한 Presigned PUT URL을 발급합니다."
+    )
+    public ResponseEntity<ApiResponse<PresignedUrlRes>> getPresignedUrl(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @Parameter(description = "판매자 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "3", required = true)
+            @RequestParam Long sellerId,
+            @RequestBody @Valid PresignedUrlReq req
+    ) {
+        PresignedUrlRes response = tradeSubmissionService.getPresignedUrl(tradeId, sellerId, req.fileName());
+        return ApiResponses.success(SuccessCode.TRADE_PRESIGNED_URL_CREATED, response);
+    }
+
+    @PostMapping("/{tradeId}/submission")
+    @Operation(
+            summary = "결과물 제출",
+            description = "판매자가 S3에 업로드한 결과물을 제출하고 거래 상태를 검토 중으로 변경합니다."
+    )
+    public ResponseEntity<ApiResponse<TradeSubmissionRes>> submitResult(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @Parameter(description = "판매자 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "3", required = true)
+            @RequestParam Long sellerId,
+            @RequestBody @Valid TradeSubmissionReq req
+    ) {
+        TradeSubmissionRes response = tradeSubmissionService.submitResult(tradeId, sellerId, req);
+        return ApiResponses.success(SuccessCode.TRADE_SUBMISSION_CREATED, response);
     }
 }

@@ -8,7 +8,10 @@ public enum TradeErrorCode implements ErrorCode {
     TRADE_ALREADY_COMPLETED(HttpStatus.BAD_REQUEST, "TRADE-400-001", "이미 완료된 거래는 취소할 수 없습니다."),
     TRADE_ALREADY_CANCELLED(HttpStatus.CONFLICT, "TRADE-409-001", "이미 취소된 거래입니다."),
     TRADE_IN_DISPUTE(HttpStatus.BAD_REQUEST, "TRADE-400-002", "분쟁 중인 거래는 취소할 수 없습니다."),
-    TRADE_UNDER_REVIEW(HttpStatus.BAD_REQUEST, "TRADE-400-003", "결과물 검토 중인 거래는 취소할 수 없습니다.");
+    TRADE_UNDER_REVIEW(HttpStatus.BAD_REQUEST, "TRADE-400-003", "결과물 검토 중인 거래는 취소할 수 없습니다."),
+    TRADE_NOT_IN_PROGRESS(HttpStatus.BAD_REQUEST, "TRADE-400-004", "진행 중인 거래가 아닙니다."),
+    TRADE_NOT_UNDER_REVIEW(HttpStatus.BAD_REQUEST, "TRADE-400-005", "결과물 검토 중인 거래가 아닙니다."),
+    TRADE_SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "TRADE-404-002", "결과물 제출 내역을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

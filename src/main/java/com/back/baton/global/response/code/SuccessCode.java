@@ -17,6 +17,10 @@ public enum SuccessCode {
 
     TRADE_OK(HttpStatus.OK, "200-7", "거래 조회에 성공했습니다."),
     TRADE_CANCELLED(HttpStatus.OK, "200-8", "거래가 취소되었습니다."),
+    TRADE_PRESIGNED_URL_CREATED(HttpStatus.CREATED, "201-4", "Presigned URL이 발급되었습니다."),
+    TRADE_SUBMISSION_CREATED(HttpStatus.CREATED, "201-5", "결과물이 제출되었습니다."),
+    TRADE_SUBMISSION_OK(HttpStatus.OK, "200-9", "결과물 조회에 성공했습니다."),
+    TRADE_COMPLETED(HttpStatus.OK, "200-10", "거래가 완료되었습니다."),
 
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-2", "토큰 재발행에 성공했습니다."),
