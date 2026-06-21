@@ -13,6 +13,7 @@ import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.domain.trade.repository.TradeSubmissionRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.EscrowErrorCode;
+import com.back.baton.global.response.code.S3ErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import com.back.baton.global.s3.S3Service;
 import org.junit.jupiter.api.DisplayName;
@@ -192,6 +193,25 @@ class TradeSubmissionServiceTest {
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(TradeErrorCode.TRADE_NOT_IN_PROGRESS);
 
+        then(tradeSubmissionRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("결과물 제출 - fileKey가 해당 거래 경로로 시작하지 않으면 INVALID_FILE_KEY 예외가 발생한다")
+    void submitResult_invalidFileKey() {
+        Long tradeId = 1L;
+        Long sellerId = 3L;
+        Trade trade = createTrade(2L, sellerId);
+        TradeSubmissionReq req = new TradeSubmissionReq("trades/999/uuid.pdf", "설명");
+
+        given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeSubmissionService.submitResult(tradeId, sellerId, req))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(S3ErrorCode.INVALID_FILE_KEY);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
         then(tradeSubmissionRepository).should(never()).save(any());
     }
 

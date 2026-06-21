@@ -22,7 +22,7 @@ public class TradeSubmission extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "escrow_id", nullable = false, updatable = false)
+    @Column(name = "escrow_id", nullable = false, updatable = false, unique = true)
     private Long escrowId;
 
     @Column(name = "file_key", nullable = false, updatable = false, length = 200)

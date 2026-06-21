@@ -12,6 +12,7 @@ import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.domain.trade.repository.TradeSubmissionRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.EscrowErrorCode;
+import com.back.baton.global.response.code.S3ErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import com.back.baton.global.s3.S3Service;
 import java.util.Objects;
@@ -48,6 +49,8 @@ public class TradeSubmissionService {
         validateSeller(trade, sellerId);
         validateInProgress(trade);
 
+        validateFileKeyBelongsToTrade(tradeId, req.fileKey()); // fileKey 경로 검증
+
         Escrow escrow = getEscrow(tradeId);
 
         TradeSubmission submission = TradeSubmission.create(escrow.getId(), req.fileKey(), req.description());
@@ -78,6 +81,13 @@ public class TradeSubmissionService {
     private void validateInProgress(Trade trade) {
         if (trade.getStatus() != TradeStatus.IN_PROGRESS) {
             throw new CustomException(TradeErrorCode.TRADE_NOT_IN_PROGRESS);
+        }
+    }
+
+    private void validateFileKeyBelongsToTrade(Long tradeId, String fileKey) {
+        String expectedPrefix = "trades/" + tradeId + "/";
+        if (!fileKey.startsWith(expectedPrefix)) {
+            throw new CustomException(S3ErrorCode.INVALID_FILE_KEY);
         }
     }
 

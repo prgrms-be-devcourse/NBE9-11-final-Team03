@@ -7,6 +7,7 @@ import com.back.baton.domain.trade.service.TradeSubmissionService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.exception.GlobalExceptionHandler;
 import com.back.baton.global.response.code.EscrowErrorCode;
+import com.back.baton.global.response.code.S3ErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
@@ -195,6 +196,21 @@ class TradeSubmissionControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("TRADE-400-004"));
+    }
+
+    @Test
+    @DisplayName("결과물 제출 API - fileKey가 해당 거래 경로가 아니면 400 반환")
+    void submitResult_invalidFileKey() throws Exception {
+        when(tradeSubmissionService.submitResult(anyLong(), anyLong(), any()))
+                .thenThrow(new CustomException(S3ErrorCode.INVALID_FILE_KEY));
+
+        mockMvc.perform(post("/api/v1/trade/1/submission")
+                        .param("sellerId", "3")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fileKey\": \"trades/999/uuid.pdf\", \"description\": \"설명\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("S3-400-001"));
     }
 
     @Test

@@ -3,7 +3,7 @@ package com.back.baton.global.response.code;
 import org.springframework.http.HttpStatus;
 
 public enum S3ErrorCode implements ErrorCode {
-    INVALID_FILE_KEY(HttpStatus.BAD_REQUEST, "S3-400-001", "파일 키는 비어있을 수 없습니다.");
+    INVALID_FILE_KEY(HttpStatus.BAD_REQUEST, "S3-400-001", "유효하지 않은 파일 키입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
