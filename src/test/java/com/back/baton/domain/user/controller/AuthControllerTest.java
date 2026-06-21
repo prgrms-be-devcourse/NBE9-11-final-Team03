@@ -13,6 +13,7 @@ import com.back.baton.global.response.code.SuccessCode;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
+import com.back.baton.global.util.CookieUtil;
 import jakarta.servlet.http.Cookie;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = true)
 @Import({
         JwtTokenProvider.class,
-        AuthControllerTest.TestSecurityConfig.class
+        AuthControllerTest.TestSecurityConfig.class,
+        CookieUtil.class
 })
 class AuthControllerTest {
     @Autowired

@@ -28,6 +28,7 @@ public class UserService {
     private final EscrowRepository escrowRepository;
     private final MatchProposalRepository matchProposalRepository;
     private final AuthService authService;
+
     public void withdraw(Long userId) {
         // 1. 유저 상태 확인
         User user = userRepository.findById(userId).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
