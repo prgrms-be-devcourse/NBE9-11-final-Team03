@@ -72,4 +72,17 @@ public class User extends BaseTimeEntity {
     public void setStatus(UserStatus status){ // 테스트 위해 임시로 구현
         this.status = status;
     }
+
+    public void softDelete(){
+        this.email = "";
+        this.password = "";
+        this.nickname = "";
+        this.profileImageUrl = null;
+        this.introduction = "";
+
+        this.trustScore = new BigDecimal("50.00");
+        this.status = UserStatus.WITHDRAWN;
+        this.deletedAt = LocalDateTime.now();
+
+    }
 }

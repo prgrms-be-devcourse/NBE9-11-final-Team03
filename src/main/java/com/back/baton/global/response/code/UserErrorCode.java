@@ -14,6 +14,7 @@ public enum UserErrorCode implements ErrorCode {
     DORMANT_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-001", "휴면 처리된 계정입니다."),
     SUSPENDED_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-002", "정지 처리된 계정입니다."),
     WITHDRAWN_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-003", "탈퇴 처리된 계정입니다."),
+    BANNED_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-004", "영구정지 처리된 계정입니다."),
     ;
     private final HttpStatus httpStatus;
     private final String code;

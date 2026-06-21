@@ -11,7 +11,7 @@ import java.util.HexFormat;
 
 @Component
 public class WithdrawnEncoder {
-    @Value("$hash.salt}")
+    @Value("${hash.salt}")
     private String salt;
 
     public String encode(String plainText) {

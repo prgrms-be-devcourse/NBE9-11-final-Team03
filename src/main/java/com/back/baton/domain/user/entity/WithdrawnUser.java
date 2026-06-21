@@ -19,7 +19,7 @@ public class WithdrawnUser extends BaseTimeEntity {
     String encodedEmail;
 
     @Column(nullable = false)
-    Boolean permanentBan = false; // 영구정지 여부
+    boolean permanentBan = false; // 영구정지 여부
 
     public WithdrawnUser(String encodedEmail, UserStatus status){
         this.encodedEmail = encodedEmail;

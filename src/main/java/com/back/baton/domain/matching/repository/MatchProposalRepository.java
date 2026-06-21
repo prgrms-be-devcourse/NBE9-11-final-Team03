@@ -44,7 +44,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Query("""
     update MatchProposal mp
     SET mp.status = :status
-    WHERE mp.providerId = :providerId
+    WHERE mp.providerId = :providerId AND mp.status!= "ACCEPTED"
     """)
     void updateStatusWhenProviderWithdrawn(
             @Param("providerId") Long providerId,
@@ -55,7 +55,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Query("""
     update MatchProposal mp
     SET mp.status = :status
-    WHERE mp.requesterId = :requesterId
+    WHERE mp.requesterId = :requesterId AND mp.status!= "ACCEPTED"
     """)
     void updateStatusWhenRequesterWithdrawn(
             @Param("requesterId") Long requesterId,

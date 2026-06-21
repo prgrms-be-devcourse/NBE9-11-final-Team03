@@ -151,6 +151,9 @@ public class AuthService {
         if(userStatus.equals(UserStatus.WITHDRAWN)){ // 탈퇴
             throw new CustomException(UserErrorCode.WITHDRAWN_STATUS);
         }
+        if(userStatus.equals(UserStatus.BANNED)){ // 탈퇴
+            throw new CustomException(UserErrorCode.BANNED_STATUS);
+        }
     }
 
     private void saveRefreshToken(String refreshTokenValue, Date now, Long userId){ // refreshToken 저장

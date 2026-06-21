@@ -51,8 +51,8 @@ public class UserService {
         WithdrawnUser withdrawnUser = new WithdrawnUser(encodedEmail, user.getStatus());
         withdrawnUserRepository.save(withdrawnUser);
 
-        // 5. 기존 user 테이블에서는 유저 삭제
-        userRepository.deleteById(userId);
+        // 5. 기존 user 테이블에서는 유저 정보 삭제
+        user.softDelete();
 
         // 6. 로그아웃 처리 - refreshToken 테이블에서 삭제
         authService.logout(userId);
@@ -61,7 +61,7 @@ public class UserService {
     private int retentionDay;
 
     // 오후 3시마다 탈퇴한 사용자 중 영구정지 아닌 사용자 정보 삭제
-    @Scheduled(cron = "0 0 15 * * *")
+    @Scheduled(cron = "0 0 15 * * *", zone = "Asia/Seoul")
     public void deleteExpiredWithdrawalUsers() {
         LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
         withdrawnUserRepository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);

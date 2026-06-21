@@ -21,7 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -41,7 +41,7 @@ class UserServiceTest {
     void withdraw_success() {
         // given
         Long userId = 1L;
-        User user = User.builder().email("test@test.com").build();
+        User user = spy(User.builder().email("test@test.com").build());
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(escrowRepository.existsByUserIdAndStatus(any(), any(), any())).willReturn(false);
 
@@ -51,7 +51,7 @@ class UserServiceTest {
         // then
         verify(matchProposalRepository).updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED);
         verify(withdrawnUserRepository).save(any(WithdrawnUser.class));
-        verify(userRepository).deleteById(userId);
+        verify(user, times(1)).softDelete();
         verify(authService).logout(userId);
     }
 
