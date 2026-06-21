@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -52,9 +53,15 @@ public class MatchProposalController {
             @Parameter(description = "매칭 제안 ID", example = "1", required = true)
             @PathVariable Long proposalId,
             @Parameter(description = "제공자 회원 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "2", required = true)
-            @RequestParam Long providerId
+            @RequestParam Long providerId,
+            @Parameter(description = "중복 수락 요청 방지를 위한 멱등키", example = "accept-proposal-1", required = true)
+            @RequestHeader("Idempotency-Key") String idempotencyKey
     ) {
-        MatchProposalRes response = matchProposalService.acceptMatchProposal(proposalId, providerId);
+        MatchProposalRes response = matchProposalService.acceptMatchProposal(
+                proposalId,
+                providerId,
+                idempotencyKey
+        );
 
         return ApiResponses.success(SuccessCode.MATCH_PROPOSAL_ACCEPTED, response);
     }
