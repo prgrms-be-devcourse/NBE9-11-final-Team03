@@ -129,7 +129,6 @@ public class TalentService {
     }
 
     // 커서 페이징 후처리 공통화
-    // TODO(BATON-78): getTalentList도 헬퍼를 사용하도록 리팩토링
     private CursorPageRes<TalentListRes> convertToCursorPage(List<TalentListRes> rows, int pageSize) {
         // size+1개 받았으면 다음 페이지 존재
         boolean hasNext = rows.size() > pageSize;
