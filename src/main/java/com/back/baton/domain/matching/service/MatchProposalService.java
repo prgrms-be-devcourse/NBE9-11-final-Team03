@@ -3,7 +3,9 @@ package com.back.baton.domain.matching.service;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.service.EscrowService;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
+import com.back.baton.domain.matching.dto.response.MatchProposalReceivedRes;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
+import com.back.baton.domain.matching.dto.response.MatchProposalSentRes;
 import com.back.baton.domain.matching.entity.MatchProposal;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
@@ -72,15 +74,12 @@ public class MatchProposalService {
         MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
-        // MatchProposal 수락 권한 검증
         validateProviderAuthority(providerId, matchProposal);
 
-        // 이미 수락된 제안인 경우, 멱등성을 위해 기존 제안 반환
         if (matchProposal.getStatus() == MatchProposalStatus.ACCEPTED) {
             return MatchProposalRes.from(matchProposal);
         }
 
-        // MatchProposal 상태 검증
         validateRequestedStatus(matchProposal);
 
         Talent providerTalent = getTalent(matchProposal.getProviderTalentId());
@@ -91,7 +90,6 @@ public class MatchProposalService {
 
         // TODO: SWAP의 양방향 거래 그룹 구조는 회의 후 정책 확정 시 별도 확장
         // 현재는 providerTalent 기준 단방향 거래 1건만 생성
-        // 거래 생성
         Trade trade = tradeService.create(
                 matchProposal.getId(),
                 matchProposal.getProviderTalentId(),
@@ -101,7 +99,6 @@ public class MatchProposalService {
                 tradeType
         );
 
-        // 잔액 확인 -> 크레딧 예치 -> 거래 내역 기록
         String escrowHoldIdempotencyKey = "MATCH-PROPOSAL-ACCEPT-"
                 + matchProposal.getId()
                 + ":"
@@ -114,7 +111,6 @@ public class MatchProposalService {
                 escrowHoldIdempotencyKey
         );
 
-        // 에스크로 생성
         escrowService.create(
                 trade.getId(),
                 matchProposal.getRequesterId(),
@@ -133,13 +129,20 @@ public class MatchProposalService {
         MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
-        // MatchProposal 상태 및 거절 권한 검증
         validateRequestedStatus(matchProposal);
         validateProviderAuthority(providerId, matchProposal);
 
         matchProposal.reject();
 
         return MatchProposalRes.from(matchProposal);
+    }
+
+    public List<MatchProposalReceivedRes> getReceivedProposals(Long providerId, MatchProposalStatus status) {
+        return matchProposalRepository.findReceivedProposals(providerId, status);
+    }
+
+    public List<MatchProposalSentRes> getSentProposals(Long requesterId, MatchProposalStatus status) {
+        return matchProposalRepository.findSentProposals(requesterId, status);
     }
 
     private Talent getTalent(Long talentId) {
