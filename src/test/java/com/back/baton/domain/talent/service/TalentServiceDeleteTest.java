@@ -3,6 +3,8 @@ package com.back.baton.domain.talent.service;
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.trade.entity.TradeStatus;
+import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
@@ -26,6 +28,7 @@ class TalentServiceDeleteTest {
 
     @InjectMocks TalentService talentService;
     @Mock TalentRepository talentRepository;
+    @Mock TradeRepository tradeRepository;
 
     @Test
     @DisplayName("본인 글이고 삭제 전이면 deletedAt이 기록된다")
@@ -50,6 +53,25 @@ class TalentServiceDeleteTest {
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(99L, 1L), TalentErrorCode.TALENT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("진행 중인 거래(IN_PROGRESS)가 존재하면 TALENT_CANNOT_DELETE 예외가 발생한다")
+    void deleteTalent_fail_tradeInProgress() {
+        // given
+        Long authorId = 1L;
+        Long talentId = 10L;
+        Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+
+        // 💡 진행 중인 거래가 있다고 가정 (true 반환)
+        given(tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS)).willReturn(true);
+
+        // when & then
+        assertErrorCode(
+                () -> talentService.deleteTalent(talentId, authorId),
+                TalentErrorCode.TALENT_CANNOT_DELETE
+        );
     }
 
     @Test
