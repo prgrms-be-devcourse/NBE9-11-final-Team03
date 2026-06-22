@@ -156,7 +156,8 @@ public class CreditService {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
         }
-        if (amount <= 0) {
+
+        if (amount <= 0 || settlementAmount <= 0) {
             throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
         }
 
