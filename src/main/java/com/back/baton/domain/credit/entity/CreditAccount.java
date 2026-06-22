@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Check;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @Entity
@@ -28,6 +30,8 @@ public class CreditAccount extends BaseTimeEntity {
 
     @Version
     private Long version;
+
+    private LocalDateTime deletedAt;
 
     public static CreditAccount create(Long userId, int initialBalance) {
         CreditAccount account = new CreditAccount();
