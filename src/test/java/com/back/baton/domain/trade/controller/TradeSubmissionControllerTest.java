@@ -1,7 +1,11 @@
 package com.back.baton.domain.trade.controller;
 
+import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
+import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.dto.response.TradeSubmissionRes;
+import com.back.baton.domain.trade.entity.TradeStatus;
+import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.domain.trade.service.TradeSubmissionService;
 import com.back.baton.global.exception.CustomException;
@@ -25,6 +29,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -44,6 +50,115 @@ class TradeSubmissionControllerTest {
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @Test
+    @DisplayName("구매 확정 API - 성공")
+    void confirmPurchase_success() throws Exception {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        TradeRes res = new TradeRes(
+                tradeId, 1L, 10L, buyerId, 3L,
+                5000, TradeType.PURCHASE, TradeStatus.COMPLETED,
+                EscrowStatus.RELEASED, null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        when(tradeSubmissionService.confirmPurchase(anyLong(), anyLong())).thenReturn(res);
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/confirm", tradeId)
+                        .param("buyerId", String.valueOf(buyerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-10"))
+                .andExpect(jsonPath("$.data.tradeStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.escrowStatus").value("RELEASED"));
+    }
+
+    @Test
+    @DisplayName("구매 확정 API - 구매자가 아니면 403 반환")
+    void confirmPurchase_accessDenied() throws Exception {
+        when(tradeSubmissionService.confirmPurchase(anyLong(), anyLong()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED));
+
+        mockMvc.perform(patch("/api/v1/trade/1/confirm")
+                        .param("buyerId", "999"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-403-001"));
+    }
+
+    @Test
+    @DisplayName("구매 확정 API - 검토 중이 아닌 거래이면 400 반환")
+    void confirmPurchase_notUnderReview() throws Exception {
+        when(tradeSubmissionService.confirmPurchase(anyLong(), anyLong()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW));
+
+        mockMvc.perform(patch("/api/v1/trade/1/confirm")
+                        .param("buyerId", "2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-400-005"));
+    }
+
+    @Test
+    @DisplayName("결과물 확인 API - 성공")
+    void getSubmission_success() throws Exception {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        TradeSubmissionRes res = new TradeSubmissionRes(
+                10L, 1L, "https://s3.example.com/get", "결과물 설명", LocalDateTime.now()
+        );
+
+        when(tradeSubmissionService.getSubmission(anyLong(), anyLong())).thenReturn(res);
+
+        mockMvc.perform(get("/api/v1/trade/{tradeId}/submission", tradeId)
+                        .param("buyerId", String.valueOf(buyerId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-9"))
+                .andExpect(jsonPath("$.data.id").value(10L))
+                .andExpect(jsonPath("$.data.fileUrl").value("https://s3.example.com/get"))
+                .andExpect(jsonPath("$.data.description").value("결과물 설명"));
+    }
+
+    @Test
+    @DisplayName("결과물 확인 API - 구매자가 아니면 403 반환")
+    void getSubmission_accessDenied() throws Exception {
+        when(tradeSubmissionService.getSubmission(anyLong(), anyLong()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED));
+
+        mockMvc.perform(get("/api/v1/trade/1/submission")
+                        .param("buyerId", "999"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-403-001"));
+    }
+
+    @Test
+    @DisplayName("결과물 확인 API - 검토 중이 아닌 거래이면 400 반환")
+    void getSubmission_notUnderReview() throws Exception {
+        when(tradeSubmissionService.getSubmission(anyLong(), anyLong()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW));
+
+        mockMvc.perform(get("/api/v1/trade/1/submission")
+                        .param("buyerId", "2"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-400-005"));
+    }
+
+    @Test
+    @DisplayName("결과물 확인 API - 제출 내역이 없으면 404 반환")
+    void getSubmission_submissionNotFound() throws Exception {
+        when(tradeSubmissionService.getSubmission(anyLong(), anyLong()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_SUBMISSION_NOT_FOUND));
+
+        mockMvc.perform(get("/api/v1/trade/1/submission")
+                        .param("buyerId", "2"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-404-002"));
+    }
 
     @Test
     @DisplayName("Presigned URL 발급 API - 성공")

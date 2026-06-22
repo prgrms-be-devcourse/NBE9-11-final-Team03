@@ -64,6 +64,36 @@ public class TradeController {
         return ApiResponses.success(SuccessCode.TRADE_CANCELLED, response);
     }
 
+    @PatchMapping("/{tradeId}/confirm")
+    @Operation(
+            summary = "구매 확정",
+            description = "구매자가 결과물을 확인 후 구매를 확정합니다. 에스크로가 해제되고 판매자에게 크레딧이 지급됩니다."
+    )
+    public ResponseEntity<ApiResponse<TradeRes>> confirmPurchase(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @Parameter(description = "구매자 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "2", required = true)
+            @RequestParam Long buyerId
+    ) {
+        TradeRes response = tradeSubmissionService.confirmPurchase(tradeId, buyerId);
+        return ApiResponses.success(SuccessCode.TRADE_COMPLETED, response);
+    }
+
+    @GetMapping("/{tradeId}/submission")
+    @Operation(
+            summary = "결과물 확인",
+            description = "구매자가 판매자가 제출한 결과물을 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<TradeSubmissionRes>> getSubmission(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @Parameter(description = "구매자 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "2", required = true)
+            @RequestParam Long buyerId
+    ) {
+        TradeSubmissionRes response = tradeSubmissionService.getSubmission(tradeId, buyerId);
+        return ApiResponses.success(SuccessCode.TRADE_SUBMISSION_OK, response);
+    }
+
     @PostMapping("/{tradeId}/submission/presigned-url")
     @Operation(
             summary = "결과물 업로드 URL 발급",

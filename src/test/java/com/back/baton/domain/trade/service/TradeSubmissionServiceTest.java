@@ -1,9 +1,11 @@
 package com.back.baton.domain.trade.service;
 
+import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
 import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
+import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.dto.response.TradeSubmissionRes;
 import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeStatus;
@@ -53,6 +55,120 @@ class TradeSubmissionServiceTest {
 
     @Mock
     private S3Service s3Service;
+
+    @Mock
+    private CreditService creditService;
+
+    @Test
+    @DisplayName("결과물 확인 성공 - 제출 내역과 Presigned GET URL을 반환한다")
+    void getSubmission_success() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+        Escrow escrow = createEscrow(buyerId, 3L);
+
+        TradeSubmission submission = TradeSubmission.create(escrow.getId(), "trades/1/uuid.pdf", "결과물 설명");
+        ReflectionTestUtils.setField(submission, "id", 10L);
+
+        given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.of(escrow));
+        given(tradeSubmissionRepository.findByEscrowId(escrow.getId())).willReturn(Optional.of(submission));
+        given(s3Service.generatePresignedGetUrl("trades/1/uuid.pdf")).willReturn("https://s3.example.com/get");
+
+        TradeSubmissionRes result = tradeSubmissionService.getSubmission(tradeId, buyerId);
+
+        assertThat(result.id()).isEqualTo(10L);
+        assertThat(result.fileUrl()).isEqualTo("https://s3.example.com/get");
+        assertThat(result.description()).isEqualTo("결과물 설명");
+    }
+
+    @Test
+    @DisplayName("결과물 확인 - 존재하지 않는 거래이면 TRADE_NOT_FOUND 예외가 발생한다")
+    void getSubmission_tradeNotFound() {
+        given(tradeRepository.findById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeSubmissionService.getSubmission(999L, 2L))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("결과물 확인 - 구매자가 아니면 TRADE_ACCESS_DENIED 예외가 발생한다")
+    void getSubmission_accessDenied() {
+        Long tradeId = 1L;
+        Trade trade = createTrade(2L, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeSubmissionService.getSubmission(tradeId, 999L))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_ACCESS_DENIED);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("결과물 확인 - UNDER_REVIEW가 아닌 거래이면 TRADE_NOT_UNDER_REVIEW 예외가 발생한다")
+    void getSubmission_notUnderReview() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+
+        given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeSubmissionService.getSubmission(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("결과물 확인 - 에스크로가 없으면 ESCROW_NOT_FOUND 예외가 발생한다")
+    void getSubmission_escrowNotFound() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeSubmissionService.getSubmission(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
+
+        then(tradeSubmissionRepository).should(never()).findByEscrowId(any());
+    }
+
+    @Test
+    @DisplayName("결과물 확인 - 제출 내역이 없으면 TRADE_SUBMISSION_NOT_FOUND 예외가 발생한다")
+    void getSubmission_submissionNotFound() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+        Escrow escrow = createEscrow(buyerId, 3L);
+
+        given(tradeRepository.findById(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.of(escrow));
+        given(tradeSubmissionRepository.findByEscrowId(escrow.getId())).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeSubmissionService.getSubmission(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_SUBMISSION_NOT_FOUND);
+
+        then(s3Service).should(never()).generatePresignedGetUrl(anyString());
+    }
 
     @Test
     @DisplayName("Presigned URL 발급 성공 - presignedUrl과 fileKey를 반환한다")
@@ -232,6 +348,86 @@ class TradeSubmissionServiceTest {
                 .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
 
         then(tradeSubmissionRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("구매 확정 성공 - Trade가 COMPLETED, Escrow가 RELEASED로 변경된다")
+    void confirmPurchase_success() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+        Escrow escrow = createEscrow(buyerId, 3L);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.of(escrow));
+
+        TradeRes result = tradeSubmissionService.confirmPurchase(tradeId, buyerId);
+
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("구매 확정 - 존재하지 않는 거래이면 TRADE_NOT_FOUND 예외가 발생한다")
+    void confirmPurchase_tradeNotFound() {
+        given(tradeRepository.findByIdWithLock(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeSubmissionService.confirmPurchase(999L, 2L))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("구매 확정 - 구매자가 아니면 TRADE_ACCESS_DENIED 예외가 발생한다")
+    void confirmPurchase_accessDenied() {
+        Long tradeId = 1L;
+        Trade trade = createTrade(2L, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeSubmissionService.confirmPurchase(tradeId, 999L))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_ACCESS_DENIED);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("구매 확정 - UNDER_REVIEW가 아닌 거래이면 TRADE_NOT_UNDER_REVIEW 예외가 발생한다")
+    void confirmPurchase_notUnderReview() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeSubmissionService.confirmPurchase(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("구매 확정 - 에스크로가 없으면 ESCROW_NOT_FOUND 예외가 발생한다")
+    void confirmPurchase_escrowNotFound() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeSubmissionService.confirmPurchase(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
     }
 
     private Trade createTrade(Long buyerId, Long sellerId) {
