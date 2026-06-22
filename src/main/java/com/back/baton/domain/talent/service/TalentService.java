@@ -92,13 +92,14 @@ public class TalentService {
             throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
         }
 
-        boolean hasInProgressTrade = tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS);
-        if (hasInProgressTrade) {
+        List<TradeStatus> blockStatuses = List.of(TradeStatus.IN_PROGRESS, TradeStatus.UNDER_REVIEW);
+        boolean hasUnfinishedTrade = tradeRepository.existsByTalentIdAndStatusIn(talentId, blockStatuses);
+
+        if (hasUnfinishedTrade) {
             throw new CustomException(TalentErrorCode.TALENT_CANNOT_DELETE);
         }
-        talent.softDelete();
         // Dirty Checking: save() 없이 커밋 시 UPDATE
-
+        talent.softDelete();
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
     }
 

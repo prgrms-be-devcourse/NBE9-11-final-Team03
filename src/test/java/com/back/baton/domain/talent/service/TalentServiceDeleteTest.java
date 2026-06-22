@@ -3,7 +3,6 @@ package com.back.baton.domain.talent.service;
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
-import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
@@ -20,6 +19,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
@@ -31,15 +32,14 @@ class TalentServiceDeleteTest {
     @Mock TradeRepository tradeRepository;
 
     @Test
-    @DisplayName("본인 글이고 삭제 전이며 진행 중인 거래가 없으면 deletedAt이 기록된다")
+    @DisplayName("본인 글이고 삭제 전이며 진행 중이거나 검토 중인 거래가 없으면 deletedAt이 기록된다")
     void deleteTalent_success() {
         // given
         Long authorId = 1L;
-        Long talentId = 10L; // 명확하게 ID 지정
+        Long talentId = 10L;
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
         given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
-
-        given(tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS)).willReturn(false);
+        given(tradeRepository.existsByTalentIdAndStatusIn(eq(talentId), anyList())).willReturn(false);
 
         // when
         talentService.deleteTalent(talentId, authorId);
@@ -59,16 +59,14 @@ class TalentServiceDeleteTest {
     }
 
     @Test
-    @DisplayName("진행 중인 거래(IN_PROGRESS)가 존재하면 TALENT_CANNOT_DELETE 예외가 발생한다")
-    void deleteTalent_fail_tradeInProgress() {
+    @DisplayName("미완료 거래(IN_PROGRESS, UNDER_REVIEW 등)가 존재하면 TALENT_CANNOT_DELETE 예외가 발생한다")
+    void deleteTalent_fail_tradeInProgressOrReview() {
         // given
         Long authorId = 1L;
         Long talentId = 10L;
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
         given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
-
-        // 진행 중인 거래가 있다고 가정
-        given(tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS)).willReturn(true);
+        given(tradeRepository.existsByTalentIdAndStatusIn(eq(talentId), anyList())).willReturn(true);
 
         // when & then
         assertErrorCode(
@@ -80,23 +78,23 @@ class TalentServiceDeleteTest {
     @Test
     @DisplayName("이미 삭제된 글이면 소유권 검사 전에 막힌다")
     void deleteTalent_alreadyDeleted() {
-        // given: 작성자 1L 글을 미리 삭제 상태로
+        // given
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
         talent.softDelete();
         given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
 
-        // when & then: 남(2L)이 요청해도 삭제여부에서 먼저 차단 -> 404
+        // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_NOT_FOUND);
     }
 
     @Test
     @DisplayName("본인 글이 아니면 TALENT_FORBIDDEN")
     void deleteTalent_forbidden() {
-        // given: 작성자는 1L
+        // given
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
         given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
 
-        // when & then: 요청자 2L → 소유권에서 막힘
+        // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_FORBIDDEN);
     }
 
