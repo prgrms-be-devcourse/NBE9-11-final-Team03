@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.back.baton.support.security.WithMockSecurityUser;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -39,17 +40,17 @@ class CreditControllerTest {
     @MockitoBean
     private CreditService creditService;
 
-    @MockitoBean // 또는 @MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
-    @DisplayName("크레딧 계좌가 존재하면 200과 잔액 정보를 반환한다")
+    @DisplayName("크레딧 계좌가 존재하면 인증 사용자 기준 잔액을 반환한다")
+    @WithMockSecurityUser(userId = 1)
     void getBalance_success() throws Exception {
         CreditBalanceRes response = new CreditBalanceRes(1L, 10000, 0);
         given(creditService.getBalance(1L)).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/credit/balance")
-                        .param("userId", "1"))
+        mockMvc.perform(get("/api/v1/credit/balance"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-0"))
@@ -59,21 +60,20 @@ class CreditControllerTest {
     }
 
     @Test
-    @DisplayName("크레딧 계좌가 없으면 404와 CREDIT_ACCOUNT_NOT_FOUND 에러를 반환한다")
+    @DisplayName("크레딧 계좌가 없으면 404와 CREDIT_ACCOUNT_NOT_FOUND를 반환한다")
+    @WithMockSecurityUser(userId = 999)
     void getBalance_notFound() throws Exception {
         given(creditService.getBalance(999L)).willThrow(new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
-        mockMvc.perform(get("/api/v1/credit/balance")
-                        .param("userId", "999"))
+        mockMvc.perform(get("/api/v1/credit/balance"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("CREDIT-404-001"))
-                .andExpect(jsonPath("$.message").value("크레딧 계좌를 찾을 수 없습니다."))
                 .andExpect(jsonPath("$.data").isEmpty());
     }
-
     @Test
     @DisplayName("거래 내역 조회 시 200과 커서 페이지 데이터를 반환한다")
+    @WithMockSecurityUser(userId = 1)
     void getTransactionHistory_success() throws Exception {
         CreditTransactionRes tx = new CreditTransactionRes(
                 1005L, 100L, CreditTransactionType.REFUND, 5000, 13000,
@@ -82,8 +82,7 @@ class CreditControllerTest {
         CursorPageRes<CreditTransactionRes> page = CursorPageRes.of(List.of(tx), false, 1005L);
         given(creditService.getTransactionHistory(eq(1L), any(), any(), anyInt())).willReturn(page);
 
-        mockMvc.perform(get("/api/v1/credit/transactions")
-                        .param("userId", "1"))
+        mockMvc.perform(get("/api/v1/credit/transactions"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-0"))
@@ -96,12 +95,12 @@ class CreditControllerTest {
 
     @Test
     @DisplayName("type, from, to, cursor, size 파라미터가 서비스로 그대로 바인딩된다")
+    @WithMockSecurityUser(userId = 1)
     void getTransactionHistory_bindsFilterParams() throws Exception {
         given(creditService.getTransactionHistory(eq(1L), any(), any(), anyInt()))
                 .willReturn(CursorPageRes.of(List.of(), false, null));
 
         mockMvc.perform(get("/api/v1/credit/transactions")
-                        .param("userId", "1")
                         .param("type", "REFUND")
                         .param("from", "2026-06-05T00:00:00")
                         .param("to", "2026-06-20T23:59:59")

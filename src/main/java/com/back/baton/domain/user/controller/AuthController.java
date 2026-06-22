@@ -9,6 +9,8 @@ import com.back.baton.domain.user.service.AuthService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
+import com.back.baton.global.security.CurrentUser;
+import com.back.baton.global.security.SecurityUser;
 import com.back.baton.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,8 +19,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -83,10 +83,10 @@ public class AuthController {
     )
     public ResponseEntity<ApiResponse<Void>> logout(
             @CookieValue(name = "refreshToken", required = false) String refreshTokenValue,
-            @AuthenticationPrincipal UserDetails principal,
+            @CurrentUser SecurityUser currentUser,
             HttpServletResponse response
     ){
-        Long userId = Long.parseLong(principal.getUsername()); // 지금 로그인한 유저
+        Long userId = currentUser.getUserId();
 
         // 1. 유저 쿠키 삭제
         if(refreshTokenValue!=null){

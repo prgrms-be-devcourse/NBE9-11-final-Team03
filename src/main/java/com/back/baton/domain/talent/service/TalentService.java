@@ -8,6 +8,8 @@ import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
 import com.back.baton.domain.talent.dto.response.*;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.trade.entity.TradeStatus;
+import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
@@ -24,6 +26,7 @@ public class TalentService {
 
     private final TalentRepository talentRepository;
     private final CategoryRepository categoryRepository;
+    private final TradeRepository tradeRepository;
     private static final int MAX_PAGE_SIZE = 100;
 
     // 재능 등록
@@ -89,10 +92,14 @@ public class TalentService {
             throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
         }
 
-        // TODO: 진행 중 거래 match 도메인 생성 되면 삭제 차단
-        talent.softDelete();
-        // Dirty Checking: save() 없이 커밋 시 UPDATE
+        List<TradeStatus> blockStatuses = List.of(TradeStatus.IN_PROGRESS, TradeStatus.UNDER_REVIEW);
+        boolean hasUnfinishedTrade = tradeRepository.existsByTalentIdAndStatusIn(talentId, blockStatuses);
 
+        if (hasUnfinishedTrade) {
+            throw new CustomException(TalentErrorCode.TALENT_CANNOT_DELETE);
+        }
+        // Dirty Checking: save() 없이 커밋 시 UPDATE
+        talent.softDelete();
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
     }
 

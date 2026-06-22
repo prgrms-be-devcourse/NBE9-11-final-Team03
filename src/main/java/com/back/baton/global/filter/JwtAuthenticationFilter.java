@@ -2,6 +2,7 @@ package com.back.baton.global.filter;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.back.baton.global.security.JwtTokenProvider;
+import com.back.baton.global.security.SecurityUser;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,14 +10,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
@@ -33,13 +31,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if(decodedJWT != null){
             try{
                 // 2. Spring Security용 인증 객체 생성
-                String userId = decodedJWT.getSubject();
+                Long userId = Long.parseLong(decodedJWT.getSubject());
                 String role = decodedJWT.getClaim("role").asString();
 
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_"+role);
-                User principal = new User(userId, "", Collections.singletonList(authority));
+                SecurityUser principal = SecurityUser.of(userId, role);
                 Authentication authentication =
-                        new UsernamePasswordAuthenticationToken(principal, "", Collections.singletonList(authority));
+                        new UsernamePasswordAuthenticationToken(principal, "", principal.getAuthorities());
 
                 // 3. SecurityContext에 등록하여 관리
                 SecurityContextHolder.getContext().setAuthentication(authentication);
