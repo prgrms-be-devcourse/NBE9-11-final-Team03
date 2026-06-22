@@ -1,7 +1,4 @@
 spring:
-  docker:
-    compose:
-      enabled: false   # 로컬은 H2 사용 — Docker Desktop 의존 제거
   application:
     name: baton
   profiles:
