@@ -12,3 +12,7 @@ logging:
   level:
     org.hibernate.SQL: debug
     org.hibernate.orm.jdbc.bind: trace
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000

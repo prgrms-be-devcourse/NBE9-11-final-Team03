@@ -15,6 +15,7 @@ import com.back.baton.global.response.code.TalentErrorCode;
 
 import java.util.List;
 import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,15 @@ public class ChatService {
         return chatRoom;
     }
 
+    public ChatRoomRes getChatRoomInfo(
+            Long roomId,
+            Long userId
+    ) {
+        ChatRoom chatRoom = getChatRoom(roomId, userId);
+
+        return ChatRoomRes.from(chatRoom);
+    }
+
     @Transactional
     public ChatMessageRes sendMessage(Long roomId, Long senderId, String content) {
         ChatRoom chatRoom = getChatRoom(roomId, senderId);
@@ -80,6 +90,7 @@ public class ChatService {
         return ChatMessageRes.from(savedMessage);
     }
 
+    @Transactional(readOnly = true)
     public List<ChatMessageRes> getMessages(Long roomId, Long userId) {
         getChatRoom(roomId, userId);
 
@@ -87,6 +98,23 @@ public class ChatService {
                 .stream()
                 .map(ChatMessageRes::from)
                 .toList();
+    }
+
+    @Transactional
+    public List<Long> markMessagesAsRead(
+            Long roomId,
+            Long readerId
+    ) {
+        getChatRoom(roomId, readerId);
+
+        List<Long> unreadMessageIds = chatMessageRepository
+                .findUnreadMessageIdsFromOtherParticipant(roomId, readerId);
+
+        if (!unreadMessageIds.isEmpty()) {
+            chatMessageRepository.markAsReadByIds(unreadMessageIds);
+        }
+
+        return unreadMessageIds;
     }
 
     private Talent getTalent(Long talentId) {

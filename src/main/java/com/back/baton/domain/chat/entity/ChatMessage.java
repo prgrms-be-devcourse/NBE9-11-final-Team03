@@ -22,7 +22,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "chat_message",
         indexes = {
-                @Index(name = "채팅 메시지 조회 인덱스", columnList = "room_id, deleted_at, created_at")
+                @Index(
+                        name = "idx_chat_message_room_deleted_created",
+                        columnList = "room_id, deleted_at, created_at"
+                )
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatMessage extends BaseTimeEntity {
