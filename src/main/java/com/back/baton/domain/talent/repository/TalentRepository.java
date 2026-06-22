@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRepositoryCustom {
@@ -25,4 +26,13 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
     @Modifying(clearAutomatically = true)
     @Query("update Talent t set t.viewCount = t.viewCount + 1 where t.id = :talentId and t.deletedAt is null")
     int increaseViewCount(@Param("talentId") Long talentId);
+
+
+    @Modifying(clearAutomatically = true)
+    @Query("""
+            UPDATE Talent t SET t.title='', t.content='', t.estimatedHours=0, t.creditPrice=0,
+                        t.status='CLOSED', t.viewCount=0, t.completeCount=0, t.avgRating=0.00, t.deletedAt = :now
+            WHERE t.authorId = :authorId
+            """)
+    void deleteTalentByUserId(@Param("authorId") Long authorId, @Param("now") LocalDateTime now);
 }

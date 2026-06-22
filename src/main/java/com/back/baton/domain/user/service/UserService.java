@@ -1,9 +1,11 @@
 package com.back.baton.domain.user.service;
 
+import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.entity.WithdrawnUser;
 import com.back.baton.domain.user.repository.UserRepository;
@@ -18,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+import static java.time.LocalDateTime.now;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,6 +31,8 @@ public class UserService {
     private final WithdrawnUserRepository withdrawnUserRepository;
     private final EscrowRepository escrowRepository;
     private final MatchProposalRepository matchProposalRepository;
+    private final TalentRepository talentRepository;
+    private final CreditAccountRepository creditAccountRepository;
     private final AuthService authService;
 
     public void withdraw(Long userId) {
@@ -38,13 +44,19 @@ public class UserService {
             throw new CustomException(UserErrorCode.ESCROW_IN_PROGRESS);
         }
 
-        // 3. 만일 이 사람에게 들어온 제안이 있다면 전부 거절 처리
+        // [3. 탈퇴 유저 관련 데이터 처리]
+        // 3-1. 만일 이 사람에게 들어온 제안이 있다면 전부 거절 처리
         matchProposalRepository.updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED); // 받은 제안 전부 거절 처리
 
         // 3-2. 보낸 제안이 있다면 전부 취소 처리
         matchProposalRepository.updateStatusWhenRequesterWithdrawn(userId, MatchProposalStatus.CANCELLED);
 
-        // 그 외 탈퇴 후 정보 파기 정책을 추가한다면 여기서 구현
+        // 3-3. 등록한 재능 삭제
+        talentRepository.deleteTalentByUserId(userId, now());
+
+        // 3-4. 크레딧 계좌 삭제
+        creditAccountRepository.deleteAccountByUserId(userId, now());
+
 
         // 4. 탈퇴 회원 테이블에 추가 (이메일 암호화)
         String encodedEmail = withdrawnEncoder.encode(user.getEmail());
