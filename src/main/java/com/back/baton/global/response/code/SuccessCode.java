@@ -25,6 +25,10 @@ public enum SuccessCode {
     TALENT_ATTACHMENT_CREATED(HttpStatus.CREATED, "201-4", "재능 첨부 등록에 성공했습니다."),
     TALENT_ATTACHMENT_OK(HttpStatus.OK, "200-3", "재능 첨부 요청에 성공했습니다."),
 
+    CHAT_ROOM_CREATED(HttpStatus.OK, "200-10", "채팅방 생성 또는 조회에 성공했습니다."),
+    CHAT_MESSAGE_SENT(HttpStatus.OK, "200-11", "채팅 메시지 전송에 성공했습니다."),
+    CHAT_MESSAGES_FOUND(HttpStatus.OK, "200-12", "채팅 메시지 목록 조회에 성공했습니다."),
+
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-2", "토큰 재발행에 성공했습니다."),
     USER_LOGOUT_SUCCESS(HttpStatus.OK, "200-3","로그아웃에 성공했습니다."),
