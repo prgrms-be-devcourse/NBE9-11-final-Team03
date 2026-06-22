@@ -1,6 +1,8 @@
 package com.back.baton.domain.matching.service;
 
 import com.back.baton.domain.category.entity.Category;
+import com.back.baton.domain.credit.service.CreditService;
+import com.back.baton.domain.escrow.service.EscrowService;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
 import com.back.baton.domain.matching.entity.MatchProposal;
@@ -8,6 +10,9 @@ import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.trade.entity.Trade;
+import com.back.baton.domain.trade.entity.TradeType;
+import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +42,15 @@ class MatchProposalServiceTest {
 
     @Mock
     private TalentRepository talentRepository;
+
+    @Mock
+    private TradeService tradeService;
+
+    @Mock
+    private CreditService creditService;
+
+    @Mock
+    private EscrowService escrowService;
 
     @InjectMocks
     private MatchProposalService matchProposalService;
@@ -190,24 +205,84 @@ class MatchProposalServiceTest {
         Long proposalId = 1L;
         Long requesterId = 1L;
         Long providerId = 2L;
+        Long providerTalentId = 20L;
+        Long tradeId = 100L;
+        int creditPrice = 100;
+        String idempotencyKey = "accept-proposal-1";
 
         MatchProposal matchProposal = MatchProposal.create(
-                20L,
+                providerTalentId,
                 null,
                 requesterId,
                 providerId,
                 "재능 구매 제안드립니다."
         );
 
+        ReflectionTestUtils.setField(matchProposal, "id", proposalId);
+
+        Talent providerTalent = createTalent(providerTalentId, providerId);
+
+        Trade trade = Trade.create(
+                proposalId,
+                providerTalentId,
+                requesterId,
+                providerId,
+                creditPrice,
+                TradeType.PURCHASE
+        );
+        ReflectionTestUtils.setField(trade, "id", tradeId);
+
         when(matchProposalRepository.findById(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
-        MatchProposalRes res = matchProposalService.acceptMatchProposal(proposalId, providerId);
+        when(talentRepository.findById(providerTalentId))
+                .thenReturn(Optional.of(providerTalent));
+
+        when(tradeService.create(
+                proposalId,
+                providerTalentId,
+                requesterId,
+                providerId,
+                creditPrice,
+                TradeType.PURCHASE
+        )).thenReturn(trade);
+
+        when(matchProposalRepository.save(matchProposal))
+                .thenReturn(matchProposal);
+
+        MatchProposalRes res = matchProposalService.acceptMatchProposal(
+                proposalId,
+                providerId,
+                idempotencyKey
+        );
 
         assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
         assertThat(res.respondedAt()).isNotNull();
 
         verify(matchProposalRepository).findById(proposalId);
+        verify(talentRepository).findById(providerTalentId);
+        verify(tradeService).create(
+                proposalId,
+                providerTalentId,
+                requesterId,
+                providerId,
+                creditPrice,
+                TradeType.PURCHASE
+        );
+        verify(creditService).holdForEscrow(
+                requesterId,
+                creditPrice,
+                tradeId,
+                "MATCH-PROPOSAL-ACCEPT-" + proposalId + ":" + idempotencyKey
+        );
+        verify(escrowService).create(
+                tradeId,
+                requesterId,
+                providerId,
+                creditPrice
+        );
+
+        verify(matchProposalRepository).save(matchProposal);
     }
 
     @Test
@@ -217,6 +292,7 @@ class MatchProposalServiceTest {
         Long requesterId = 1L;
         Long providerId = 2L;
         Long invalidProviderId = 999L;
+        String idempotencyKey = "accept-proposal-1";
 
         MatchProposal matchProposal = MatchProposal.create(
                 20L,
@@ -229,35 +305,88 @@ class MatchProposalServiceTest {
         when(matchProposalRepository.findById(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
-        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, invalidProviderId))
+        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
+                proposalId,
+                invalidProviderId,
+                idempotencyKey
+        ))
                 .isInstanceOf(CustomException.class);
 
         verify(matchProposalRepository).findById(proposalId);
+        verify(talentRepository, never()).findById(any());
+        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
     }
 
     @Test
-    @DisplayName("REQUESTED 상태가 아닌 매칭 제안은 수락할 수 없다")
-    void acceptMatchProposal_invalidStatus() {
+    @DisplayName("이미 수락된 매칭 제안을 다시 수락하면 기존 수락 결과를 반환한다")
+    void acceptMatchProposal_alreadyAccepted() {
         Long proposalId = 1L;
         Long requesterId = 1L;
         Long providerId = 2L;
+        Long providerTalentId = 20L;
+        String idempotencyKey = "accept-proposal-1";
 
         MatchProposal matchProposal = MatchProposal.create(
-                20L,
+                providerTalentId,
                 null,
                 requesterId,
                 providerId,
                 "재능 구매 제안드립니다."
         );
+
+        ReflectionTestUtils.setField(matchProposal, "id", proposalId);
         matchProposal.accept();
 
         when(matchProposalRepository.findById(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
-        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, providerId))
+        MatchProposalRes res = matchProposalService.acceptMatchProposal(
+                proposalId,
+                providerId,
+                idempotencyKey
+        );
+
+        assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
+        assertThat(res.respondedAt()).isNotNull();
+
+        verify(matchProposalRepository).findById(proposalId);
+        verify(talentRepository, never()).findById(any());
+        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
+        verify(creditService, never()).holdForEscrow(any(), anyInt(), any(), any());
+        verify(escrowService, never()).create(any(), any(), any(), anyInt());
+        verify(matchProposalRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("REQUESTED 또는 ACCEPTED 상태가 아닌 매칭 제안은 수락할 수 없다")
+    void acceptMatchProposal_invalidStatus() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+        String idempotencyKey = "accept-proposal-1";
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                null,
+                requesterId,
+                providerId,
+                "재능 구매 제안드립니다."
+        );
+        matchProposal.reject();
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
+                proposalId,
+                providerId,
+                idempotencyKey
+        ))
                 .isInstanceOf(CustomException.class);
 
         verify(matchProposalRepository).findById(proposalId);
+        verify(talentRepository, never()).findById(any());
+        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
     }
 
     @Test

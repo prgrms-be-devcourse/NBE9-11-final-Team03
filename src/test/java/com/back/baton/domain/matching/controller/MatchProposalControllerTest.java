@@ -85,6 +85,7 @@ class MatchProposalControllerTest {
     void acceptMatchProposal_Success() throws Exception {
         Long proposalId = 1L;
         Long providerId = 2L;
+        String idempotencyKey = "accept-proposal-1";
 
         MatchProposalRes res = new MatchProposalRes(
                 proposalId,
@@ -99,11 +100,12 @@ class MatchProposalControllerTest {
                 LocalDateTime.now()
         );
 
-        when(matchProposalService.acceptMatchProposal(eq(proposalId), eq(providerId)))
+        when(matchProposalService.acceptMatchProposal(eq(proposalId), eq(providerId), eq(idempotencyKey)))
                 .thenReturn(res);
 
         mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/accept", proposalId)
-                        .param("providerId", String.valueOf(providerId)))
+                        .param("providerId", String.valueOf(providerId))
+                        .header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-4"))
                 .andExpect(jsonPath("$.message").value("매칭 제안이 수락되었습니다."))
