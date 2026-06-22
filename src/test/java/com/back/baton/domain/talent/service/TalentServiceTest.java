@@ -38,7 +38,7 @@ class TalentServiceTest {
         given(category.isActive()).willReturn(true);
         given(categoryRepository.findById(10L)).willReturn(Optional.of(category));
         ReflectionTestUtils.setField(talentService, "maxTalentCountPerUser", 10);
-        given(talentRepository.countByAuthorIdAndDeletedAtIsNull(authorId)).willReturn(0);
+        given(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).willReturn(0);
 
         Talent saved = Talent.create(authorId, mock(Category.class), "스프링 코드리뷰", "내용", 2, 100);
         ReflectionTestUtils.setField(saved, "id", 100L);

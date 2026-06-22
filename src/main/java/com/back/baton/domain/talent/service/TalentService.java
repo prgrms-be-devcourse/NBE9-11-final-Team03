@@ -30,7 +30,7 @@ public class TalentService {
     private final TradeRepository tradeRepository;
     private static final int MAX_PAGE_SIZE = 100;
 
-    @Value("${talent.max-count-per-user}:3")
+    @Value("${talent.max-count-per-user:3}")
     private int maxTalentCountPerUser;
 
     // 재능 등록
