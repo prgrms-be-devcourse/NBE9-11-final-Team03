@@ -1,15 +1,16 @@
 package com.back.baton.domain.credit.service;
 
+import com.back.baton.domain.credit.dto.request.CreditTransactionSearchReq;
 import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
+import com.back.baton.domain.credit.dto.response.CreditTransactionRes;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.domain.credit.entity.CreditAccount;
 import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.credit.repository.CreditTransactionRepository;
-import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.CreditErrorCode;
-import com.back.baton.global.response.code.UserErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -26,21 +28,30 @@ public class CreditService {
 
     private final CreditAccountRepository creditAccountRepository;
     private final CreditTransactionRepository creditTransactionRepository;
-    private final UserRepository userRepository;
 
     @Value("${credit.initial-amount}")
     private int initialCreditAmount;
 
+    @Value("${credit.transaction-max-page-size}")
+    private int maxPageSize;
+
     // 크레딧 잔액 조회
     public CreditBalanceRes getBalance(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
-        }
-
         CreditAccount creditAccount = creditAccountRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
         return CreditBalanceRes.from(creditAccount);
+    }
+
+    // 본인 크레딧 거래 내역 조회
+    public CursorPageRes<CreditTransactionRes> getTransactionHistory(
+            Long userId, CreditTransactionSearchReq req, Long cursor, int size
+    ) {
+        CreditTransactionSearchReq searchReq = req != null ? req : new CreditTransactionSearchReq(null, null, null); // NPE 방지를 위한 기본값 할당
+        int pageSize = Math.clamp(size, 1, maxPageSize);
+        List<CreditTransactionRes> rows = creditTransactionRepository.findHistory(userId, searchReq, cursor, pageSize);
+
+        return CursorPageRes.from(rows, pageSize, CreditTransactionRes::transactionId);
     }
 
     // 초기 크레딧 계좌 생성 및 지급
@@ -52,7 +63,7 @@ public class CreditService {
         creditAccountRepository.save(CreditAccount.create(userId, initialCreditAmount));
         creditTransactionRepository.save(CreditTransaction.create(
                 userId, null, CreditTransactionType.WELCOME, initialCreditAmount, initialCreditAmount,
-                UUID.randomUUID().toString(), CreditTransactionType.WELCOME.getDefaultReason()
+                UUID.randomUUID().toString(), null
         ));
     }
 
@@ -73,7 +84,7 @@ public class CreditService {
                 .getBalance();
 
         creditTransactionRepository.save(CreditTransaction.create(
-                userId, null, type, amount, balanceAfter, UUID.randomUUID().toString(), type.getDefaultReason()
+                userId, null, type, amount, balanceAfter, UUID.randomUUID().toString(), null
         ));
     }
 
@@ -107,7 +118,7 @@ public class CreditService {
         try {
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     userId, relatedTradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter,
-                    idempotencyKey, CreditTransactionType.ESCROW_HOLD.getDefaultReason()
+                    idempotencyKey, null
             ));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_HOLD_REQUEST); // idempotencyKey unique 제약 위반 예외 처리
@@ -143,7 +154,7 @@ public class CreditService {
         try {
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     userId, relatedTradeId, CreditTransactionType.REFUND, amount, balanceAfter,
-                    idempotencyKey, CreditTransactionType.REFUND.getDefaultReason()
+                    idempotencyKey, null
             ));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_REFUND_REQUEST);
@@ -191,11 +202,11 @@ public class CreditService {
         try {
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     buyerId, tradeId, CreditTransactionType.ESCROW_RELEASE, -amount, buyerBalanceAfter,
-                    idempotencyKey + "-buyer", CreditTransactionType.ESCROW_RELEASE.getDefaultReason()
+                    idempotencyKey + "-buyer", null
             ));
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     sellerId, tradeId, CreditTransactionType.ESCROW_RELEASE, settlementAmount, sellerBalanceAfter,
-                    idempotencyKey + "-seller", CreditTransactionType.ESCROW_RELEASE.getDefaultReason()
+                    idempotencyKey + "-seller", null
             ));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_SETTLE_REQUEST);
@@ -222,7 +233,7 @@ public class CreditService {
 
         creditTransactionRepository.save(CreditTransaction.create(
                 userId, null, CreditTransactionType.PURCHASE_DEBIT, -amount, balanceAfter,
-                UUID.randomUUID().toString(), CreditTransactionType.PURCHASE_DEBIT.getDefaultReason()
+                UUID.randomUUID().toString(), null
         ));
     }
 }

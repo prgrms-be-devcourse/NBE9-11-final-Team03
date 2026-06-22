@@ -11,7 +11,7 @@ class CreditTransactionTest {
     @DisplayName("원장 생성 시 전달된 필드가 올바르게 설정된다")
     void create_fields() {
         CreditTransaction tx = CreditTransaction.create(
-                1L, 10L, CreditTransactionType.ESCROW_HOLD, -5000, 5000, "key-001", "에스크로 예치"
+                1L, 10L, CreditTransactionType.ESCROW_HOLD, -5000, 5000, "key-001", "보상 처리"
         );
 
         assertThat(tx.getUserId()).isEqualTo(1L);
@@ -20,7 +20,9 @@ class CreditTransactionTest {
         assertThat(tx.getAmount()).isEqualTo(-5000);
         assertThat(tx.getBalanceAfter()).isEqualTo(5000);
         assertThat(tx.getIdempotencyKey()).isEqualTo("key-001");
-        assertThat(tx.getReason()).isEqualTo("에스크로 예치");
+        // default_reason 은 타입의 기본 사유 스냅샷, detail_reason 은 전달된 건별 사유
+        assertThat(tx.getDefaultReason()).isEqualTo(CreditTransactionType.ESCROW_HOLD.getDefaultReason());
+        assertThat(tx.getDetailReason()).isEqualTo("보상 처리");
     }
 
     @Test
