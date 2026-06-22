@@ -1,12 +1,14 @@
 package com.back.baton.domain.credit.entity;
 
 import com.back.baton.global.entity.BaseTimeEntity;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+@Schema(description = "크레딧 거래 원장 엔티티")
 @Entity
 @Table(
         name = "credit_transaction",
@@ -30,21 +32,30 @@ public class CreditTransaction extends BaseTimeEntity {
     @Column(name = "related_trade_id", updatable = false)
     private Long relatedTradeId; // 초기 크레딧 지급 시에는 거래 ID가 없을 수 있음
 
+    @Schema(description = "크레딧 거래 유형", example = "ESCROW_HOLD")
     @Enumerated(EnumType.STRING)
     @Column(name = "type", length = 30, nullable = false, updatable = false)
     private CreditTransactionType type;
 
+    @Schema(description = "거래할 금액. 차감 시 음수/적립 시 양수", example = "-5000")
     @Column(name = "amount", nullable = false, updatable = false)
-    private Integer amount; // 차감 시 음수, 적립 시 양수
+    private Integer amount;
 
+    @Schema(description = "거래 후 잔액", example = "15000")
     @Column(name = "balance_after", nullable = false, updatable = false)
     private Integer balanceAfter;
 
+    @Schema(description = "멱등성 키. 중복 요청 방지를 위한 unique 제약", example = "550e8400-e29b-41d4-a716-446655440000")
     @Column(name = "idempotency_key", nullable = false, unique = true, length = 100, updatable = false)
-    private String idempotencyKey; // 멱등성 키, 중복 요청 방지를 위한 unique 제약 조건
+    private String idempotencyKey;
 
-    @Column(name = "reason", length = 200, updatable = false)
-    private String reason;
+    @Schema(description = "거래 유형별 고정 기본 사유 (type.defaultReason 스냅샷)", example = "거래 완료까지 크레딧 에스크로 예치")
+    @Column(name = "default_reason", length = 200, nullable = false, updatable = false)
+    private String defaultReason;
+
+    @Schema(description = "건별 실제 사유. 관리자 수동 조정 등에만 사용하며 일반 거래에서는 null", example = "환불 지연으로 50 보상", nullable = true)
+    @Column(name = "detail_reason", length = 200, updatable = false)
+    private String detailReason;
 
     public static CreditTransaction create(
             Long userId,
@@ -53,7 +64,7 @@ public class CreditTransaction extends BaseTimeEntity {
             Integer amount,
             Integer balanceAfter,
             String idempotencyKey,
-            String reason
+            String detailReason
     ) {
         CreditTransaction ct = new CreditTransaction();
         ct.userId = userId;
@@ -62,7 +73,8 @@ public class CreditTransaction extends BaseTimeEntity {
         ct.amount = amount;
         ct.balanceAfter = balanceAfter;
         ct.idempotencyKey = idempotencyKey;
-        ct.reason = reason;
+        ct.defaultReason = type.getDefaultReason();
+        ct.detailReason = detailReason;
         return ct;
     }
 }

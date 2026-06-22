@@ -52,7 +52,7 @@ public class CreditService {
         creditAccountRepository.save(CreditAccount.create(userId, initialCreditAmount));
         creditTransactionRepository.save(CreditTransaction.create(
                 userId, null, CreditTransactionType.WELCOME, initialCreditAmount, initialCreditAmount,
-                UUID.randomUUID().toString(), CreditTransactionType.WELCOME.getDefaultReason()
+                UUID.randomUUID().toString(), null
         ));
     }
 
@@ -73,7 +73,7 @@ public class CreditService {
                 .getBalance();
 
         creditTransactionRepository.save(CreditTransaction.create(
-                userId, null, type, amount, balanceAfter, UUID.randomUUID().toString(), type.getDefaultReason()
+                userId, null, type, amount, balanceAfter, UUID.randomUUID().toString(), null
         ));
     }
 
@@ -107,7 +107,7 @@ public class CreditService {
         try {
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     userId, relatedTradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter,
-                    idempotencyKey, CreditTransactionType.ESCROW_HOLD.getDefaultReason()
+                    idempotencyKey, null
             ));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_HOLD_REQUEST); // idempotencyKey unique 제약 위반 예외 처리
@@ -143,7 +143,7 @@ public class CreditService {
         try {
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     userId, relatedTradeId, CreditTransactionType.REFUND, amount, balanceAfter,
-                    idempotencyKey, CreditTransactionType.REFUND.getDefaultReason()
+                    idempotencyKey, null
             ));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_REFUND_REQUEST);
@@ -191,11 +191,11 @@ public class CreditService {
         try {
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     buyerId, tradeId, CreditTransactionType.ESCROW_RELEASE, -amount, buyerBalanceAfter,
-                    idempotencyKey + "-buyer", CreditTransactionType.ESCROW_RELEASE.getDefaultReason()
+                    idempotencyKey + "-buyer", null
             ));
             creditTransactionRepository.saveAndFlush(CreditTransaction.create(
                     sellerId, tradeId, CreditTransactionType.ESCROW_RELEASE, settlementAmount, sellerBalanceAfter,
-                    idempotencyKey + "-seller", CreditTransactionType.ESCROW_RELEASE.getDefaultReason()
+                    idempotencyKey + "-seller", null
             ));
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_SETTLE_REQUEST);
@@ -222,7 +222,7 @@ public class CreditService {
 
         creditTransactionRepository.save(CreditTransaction.create(
                 userId, null, CreditTransactionType.PURCHASE_DEBIT, -amount, balanceAfter,
-                UUID.randomUUID().toString(), CreditTransactionType.PURCHASE_DEBIT.getDefaultReason()
+                UUID.randomUUID().toString(), null
         ));
     }
 }

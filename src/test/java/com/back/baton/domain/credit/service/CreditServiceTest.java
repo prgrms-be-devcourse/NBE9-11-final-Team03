@@ -143,7 +143,8 @@ class CreditServiceTest {
         then(creditTransactionRepository).should().save(captor.capture());
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(5000);
-        assertThat(saved.getReason()).isEqualTo(CreditTransactionType.CHARGE.getDefaultReason());
+        assertThat(saved.getDefaultReason()).isEqualTo(CreditTransactionType.CHARGE.getDefaultReason());
+        assertThat(saved.getDetailReason()).isNull();
         assertThat(saved.getBalanceAfter()).isEqualTo(15000);
     }
 
@@ -200,7 +201,8 @@ class CreditServiceTest {
         then(creditTransactionRepository).should().save(captor.capture());
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(-3000);
-        assertThat(saved.getReason()).isEqualTo(CreditTransactionType.PURCHASE_DEBIT.getDefaultReason());
+        assertThat(saved.getDefaultReason()).isEqualTo(CreditTransactionType.PURCHASE_DEBIT.getDefaultReason());
+        assertThat(saved.getDetailReason()).isNull();
         assertThat(saved.getBalanceAfter()).isEqualTo(7000);
     }
 
@@ -279,7 +281,8 @@ class CreditServiceTest {
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(-3000);
         assertThat(saved.getRelatedTradeId()).isEqualTo(10L);
-        assertThat(saved.getReason()).isEqualTo(CreditTransactionType.ESCROW_HOLD.getDefaultReason());
+        assertThat(saved.getDefaultReason()).isEqualTo(CreditTransactionType.ESCROW_HOLD.getDefaultReason());
+        assertThat(saved.getDetailReason()).isNull();
         assertThat(saved.getBalanceAfter()).isEqualTo(7000);
     }
 
@@ -387,7 +390,8 @@ class CreditServiceTest {
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(3000);
         assertThat(saved.getRelatedTradeId()).isEqualTo(10L);
-        assertThat(saved.getReason()).isEqualTo(CreditTransactionType.REFUND.getDefaultReason());
+        assertThat(saved.getDefaultReason()).isEqualTo(CreditTransactionType.REFUND.getDefaultReason());
+        assertThat(saved.getDetailReason()).isNull();
         assertThat(saved.getBalanceAfter()).isEqualTo(8000);
     }
 
