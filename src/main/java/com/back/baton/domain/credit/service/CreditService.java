@@ -32,7 +32,8 @@ public class CreditService {
     @Value("${credit.initial-amount}")
     private int initialCreditAmount;
 
-    private static final int MAX_PAGE_SIZE = 50;
+    @Value("${credit.transaction-max-page-size}")
+    private int maxPageSize;
 
     // 크레딧 잔액 조회
     public CreditBalanceRes getBalance(Long userId) {
@@ -47,7 +48,7 @@ public class CreditService {
             Long userId, CreditTransactionSearchReq req, Long cursor, int size
     ) {
         CreditTransactionSearchReq searchReq = req != null ? req : new CreditTransactionSearchReq(null, null, null); // NPE 방지를 위한 기본값 할당
-        int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+        int pageSize = Math.clamp(size, 1, maxPageSize);
         List<CreditTransactionRes> rows = creditTransactionRepository.findHistory(userId, searchReq, cursor, pageSize);
 
         return CursorPageRes.from(rows, pageSize, CreditTransactionRes::transactionId);

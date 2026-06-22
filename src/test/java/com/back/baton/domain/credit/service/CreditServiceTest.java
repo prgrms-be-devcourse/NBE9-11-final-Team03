@@ -11,6 +11,7 @@ import com.back.baton.domain.credit.repository.CreditTransactionRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.CreditErrorCode;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +48,11 @@ class CreditServiceTest {
 
     @Mock
     private CreditTransactionRepository creditTransactionRepository;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(creditService, "maxPageSize", 50);
+    }
 
     @Test
     @DisplayName("크레딧 계좌가 존재하면 잔액을 반환한다")
