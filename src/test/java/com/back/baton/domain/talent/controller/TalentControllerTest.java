@@ -13,33 +13,41 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.back.baton.support.security.WithMockSecurityUser;
 import tools.jackson.databind.ObjectMapper;
+
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TalentController.class)
 class TalentControllerTest {
 
-    @Autowired MockMvc mockMvc;
+    @Autowired
+    MockMvc mockMvc;
+
     @Autowired
     private ObjectMapper om;
-    @MockitoBean TalentService talentService;
 
-    @MockitoBean // 또는 @MockBean
+    @MockitoBean
+    TalentService talentService;
+
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
-    @DisplayName("정상 요청이면 201과 함께 Location, 응답 본문을 반환한다")
+    @DisplayName("정상 요청이면 인증 사용자 기준으로 재능을 생성한다")
+    @WithMockSecurityUser(userId = 1)
     void create_success() throws Exception {
         given(talentService.createTalent(any(), any()))
                 .willReturn(new TalentCreateRes(100L));
         var request = new TalentCreateReq(10L, "제목", "내용", 2, 100);
 
         mockMvc.perform(post("/api/v1/talents")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -52,13 +60,11 @@ class TalentControllerTest {
 
     @Test
     @DisplayName("제목이 비어 있으면 400을 반환한다")
+    @WithMockSecurityUser(userId = 1)
     void create_blankTitle_400() throws Exception {
-        //given
         var request = new TalentCreateReq(10L, "", "내용", 2, 100);
 
-        //when then
         mockMvc.perform(post("/api/v1/talents")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -67,13 +73,13 @@ class TalentControllerTest {
 
     @Test
     @DisplayName("등록 개수 제한 초과면 409를 반환한다")
+    @WithMockSecurityUser(userId = 1)
     void create_limitExceeded_409() throws Exception {
         given(talentService.createTalent(any(), any()))
                 .willThrow(new CustomException(TalentErrorCode.TALENT_REGISTRATION_LIMIT_EXCEEDED));
         var request = new TalentCreateReq(10L, "제목", "내용", 2, 100);
 
         mockMvc.perform(post("/api/v1/talents")
-                        .header("X-User-Id", "1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isConflict())

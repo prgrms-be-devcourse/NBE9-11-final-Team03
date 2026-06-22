@@ -5,6 +5,7 @@ import com.back.baton.domain.matching.dto.response.MatchProposalRes;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.service.MatchProposalService;
 import com.back.baton.global.security.JwtTokenProvider;
+import com.back.baton.support.security.WithMockSecurityUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,18 +38,19 @@ class MatchProposalControllerTest {
     @MockitoBean
     private MatchProposalService matchProposalService;
 
-    @MockitoBean // 또는 @MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
-    @DisplayName("매칭 제안 생성 API - 성공")
+    @DisplayName("create match proposal with current user as requester")
+    @WithMockSecurityUser(userId = 1)
     void createMatchProposal_Success() throws Exception {
         Long requesterId = 1L;
         MatchProposalCreateReq req = new MatchProposalCreateReq(
                 10L,
                 2L,
                 20L,
-                "재능 교환 제안드립니다."
+                "proposal message"
         );
 
         MatchProposalRes res = new MatchProposalRes(
@@ -68,12 +70,10 @@ class MatchProposalControllerTest {
                 .thenReturn(res);
 
         mockMvc.perform(post("/api/v1/match-proposals")
-                        .param("requesterId", String.valueOf(requesterId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.code").value("201-3"))
-                .andExpect(jsonPath("$.message").value("매칭 제안이 생성되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(1L))
                 .andExpect(jsonPath("$.data.providerId").value(req.providerId()))
                 .andExpect(jsonPath("$.data.requesterId").value(requesterId))
@@ -81,7 +81,8 @@ class MatchProposalControllerTest {
     }
 
     @Test
-    @DisplayName("매칭 제안 수락 API - 성공")
+    @DisplayName("accept match proposal with current user as provider")
+    @WithMockSecurityUser(userId = 2)
     void acceptMatchProposal_Success() throws Exception {
         Long proposalId = 1L;
         Long providerId = 2L;
@@ -94,7 +95,7 @@ class MatchProposalControllerTest {
                 1L,
                 providerId,
                 MatchProposalStatus.ACCEPTED,
-                "재능 구매 제안드립니다.",
+                "purchase proposal",
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -104,18 +105,17 @@ class MatchProposalControllerTest {
                 .thenReturn(res);
 
         mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/accept", proposalId)
-                        .param("providerId", String.valueOf(providerId))
                         .header("Idempotency-Key", idempotencyKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-4"))
-                .andExpect(jsonPath("$.message").value("매칭 제안이 수락되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(proposalId))
                 .andExpect(jsonPath("$.data.providerId").value(providerId))
                 .andExpect(jsonPath("$.data.status").value("ACCEPTED"));
     }
 
     @Test
-    @DisplayName("매칭 제안 거절 API - 성공")
+    @DisplayName("reject match proposal with current user as provider")
+    @WithMockSecurityUser(userId = 2)
     void rejectMatchProposal_Success() throws Exception {
         Long proposalId = 1L;
         Long providerId = 2L;
@@ -127,7 +127,7 @@ class MatchProposalControllerTest {
                 1L,
                 providerId,
                 MatchProposalStatus.REJECTED,
-                "재능 구매 제안드립니다.",
+                "purchase proposal",
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 LocalDateTime.now()
@@ -136,20 +136,18 @@ class MatchProposalControllerTest {
         when(matchProposalService.rejectMatchProposal(eq(proposalId), eq(providerId)))
                 .thenReturn(res);
 
-        mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/reject", proposalId)
-                        .param("providerId", String.valueOf(providerId)))
+        mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/reject", proposalId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-5"))
-                .andExpect(jsonPath("$.message").value("매칭 제안이 거절되었습니다."))
                 .andExpect(jsonPath("$.data.id").value(proposalId))
                 .andExpect(jsonPath("$.data.providerId").value(providerId))
                 .andExpect(jsonPath("$.data.status").value("REJECTED"));
     }
 
     @Test
-    @DisplayName("매칭 제안 생성 API - 필수 값 누락 시 400 Bad Request 반환")
+    @DisplayName("create match proposal validation error")
+    @WithMockSecurityUser(userId = 1)
     void createMatchProposal_ValidationError() throws Exception {
-        Long requesterId = 1L;
         MatchProposalCreateReq req = new MatchProposalCreateReq(
                 10L,
                 2L,
@@ -158,7 +156,6 @@ class MatchProposalControllerTest {
         );
 
         mockMvc.perform(post("/api/v1/match-proposals")
-                        .param("requesterId", String.valueOf(requesterId))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andDo(print())
