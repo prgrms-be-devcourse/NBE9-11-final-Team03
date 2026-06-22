@@ -92,7 +92,6 @@ public class TalentService {
             throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
         }
 
-        // TODO: 진행 중 거래 match 도메인 생성 되면 삭제 차단
         boolean hasInProgressTrade = tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS);
         if (hasInProgressTrade) {
             throw new CustomException(TalentErrorCode.TALENT_CANNOT_DELETE);

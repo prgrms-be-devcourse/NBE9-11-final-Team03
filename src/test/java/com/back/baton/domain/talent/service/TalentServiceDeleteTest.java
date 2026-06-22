@@ -31,15 +31,18 @@ class TalentServiceDeleteTest {
     @Mock TradeRepository tradeRepository;
 
     @Test
-    @DisplayName("본인 글이고 삭제 전이면 deletedAt이 기록된다")
+    @DisplayName("본인 글이고 삭제 전이며 진행 중인 거래가 없으면 deletedAt이 기록된다")
     void deleteTalent_success() {
         // given
         Long authorId = 1L;
+        Long talentId = 10L; // 명확하게 ID 지정
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+
+        given(tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS)).willReturn(false);
 
         // when
-        talentService.deleteTalent(10L, authorId);
+        talentService.deleteTalent(talentId, authorId);
 
         // then
         assertThat(talent.isDeleted()).isTrue();
