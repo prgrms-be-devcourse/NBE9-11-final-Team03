@@ -19,6 +19,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static java.time.LocalDateTime.now;
 
@@ -40,7 +41,7 @@ public class UserService {
         User user = userRepository.findById(userId).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
         // 2. 진행중인 거래가 있다면 탈퇴 거부
-        if(escrowRepository.existsByUserIdAndStatus(userId, userId, EscrowStatus.RELEASED)){
+        if(escrowRepository.existsByUserIdAndStatus(userId, userId, List.of(EscrowStatus.HELD, EscrowStatus.FROZEN))){
             throw new CustomException(UserErrorCode.ESCROW_IN_PROGRESS);
         }
 

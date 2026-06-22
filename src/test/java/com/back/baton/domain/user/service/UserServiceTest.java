@@ -1,8 +1,10 @@
 package com.back.baton.domain.user.service;
 
+import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.entity.WithdrawnUser;
 import com.back.baton.domain.user.repository.UserRepository;
@@ -16,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -30,6 +33,8 @@ class UserServiceTest {
     @Mock private WithdrawnUserRepository withdrawnUserRepository;
     @Mock private EscrowRepository escrowRepository;
     @Mock private MatchProposalRepository matchProposalRepository;
+    @Mock private TalentRepository talentRepository;
+    @Mock private CreditAccountRepository creditAccountRepository;
     @Mock private AuthService authService;
     @Mock private WithdrawnEncoder withdrawnEncoder;
 
@@ -51,6 +56,8 @@ class UserServiceTest {
         // then
         verify(matchProposalRepository).updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED);
         verify(withdrawnUserRepository).save(any(WithdrawnUser.class));
+        verify(talentRepository).deleteTalentByUserId(eq(userId), any(LocalDateTime.class));
+        verify(creditAccountRepository).deleteAccountByUserId(eq(userId), any(LocalDateTime.class));
         verify(user, times(1)).softDelete();
         verify(authService).logout(userId);
     }
