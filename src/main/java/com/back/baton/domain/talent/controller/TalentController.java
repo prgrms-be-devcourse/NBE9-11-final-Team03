@@ -12,6 +12,8 @@ import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
+import com.back.baton.global.security.CurrentUser;
+import com.back.baton.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,7 +28,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,13 +45,13 @@ public class TalentController {
     @PostMapping
     @Operation(
             summary = "재능 등록",
-            description = "로그인 사용자의 재능을 등록합니다. 인증 연동 전까지 X-User-Id 헤더로 작성자 ID를 전달합니다."
+            description = "현재 로그인한 사용자의 재능을 등록합니다."
     )
     public ResponseEntity<ApiResponse<TalentCreateRes>> createTalent(
-            @Parameter(description = "작성자 회원 ID", example = "1", required = true)
-            @RequestHeader("X-User-Id") Long authorId,
+            @CurrentUser SecurityUser currentUser,
             @Valid @RequestBody TalentCreateReq request
     ) {
+        Long authorId = currentUser.getUserId();
         TalentCreateRes response = talentService.createTalent(authorId, request);
         return ResponseEntity
                 .created(URI.create("/api/v1/talents/" + response.talentId()))
@@ -60,15 +61,15 @@ public class TalentController {
     @PutMapping("/{talentId}")
     @Operation(
             summary = "재능 수정",
-            description = "재능 작성자가 등록된 재능의 카테고리, 제목, 내용, 예상 소요 시간, 크레딧 가격을 수정합니다."
+            description = "현재 로그인한 작성자가 등록한 재능의 카테고리, 제목, 내용, 예상 소요 시간, 크레딧 가격을 수정합니다."
     )
     public ResponseEntity<ApiResponse<TalentUpdateRes>> updateTalent(
             @Parameter(description = "수정할 재능 ID", example = "1", required = true)
             @PathVariable Long talentId,
-            @Parameter(description = "작성자 회원 ID", example = "1", required = true)
-            @RequestHeader("X-User-Id") Long authorId,
+            @CurrentUser SecurityUser currentUser,
             @Valid @RequestBody TalentUpdateReq request
     ) {
+        Long authorId = currentUser.getUserId();
         TalentUpdateRes response = talentService.updateTalent(talentId, authorId, request);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
@@ -76,14 +77,14 @@ public class TalentController {
     @DeleteMapping("/{talentId}")
     @Operation(
             summary = "재능 삭제",
-            description = "재능 작성자가 등록된 재능을 삭제합니다. 현재 구현은 soft delete 정책을 따릅니다."
+            description = "현재 로그인한 작성자가 등록한 재능을 삭제합니다. 현재 구현은 soft delete 정책을 따릅니다."
     )
     public ResponseEntity<ApiResponse<Void>> deleteTalent(
             @Parameter(description = "삭제할 재능 ID", example = "1", required = true)
             @PathVariable Long talentId,
-            @Parameter(description = "작성자 회원 ID", example = "1", required = true)
-            @RequestHeader("X-User-Id") Long authorId
+            @CurrentUser SecurityUser currentUser
     ) {
+        Long authorId = currentUser.getUserId();
         talentService.deleteTalent(talentId, authorId);
         return ApiResponses.success(SuccessCode.TALENT_OK, null);
     }

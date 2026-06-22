@@ -8,6 +8,7 @@ import com.back.baton.domain.talent.service.TalentAttachmentService;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.support.security.WithMockSecurityUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,7 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("presigned URL 발급 성공 - 200, uploadUrl/key 반환")
+    @WithMockSecurityUser(userId = 7)
     void createPresignedUrl_success() throws Exception {
         var res = new PresignedUrlRes("https://bucket.s3.../talents/1/uuid-photo.png", "talents/1/uuid-photo.png");
         given(talentAttachmentService.createPresignedUrl(eq(1L), eq(7L), any(PresignedUrlReq.class)))
@@ -57,7 +59,6 @@ class TalentAttachmentControllerTest {
         var req = new PresignedUrlReq("photo.png", "image/png");
 
         mockMvc.perform(post(BASE + "/presigned-url")
-                        .header("X-User-Id", "7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -69,11 +70,11 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("contentType이 image/* 패턴이 아니면 400")
+    @WithMockSecurityUser(userId = 7)
     void createPresignedUrl_invalidContentType() throws Exception {
         var req = new PresignedUrlReq("malware.exe", "application/x-msdownload");
 
         mockMvc.perform(post(BASE + "/presigned-url")
-                        .header("X-User-Id", "7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
@@ -82,11 +83,11 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("fileName이 비어있으면 400")
+    @WithMockSecurityUser(userId = 7)
     void createPresignedUrl_blankFileName() throws Exception {
         var req = new PresignedUrlReq("", "image/png");
 
         mockMvc.perform(post(BASE + "/presigned-url")
-                        .header("X-User-Id", "7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
@@ -95,6 +96,7 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("남의 재능에 발급 시도하면 403")
+    @WithMockSecurityUser(userId = 2)
     void createPresignedUrl_forbidden() throws Exception {
         willThrow(new CustomException(TalentErrorCode.ATTACHMENT_FORBIDDEN))
                 .given(talentAttachmentService).createPresignedUrl(eq(1L), eq(2L), any());
@@ -102,7 +104,6 @@ class TalentAttachmentControllerTest {
         var req = new PresignedUrlReq("photo.png", "image/png");
 
         mockMvc.perform(post(BASE + "/presigned-url")
-                        .header("X-User-Id", "2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden())
@@ -113,6 +114,7 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("첨부 저장 성공 - 201")
+    @WithMockSecurityUser(userId = 7)
     void saveAttachment_success() throws Exception {
         var res = new AttachmentRes(10L, 1L, "talents/1/uuid-photo.png", "샘플", LocalDateTime.now());
         given(talentAttachmentService.saveAttachment(eq(1L), eq(7L), any(AttachmentSaveReq.class)))
@@ -121,7 +123,6 @@ class TalentAttachmentControllerTest {
         var req = new AttachmentSaveReq("talents/1/uuid-photo.png", "샘플");
 
         mockMvc.perform(post(BASE)
-                        .header("X-User-Id", "7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isCreated())
@@ -132,11 +133,11 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("url이 비어있으면 400")
+    @WithMockSecurityUser(userId = 7)
     void saveAttachment_blankUrl() throws Exception {
         var req = new AttachmentSaveReq("", "샘플");
 
         mockMvc.perform(post(BASE)
-                        .header("X-User-Id", "7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())
@@ -174,11 +175,12 @@ class TalentAttachmentControllerTest {
     // 삭제
     @Test
     @DisplayName("첨부 삭제 성공 - 200")
+    @WithMockSecurityUser(userId = 7)
     void deleteAttachment_success() throws Exception {
         doNothing().when(talentAttachmentService).deleteAttachment(1L, 10L, 7L);
 
         mockMvc.perform(delete(BASE + "/10")
-                        .header("X-User-Id", "7"))
+                        )
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-3"))
                 .andExpect(jsonPath("$.data").isEmpty());
@@ -188,23 +190,24 @@ class TalentAttachmentControllerTest {
 
     @Test
     @DisplayName("남의 첨부 삭제 시도하면 403")
+    @WithMockSecurityUser(userId = 2)
     void deleteAttachment_forbidden() throws Exception {
         willThrow(new CustomException(TalentErrorCode.ATTACHMENT_FORBIDDEN))
                 .given(talentAttachmentService).deleteAttachment(1L, 10L, 2L);
 
         mockMvc.perform(delete(BASE + "/10")
-                        .header("X-User-Id", "2"))
+                        )
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("TALENT-403-002"));
     }
 
     @Test
     @DisplayName("contentType이 SVG면 400 (XSS 위험으로 제외)")
+    @WithMockSecurityUser(userId = 7)
     void createPresignedUrl_svgRejected() throws Exception {
         var req = new PresignedUrlReq("logo.svg", "image/svg+xml");
 
         mockMvc.perform(post(BASE + "/presigned-url")
-                        .header("X-User-Id", "7")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isBadRequest())

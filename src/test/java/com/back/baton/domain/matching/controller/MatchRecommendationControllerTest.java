@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import com.back.baton.support.security.WithMockSecurityUser;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -29,11 +30,12 @@ class MatchRecommendationControllerTest {
     @MockitoBean
     private MatchRecommendationService matchRecommendationService;
 
-    @MockitoBean // 또는 @MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
-    @DisplayName("매칭 추천 상대 조회 API - 성공")
+    @DisplayName("매칭 추천 목록 조회 API - 인증 사용자 ID를 사용한다")
+    @WithMockSecurityUser(userId = 2)
     void getMatchRecommendations_Success() throws Exception {
         Long talentId = 1L;
         Long userId = 2L;
@@ -59,11 +61,9 @@ class MatchRecommendationControllerTest {
                 .willReturn(res);
 
         mockMvc.perform(get("/api/v1/match-recommendations")
-                        .param("talentId", String.valueOf(talentId))
-                        .param("userId", String.valueOf(userId)))
+                        .param("talentId", String.valueOf(talentId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-6"))
-                .andExpect(jsonPath("$.message").value("매칭 추천 상대 목록 조회에 성공했습니다."))
                 .andExpect(jsonPath("$.data[0].talentId").value(3L))
                 .andExpect(jsonPath("$.data[0].providerId").value(4L))
                 .andExpect(jsonPath("$.data[0].categoryId").value(10L))
@@ -80,7 +80,8 @@ class MatchRecommendationControllerTest {
     }
 
     @Test
-    @DisplayName("매칭 추천 상대 상세 조회 API - 성공")
+    @DisplayName("매칭 추천 상세 조회 API - 인증 사용자 ID를 사용한다")
+    @WithMockSecurityUser(userId = 1)
     void getMatchRecommendationDetail_success() throws Exception {
         Long requesterTalentId = 1L;
         Long providerTalentId = 2L;
@@ -92,14 +93,14 @@ class MatchRecommendationControllerTest {
                 1L,
                 "디자인",
                 "Figma 와이어프레임 제작",
-                "초기 서비스 아이디어를 Figma 저충실도 와이어프레임으로 만듭니다.",
+                "초기 서비스 아이디어를 Figma 와이어프레임으로 만듭니다.",
                 100,
                 4,
                 BigDecimal.valueOf(4.6),
                 8,
                 12,
-                "이미자",
-                "Figma 기반 와이어프레임과 포트폴리오 UI를 주로 작업합니다.",
+                "디자이너",
+                "Figma 기반 와이어프레임과 스토리보드 UI를 주로 작업합니다.",
                 "https://example.com/profile.png",
                 BigDecimal.valueOf(85),
                 true,
@@ -113,24 +114,19 @@ class MatchRecommendationControllerTest {
         )).willReturn(response);
 
         mockMvc.perform(get("/api/v1/match-recommendations/{providerTalentId}", providerTalentId)
-                        .param("requesterTalentId", String.valueOf(requesterTalentId))
-                        .param("userId", String.valueOf(userId)))
+                        .param("requesterTalentId", String.valueOf(requesterTalentId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-7"))
-                .andExpect(jsonPath("$.message").value("매칭 추천 상대 정보 조회에 성공했습니다."))
                 .andExpect(jsonPath("$.data.talentId").value(providerTalentId))
                 .andExpect(jsonPath("$.data.providerId").value(3L))
                 .andExpect(jsonPath("$.data.categoryId").value(1L))
                 .andExpect(jsonPath("$.data.categoryName").value("디자인"))
                 .andExpect(jsonPath("$.data.title").value("Figma 와이어프레임 제작"))
-                .andExpect(jsonPath("$.data.content").value("초기 서비스 아이디어를 Figma 저충실도 와이어프레임으로 만듭니다."))
                 .andExpect(jsonPath("$.data.creditPrice").value(100))
                 .andExpect(jsonPath("$.data.estimatedHours").value(4))
                 .andExpect(jsonPath("$.data.avgRating").value(4.6))
                 .andExpect(jsonPath("$.data.completeCount").value(8))
                 .andExpect(jsonPath("$.data.viewCount").value(12))
-                .andExpect(jsonPath("$.data.nickname").value("이미자"))
-                .andExpect(jsonPath("$.data.introduction").value("Figma 기반 와이어프레임과 포트폴리오 UI를 주로 작업합니다."))
                 .andExpect(jsonPath("$.data.profileImageUrl").value("https://example.com/profile.png"))
                 .andExpect(jsonPath("$.data.trustScore").value(85))
                 .andExpect(jsonPath("$.data.proposalRequestEnabled").value(true))

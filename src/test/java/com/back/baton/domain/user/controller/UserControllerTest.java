@@ -8,6 +8,7 @@ import com.back.baton.global.filter.JwtAuthenticationFilter;
 import com.back.baton.global.response.code.UserErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.global.util.CookieUtil;
+import com.back.baton.support.security.WithMockSecurityUser;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +20,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -97,7 +97,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("탈퇴 성공 - 모든 조건 만족 시 200 반환 및 쿠키 삭제")
-    @WithMockUser(username = "1")
+    @WithMockSecurityUser(userId = 1)
     void withdraw_success() throws Exception {
         mockMvc.perform(delete("/api/v1/users/me")
                         .header("Authorization", VALID_ACCESS_TOKEN))
@@ -110,7 +110,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("탈퇴 실패 - 진행중인 에스크로 거래 존재 시 400 반환")
-    @WithMockUser(username = "1")
+    @WithMockSecurityUser(userId = 1)
     void withdraw_fail_escrow_exists() throws Exception {
         // 서비스에서 에러 발생 시뮬레이션
         doThrow(new CustomException(UserErrorCode.ESCROW_IN_PROGRESS))
@@ -135,7 +135,7 @@ class UserControllerTest {
     }
     @Test
     @DisplayName("탈퇴 실패 - 존재하지 않는 유저가 요청 시 404 반환")
-    @WithMockUser(username = "999") // 존재하지 않는 유저 ID로 가정
+    @WithMockSecurityUser(userId = 999)
     void withdraw_fail_user_not_found() throws Exception {
         // given: 유저를 찾을 수 없을 때 예외 발생
         doThrow(new CustomException(UserErrorCode.USER_NOT_FOUND))
@@ -152,7 +152,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("탈퇴 실패 - 서버 오류 시 500 반환")
-    @WithMockUser(username = "1")
+    @WithMockSecurityUser(userId = 1)
     void withdraw_fail_internal_server_error() throws Exception {
         // given: 예기치 못한 런타임 에러 발생
         doThrow(new RuntimeException("Database connection error"))
@@ -168,7 +168,7 @@ class UserControllerTest {
 
     @Test
     @DisplayName("탈퇴 실패 - 삭제된 유저 혹은 이미 탈퇴한 유저 재요청 시")
-    @WithMockUser(username = "1")
+    @WithMockSecurityUser(userId = 1)
     void withdraw_fail_already_withdrawn() throws Exception {
         // given
         doThrow(new CustomException(UserErrorCode.USER_NOT_FOUND))

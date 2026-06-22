@@ -3,12 +3,12 @@ package com.back.baton.domain.user.controller;
 import com.back.baton.domain.user.service.UserService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.code.SuccessCode;
+import com.back.baton.global.security.CurrentUser;
+import com.back.baton.global.security.SecurityUser;
 import com.back.baton.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,10 +23,10 @@ public class UserController {
 
     @DeleteMapping
     public ApiResponse<Void> withdraw(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @CurrentUser SecurityUser currentUser,
             HttpServletResponse response
     ) {
-        userService.withdraw(Long.parseLong(userDetails.getUsername()));
+        userService.withdraw(currentUser.getUserId());
         cookieUtil.setCookie(response, "refreshToken",null,0L); // 로그아웃 처리 - 쿠키 삭제
 
         return ApiResponse.success(SuccessCode.USER_WITHDRAW_SUCCESS, null);

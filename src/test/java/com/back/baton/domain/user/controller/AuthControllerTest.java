@@ -14,6 +14,7 @@ import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.global.util.CookieUtil;
+import com.back.baton.support.security.WithMockSecurityUser;
 import jakarta.servlet.http.Cookie;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +30,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -253,7 +253,7 @@ class AuthControllerTest {
     }
     @Test
     @DisplayName("로그아웃 성공 - 유효한 Bearer 토큰과 refreshToken 쿠키가 모두 존재할 때")
-    @WithMockUser(username = "1") // 시큐리티 컨텍스트에 유저 ID '1' 주입
+    @WithMockSecurityUser(userId = 1)
     void logout_success_with_all_tokens() throws Exception {
         // given
         Cookie refreshTokenCookie = new Cookie("refreshToken", "valid-refresh-token-value");
@@ -275,7 +275,7 @@ class AuthControllerTest {
 
     @Test
     @DisplayName("로그아웃 성공 - 유효한 Bearer 토큰은 있으나, refreshToken 쿠키가 null(없음)일 때도 DB에서는 무조건 지운다")
-    @WithMockUser(username = "1")
+    @WithMockSecurityUser(userId = 1)
     void logout_success_without_cookie() throws Exception {
         // given & when & then
         mockMvc.perform(post("/api/v1/auth/logout")
