@@ -7,6 +7,7 @@ import com.back.baton.domain.talent.dto.response.TalentCreateRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TalentErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,15 +37,33 @@ class TalentServiceTest {
         Category category = mock(Category.class);
         given(category.isActive()).willReturn(true);
         given(categoryRepository.findById(10L)).willReturn(Optional.of(category));
+        ReflectionTestUtils.setField(talentService, "maxTalentCountPerUser", 10); // 추가
 
         Talent saved = Talent.create(authorId, mock(Category.class), "스프링 코드리뷰", "내용", 2, 100);
-        ReflectionTestUtils.setField(saved, "id", 100L); // save 후 id 채워진 상태 모사
+        ReflectionTestUtils.setField(saved, "id", 100L);
         given(talentRepository.save(any(Talent.class))).willReturn(saved);
 
         TalentCreateRes res = talentService.createTalent(authorId, request);
 
         assertThat(res.talentId()).isEqualTo(100L);
         then(talentRepository).should().save(any(Talent.class));
+    }
+
+    @Test
+    @DisplayName("등록 개수가 상한에 도달하면 TALENT_REGISTRATION_LIMIT_EXCEEDED, 저장하지 않는다")
+    void createTalent_limitExceeded() {
+        var request = new TalentCreateReq(10L, "제목", "내용", 2, 100);
+        Category category = mock(Category.class);
+        given(category.isActive()).willReturn(true);
+        given(categoryRepository.findById(10L)).willReturn(Optional.of(category));
+        ReflectionTestUtils.setField(talentService, "maxTalentCountPerUser", 10);
+        given(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).willReturn(10);
+
+        assertThatThrownBy(() -> talentService.createTalent(1L, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(TalentErrorCode.TALENT_REGISTRATION_LIMIT_EXCEEDED));
+        then(talentRepository).should(never()).save(any());
     }
 
     @Test

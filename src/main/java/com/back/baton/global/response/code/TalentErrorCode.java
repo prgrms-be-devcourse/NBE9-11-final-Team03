@@ -12,8 +12,11 @@ public enum TalentErrorCode implements ErrorCode {
 
     TALENT_CANNOT_DELETE(HttpStatus.BAD_REQUEST, "TALENT-400-002", "진행 중인 거래가 있는 재능은 삭제할 수 없습니다."),
 
+
     ATTACHMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "TALENT-404-003", "첨부를 찾을 수 없습니다."),
-    ATTACHMENT_FORBIDDEN(HttpStatus.FORBIDDEN, "TALENT-403-002", "본인의 재능에만 첨부를 등록/삭제할 수 있습니다.");
+    ATTACHMENT_FORBIDDEN(HttpStatus.FORBIDDEN, "TALENT-403-002", "본인의 재능에만 첨부를 등록/삭제할 수 있습니다."),
+
+    TALENT_REGISTRATION_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "TALENT-409-001", "재능 등록 개수 제한을 초과했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

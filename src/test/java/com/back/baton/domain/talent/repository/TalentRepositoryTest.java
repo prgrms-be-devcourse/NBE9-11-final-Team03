@@ -68,6 +68,20 @@ class TalentRepositoryTest {
                 .containsExactly(t3.getId(), t2.getId(), t1.getId());
     }
 
+    @Test
+    @DisplayName("countByAuthorIdAndDeletedAtIsNull - 삭제되지 않은 본인 재능만 센다")
+    void countByAuthorIdAndDeletedAtIsNull() {
+        Category category = saveCategory();
+        save(category, "재능1");          // author 1
+        save(category, "재능2");          // author 1
+        Talent deleted = save(category, "삭제됨"); // author 1, soft delete
+        deleted.softDelete();
+        talentRepository.save(deleted);
+        talentRepository.save(Talent.create(2L, category, "남의재능", "내용", 2, 100)); // 다른 author
+
+        assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).isEqualTo(2);
+    }
+
     private Category saveCategory() {
         try {
             Constructor<Category> constructor = Category.class.getDeclaredConstructor();

@@ -3,6 +3,8 @@ package com.back.baton.domain.talent.controller;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.response.TalentCreateRes;
 import com.back.baton.domain.talent.service.TalentService;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TalentErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,5 +63,20 @@ class TalentControllerTest {
                         .content(om.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON-400-002"));
+    }
+
+    @Test
+    @DisplayName("등록 개수 제한 초과면 409를 반환한다")
+    void create_limitExceeded_409() throws Exception {
+        given(talentService.createTalent(any(), any()))
+                .willThrow(new CustomException(TalentErrorCode.TALENT_REGISTRATION_LIMIT_EXCEEDED));
+        var request = new TalentCreateReq(10L, "제목", "내용", 2, 100);
+
+        mockMvc.perform(post("/api/v1/talents")
+                        .header("X-User-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(om.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("TALENT-409-001"));
     }
 }
