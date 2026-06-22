@@ -62,4 +62,8 @@ public class Trade extends BaseTimeEntity {
     public void complete() {
         this.status = TradeStatus.COMPLETED;
     }
+
+    public void dispute() {
+        this.status = TradeStatus.DISPUTED;
+    }
 }

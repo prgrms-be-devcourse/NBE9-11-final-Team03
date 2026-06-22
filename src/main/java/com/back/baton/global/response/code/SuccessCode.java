@@ -21,6 +21,7 @@ public enum SuccessCode {
     TRADE_SUBMISSION_CREATED(HttpStatus.CREATED, "201-5", "결과물이 제출되었습니다."),
     TRADE_SUBMISSION_OK(HttpStatus.OK, "200-9", "결과물 조회에 성공했습니다."),
     TRADE_COMPLETED(HttpStatus.OK, "200-10", "거래가 완료되었습니다."),
+    TRADE_DISPUTED(HttpStatus.OK, "200-11", "분쟁이 신청되었습니다."),
 
     TALENT_ATTACHMENT_CREATED(HttpStatus.CREATED, "201-4", "재능 첨부 등록에 성공했습니다."),
     TALENT_ATTACHMENT_OK(HttpStatus.OK, "200-3", "재능 첨부 요청에 성공했습니다."),

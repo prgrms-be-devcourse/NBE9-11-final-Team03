@@ -76,6 +76,15 @@ public class Escrow extends BaseTimeEntity {
         this.settledAt = LocalDateTime.now();
     }
 
+    public void freeze(String reason) {
+        if (this.status != EscrowStatus.HELD) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.status = EscrowStatus.FROZEN;
+        this.rejectReason = reason;
+        this.expiresAt = null; // 분쟁 발생 시 자동 확정 타이머 정지
+    }
+
     public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, LocalDateTime expiresAt) {
         Escrow escrow = new Escrow();
         escrow.tradeId = tradeId;
