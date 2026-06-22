@@ -1,5 +1,6 @@
 package com.back.baton.domain.user.service;
 
+import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -7,6 +8,7 @@ import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.entity.UserStatus;
 import com.back.baton.domain.user.repository.RefreshTokenRepository;
 import com.back.baton.domain.user.repository.UserRepository;
+import com.back.baton.domain.user.repository.WithdrawnUserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
@@ -31,24 +33,28 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RefreshTokenRepository refreshTokenRepository;
-
+    private final CreditService creditService;
+    private final WithdrawnUserRepository withdrawnUserRepository;
+    private final WithdrawnEncoder withdrawnEncoder;
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
         // 1. 이메일 검증
+        email = email.strip();
+        email = email.toLowerCase();
         if(userRepository.existsByEmail(email)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
-
-        // TODO: 1-2. 이메일 인증 여부 확인
+        // 1-2. 탈퇴한 유저 중에서도 확인
+        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
+            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
+        }
+        // TODO: 1-3. 이메일 인증 여부 확인
 
         // 2. 닉네임 검증
-        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
+        checkNicknameDuplicated(nickname);
 
-        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
-            throw new CustomException(UserErrorCode.DUPLICATED_USER);
-        }
         //TODO: 2-2. 닉네임 중복 확인 별도 구현
 
         // 3. 비밀번호 형식 검증
@@ -73,9 +79,18 @@ public class AuthService {
                 .build();
         userRepository.save(user);
 
-        // TODO: 6. Account 생성
+        // 6. Account 생성
+        creditService.initializeAccount(user.getId());
 
         return new UserSignupRes(user);
+    }
+
+    public void checkNicknameDuplicated(String nickname){
+        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
+
+        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
+            throw new CustomException(UserErrorCode.DUPLICATED_USER);
+        }
     }
 
     public UserTokenDto login(String email, String password) {

@@ -1,5 +1,6 @@
 package com.back.baton.domain.user.service;
 
+import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -7,6 +8,7 @@ import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.entity.UserStatus;
 import com.back.baton.domain.user.repository.RefreshTokenRepository;
 import com.back.baton.domain.user.repository.UserRepository;
+import com.back.baton.domain.user.repository.WithdrawnUserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
@@ -40,20 +42,15 @@ public class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
-    @Mock
-    private UserRepository userRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordValidator passwordValidator;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private JwtTokenProvider jwtTokenProvider;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private WithdrawnEncoder withdrawnEncoder;
+    @Mock private WithdrawnUserRepository withdrawnUserRepository;
+    @Mock private CreditService creditService;
 
-    @Mock
-    private PasswordValidator passwordValidator;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private JwtTokenProvider jwtTokenProvider;
-
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
     private User validUser;
     @BeforeEach
     void setUp() {
@@ -94,9 +91,11 @@ public class AuthServiceTest {
         assertThat(response.nickname()).isEqualTo(nickname);
 
         // 내부 로직이 정확한 인자로 호출되었는지 대조 검증
+        verify(withdrawnUserRepository).existsByEncodedEmail(withdrawnEncoder.encode(email));
         verify(passwordValidator).validate("securePassword123!", "baton");
         verify(passwordEncoder).encode("securePassword123!");
         verify(userRepository).save(any(User.class));
+        verify(creditService).initializeAccount(response.id());
     }
 
     @Test

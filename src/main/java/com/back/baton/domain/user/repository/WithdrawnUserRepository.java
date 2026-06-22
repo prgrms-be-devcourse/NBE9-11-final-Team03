@@ -7,4 +7,5 @@ import java.time.LocalDateTime;
 
 public interface WithdrawnUserRepository extends JpaRepository<WithdrawnUser,Long> {
     void deleteByCreatedAtBeforeAndPermanentBanIsFalse(LocalDateTime thresholdDate);
+    boolean existsByEncodedEmail(String encodedEmail);
 }
