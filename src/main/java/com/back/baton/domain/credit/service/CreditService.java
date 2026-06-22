@@ -9,10 +9,8 @@ import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.credit.repository.CreditTransactionRepository;
-import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.CreditErrorCode;
-import com.back.baton.global.response.code.UserErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,7 +28,6 @@ public class CreditService {
 
     private final CreditAccountRepository creditAccountRepository;
     private final CreditTransactionRepository creditTransactionRepository;
-    private final UserRepository userRepository;
 
     @Value("${credit.initial-amount}")
     private int initialCreditAmount;
@@ -39,10 +36,6 @@ public class CreditService {
 
     // 크레딧 잔액 조회
     public CreditBalanceRes getBalance(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
-        }
-
         CreditAccount creditAccount = creditAccountRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
@@ -53,12 +46,9 @@ public class CreditService {
     public CursorPageRes<CreditTransactionRes> getTransactionHistory(
             Long userId, CreditTransactionSearchReq req, Long cursor, int size
     ) {
-        if (!userRepository.existsById(userId)) {
-            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
-        }
-
+        CreditTransactionSearchReq searchReq = req != null ? req : new CreditTransactionSearchReq(null, null, null); // NPE 방지를 위한 기본값 할당
         int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
-        List<CreditTransactionRes> rows = creditTransactionRepository.findHistory(userId, req, cursor, pageSize);
+        List<CreditTransactionRes> rows = creditTransactionRepository.findHistory(userId, searchReq, cursor, pageSize);
 
         return CursorPageRes.from(rows, pageSize, CreditTransactionRes::transactionId);
     }

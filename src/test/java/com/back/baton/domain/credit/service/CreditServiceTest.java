@@ -8,11 +8,9 @@ import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
 import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.credit.repository.CreditTransactionRepository;
-import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.CreditErrorCode;
-import com.back.baton.global.response.code.UserErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,9 +48,6 @@ class CreditServiceTest {
     @Mock
     private CreditTransactionRepository creditTransactionRepository;
 
-    @Mock
-    private UserRepository userRepository;
-
     @Test
     @DisplayName("크레딧 계좌가 존재하면 잔액을 반환한다")
     void getBalance_success() {
@@ -61,7 +56,6 @@ class CreditServiceTest {
         ReflectionTestUtils.setField(creditAccount, "balance", 10000);
         ReflectionTestUtils.setField(creditAccount, "escrowBalance", 0);
 
-        given(userRepository.existsById(1L)).willReturn(true);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(creditAccount));
 
         CreditBalanceRes result = creditService.getBalance(1L);
@@ -72,20 +66,8 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 유저이면 USER_NOT_FOUND 예외가 발생한다")
-    void getBalance_userNotFound() {
-        given(userRepository.existsById(999L)).willReturn(false);
-
-        assertThatThrownBy(() -> creditService.getBalance(999L))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(UserErrorCode.USER_NOT_FOUND));
-    }
-
-    @Test
-    @DisplayName("유저는 존재하지만 크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
+    @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
     void getBalance_creditAccountNotFound() {
-        given(userRepository.existsById(1L)).willReturn(true);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> creditService.getBalance(1L))
@@ -102,7 +84,6 @@ class CreditServiceTest {
                 historyRow(1002L, CreditTransactionType.CHARGE, 5000, 15000),
                 historyRow(1001L, CreditTransactionType.WELCOME, 10000, 10000)
         );
-        given(userRepository.existsById(1L)).willReturn(true);
         given(creditTransactionRepository.findHistory(1L, req, null, 20)).willReturn(rows);
 
         CursorPageRes<CreditTransactionRes> result =
@@ -123,7 +104,6 @@ class CreditServiceTest {
                 historyRow(2L, CreditTransactionType.CHARGE, 1000, 2000),
                 historyRow(1L, CreditTransactionType.CHARGE, 1000, 1000)
         );
-        given(userRepository.existsById(1L)).willReturn(true);
         given(creditTransactionRepository.findHistory(1L, req, null, 2)).willReturn(rows);
 
         CursorPageRes<CreditTransactionRes> result =
@@ -135,24 +115,9 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 유저이면 USER_NOT_FOUND 예외가 발생한다")
-    void getTransactionHistory_userNotFound() {
-        CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
-        given(userRepository.existsById(999L)).willReturn(false);
-
-        assertThatThrownBy(() -> creditService.getTransactionHistory(999L, req, null, 20))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(UserErrorCode.USER_NOT_FOUND));
-
-        then(creditTransactionRepository).should(never()).findHistory(any(), any(), any(), anyInt());
-    }
-
-    @Test
     @DisplayName("size 가 최대치(50)를 넘으면 50으로 제한해 조회한다")
     void getTransactionHistory_clampsSizeUpperBound() {
         CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
-        given(userRepository.existsById(1L)).willReturn(true);
         given(creditTransactionRepository.findHistory(eq(1L), eq(req), isNull(), anyInt()))
                 .willReturn(List.of());
 
@@ -165,7 +130,6 @@ class CreditServiceTest {
     @DisplayName("size 가 1 미만이면 1로 제한해 조회한다")
     void getTransactionHistory_clampsSizeLowerBound() {
         CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
-        given(userRepository.existsById(1L)).willReturn(true);
         given(creditTransactionRepository.findHistory(eq(1L), eq(req), isNull(), anyInt()))
                 .willReturn(List.of());
 

@@ -16,4 +16,9 @@ public record CreditTransactionSearchReq(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
         LocalDateTime to
 ) {
+        public CreditTransactionSearchReq {
+                if (from != null && to != null && from.isAfter(to)) {
+                        throw new IllegalArgumentException("조회 시작일(from)은 종료일(to)보다 이전이어야 합니다.");
+                }
+        }
 }
