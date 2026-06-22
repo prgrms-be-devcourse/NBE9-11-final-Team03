@@ -64,6 +64,15 @@ public class ChatService {
         return chatRoom;
     }
 
+    public ChatRoomRes getChatRoomInfo(
+            Long roomId,
+            Long userId
+    ) {
+        ChatRoom chatRoom = getChatRoom(roomId, userId);
+
+        return ChatRoomRes.from(chatRoom);
+    }
+
     @Transactional
     public ChatMessageRes sendMessage(Long roomId, Long senderId, String content) {
         ChatRoom chatRoom = getChatRoom(roomId, senderId);
@@ -80,12 +89,27 @@ public class ChatService {
         return ChatMessageRes.from(savedMessage);
     }
 
+    @Transactional(readOnly = true)
     public List<ChatMessageRes> getMessages(Long roomId, Long userId) {
         getChatRoom(roomId, userId);
 
         return chatMessageRepository.findMessages(roomId)
                 .stream()
                 .map(ChatMessageRes::from)
+                .toList();
+    }
+
+    @Transactional
+    public List<Long> markMessagesAsRead(Long roomId, Long readerId) {
+        getChatRoom(roomId, readerId);
+
+        List<ChatMessage> unreadMessages = chatMessageRepository
+                .findUnreadMessagesFromOtherParticipant(roomId, readerId);
+
+        unreadMessages.forEach(ChatMessage::read);
+
+        return unreadMessages.stream()
+                .map(ChatMessage::getId)
                 .toList();
     }
 

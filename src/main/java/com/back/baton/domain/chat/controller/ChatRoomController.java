@@ -7,13 +7,17 @@ import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.response.code.SuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,5 +42,25 @@ public class ChatRoomController {
         );
 
         return ApiResponses.success(SuccessCode.CHAT_ROOM_CREATED, response);
+    }
+
+    @GetMapping("/{chatRoomId}")
+    @Operation(
+            summary = "채팅방 단건 조회",
+            description = "채팅방 참여자가 roomId로 기존 채팅방 정보를 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<ChatRoomRes>> getChatRoom(
+            @Parameter(description = "채팅방 ID", example = "1", required = true)
+            @PathVariable Long chatRoomId,
+
+            @Parameter(description = "조회 요청자 회원 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "23", required = true)
+            @RequestParam Long userId
+    ) {
+        ChatRoomRes response = chatService.getChatRoomInfo(
+                chatRoomId,
+                userId
+        );
+
+        return ApiResponses.success(SuccessCode.CHAT_ROOM_FOUND, response);
     }
 }
