@@ -15,6 +15,7 @@ import com.back.baton.global.response.code.TalentErrorCode;
 
 import java.util.List;
 import java.util.Objects;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -100,17 +101,20 @@ public class ChatService {
     }
 
     @Transactional
-    public List<Long> markMessagesAsRead(Long roomId, Long readerId) {
+    public List<Long> markMessagesAsRead(
+            Long roomId,
+            Long readerId
+    ) {
         getChatRoom(roomId, readerId);
 
-        List<ChatMessage> unreadMessages = chatMessageRepository
-                .findUnreadMessagesFromOtherParticipant(roomId, readerId);
+        List<Long> unreadMessageIds = chatMessageRepository
+                .findUnreadMessageIdsFromOtherParticipant(roomId, readerId);
 
-        unreadMessages.forEach(ChatMessage::read);
+        if (!unreadMessageIds.isEmpty()) {
+            chatMessageRepository.markAsReadByIds(unreadMessageIds);
+        }
 
-        return unreadMessages.stream()
-                .map(ChatMessage::getId)
-                .toList();
+        return unreadMessageIds;
     }
 
     private Talent getTalent(Long talentId) {

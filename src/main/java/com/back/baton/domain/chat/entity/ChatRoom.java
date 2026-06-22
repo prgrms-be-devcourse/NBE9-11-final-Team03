@@ -19,7 +19,10 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "chat_room",
         indexes = {
-                @Index(name = "채팅방 조회 인덱스", columnList = "talent_id, buyer_id, seller_id, status, deleted_at")
+                @Index(
+                        name = "idx_chat_room_match_lookup",
+                        columnList = "talent_id, buyer_id, seller_id, status, deleted_at"
+                )
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatRoom extends BaseTimeEntity {
