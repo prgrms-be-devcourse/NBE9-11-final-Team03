@@ -1,6 +1,8 @@
 package com.back.baton.domain.credit.service;
 
+import com.back.baton.domain.credit.dto.request.CreditTransactionSearchReq;
 import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
+import com.back.baton.domain.credit.dto.response.CreditTransactionRes;
 import com.back.baton.domain.credit.entity.CreditAccount;
 import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
@@ -8,6 +10,7 @@ import com.back.baton.domain.credit.repository.CreditAccountRepository;
 import com.back.baton.domain.credit.repository.CreditTransactionRepository;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.CreditErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -21,12 +24,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -85,6 +92,86 @@ class CreditServiceTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("거래 내역 조회 성공 시 조회 결과를 커서 페이지로 반환한다")
+    void getTransactionHistory_success() {
+        CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
+        List<CreditTransactionRes> rows = List.of(
+                historyRow(1002L, CreditTransactionType.CHARGE, 5000, 15000),
+                historyRow(1001L, CreditTransactionType.WELCOME, 10000, 10000)
+        );
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(creditTransactionRepository.findHistory(1L, req, null, 20)).willReturn(rows);
+
+        CursorPageRes<CreditTransactionRes> result =
+                creditService.getTransactionHistory(1L, req, null, 20);
+
+        assertThat(result.content()).extracting(CreditTransactionRes::transactionId)
+                .containsExactly(1002L, 1001L);
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.nextCursor()).isEqualTo(1001L); // 마지막 행 id
+    }
+
+    @Test
+    @DisplayName("size+1 개가 조회되면 hasNext=true 이고 마지막 한 건은 잘려나간다")
+    void getTransactionHistory_hasNext() {
+        CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
+        List<CreditTransactionRes> rows = List.of(
+                historyRow(3L, CreditTransactionType.CHARGE, 1000, 3000),
+                historyRow(2L, CreditTransactionType.CHARGE, 1000, 2000),
+                historyRow(1L, CreditTransactionType.CHARGE, 1000, 1000)
+        );
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(creditTransactionRepository.findHistory(1L, req, null, 2)).willReturn(rows);
+
+        CursorPageRes<CreditTransactionRes> result =
+                creditService.getTransactionHistory(1L, req, null, 2);
+
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.nextCursor()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 유저이면 USER_NOT_FOUND 예외가 발생한다")
+    void getTransactionHistory_userNotFound() {
+        CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
+        given(userRepository.existsById(999L)).willReturn(false);
+
+        assertThatThrownBy(() -> creditService.getTransactionHistory(999L, req, null, 20))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.USER_NOT_FOUND));
+
+        then(creditTransactionRepository).should(never()).findHistory(any(), any(), any(), anyInt());
+    }
+
+    @Test
+    @DisplayName("size 가 최대치(50)를 넘으면 50으로 제한해 조회한다")
+    void getTransactionHistory_clampsSizeUpperBound() {
+        CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(creditTransactionRepository.findHistory(eq(1L), eq(req), isNull(), anyInt()))
+                .willReturn(List.of());
+
+        creditService.getTransactionHistory(1L, req, null, 100);
+
+        then(creditTransactionRepository).should().findHistory(1L, req, null, 50);
+    }
+
+    @Test
+    @DisplayName("size 가 1 미만이면 1로 제한해 조회한다")
+    void getTransactionHistory_clampsSizeLowerBound() {
+        CreditTransactionSearchReq req = new CreditTransactionSearchReq(null, null, null);
+        given(userRepository.existsById(1L)).willReturn(true);
+        given(creditTransactionRepository.findHistory(eq(1L), eq(req), isNull(), anyInt()))
+                .willReturn(List.of());
+
+        creditService.getTransactionHistory(1L, req, null, 0);
+
+        then(creditTransactionRepository).should().findHistory(1L, req, null, 1);
     }
 
     @Test
@@ -478,5 +565,12 @@ class CreditServiceTest {
                         .isEqualTo(CreditErrorCode.INSUFFICIENT_ESCROW_BALANCE));
 
         then(creditTransactionRepository).should(never()).saveAndFlush(any());
+    }
+
+    private CreditTransactionRes historyRow(Long id, CreditTransactionType type, int amount, int balanceAfter) {
+        return new CreditTransactionRes(
+                id, null, type, amount, balanceAfter,
+                type.getDefaultReason(), null, LocalDateTime.now()
+        );
     }
 }
