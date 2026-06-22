@@ -23,4 +23,13 @@ public class Category extends BaseTimeEntity {
 
     @Column(name = "is_active", nullable = false)
     private boolean active;
+
+
+    public static Category create(String name, int sortOrder) {
+        Category category = new Category();
+        category.name = name;
+        category.sortOrder = sortOrder;
+        category.active = true;   // 생성 시 노출 활성
+        return category;
+    }
 }
