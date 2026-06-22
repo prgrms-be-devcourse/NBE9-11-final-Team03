@@ -67,7 +67,7 @@ class TalentServiceDeleteTest {
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
         given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
 
-        // 💡 진행 중인 거래가 있다고 가정 (true 반환)
+        // 진행 중인 거래가 있다고 가정
         given(tradeRepository.existsByTalentIdAndStatus(talentId, TradeStatus.IN_PROGRESS)).willReturn(true);
 
         // when & then
