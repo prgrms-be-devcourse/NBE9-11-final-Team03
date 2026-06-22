@@ -1,6 +1,9 @@
 package com.back.baton.domain.credit.service;
 
+import com.back.baton.domain.credit.dto.request.CreditTransactionSearchReq;
 import com.back.baton.domain.credit.dto.response.CreditBalanceRes;
+import com.back.baton.domain.credit.dto.response.CreditTransactionRes;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.domain.credit.entity.CreditAccount;
 import com.back.baton.domain.credit.entity.CreditTransaction;
 import com.back.baton.domain.credit.entity.CreditTransactionType;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -31,6 +35,8 @@ public class CreditService {
     @Value("${credit.initial-amount}")
     private int initialCreditAmount;
 
+    private static final int MAX_PAGE_SIZE = 50;
+
     // 크레딧 잔액 조회
     public CreditBalanceRes getBalance(Long userId) {
         if (!userRepository.existsById(userId)) {
@@ -41,6 +47,20 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
         return CreditBalanceRes.from(creditAccount);
+    }
+
+    // 본인 크레딧 거래 내역 조회
+    public CursorPageRes<CreditTransactionRes> getTransactionHistory(
+            Long userId, CreditTransactionSearchReq req, Long cursor, int size
+    ) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(UserErrorCode.USER_NOT_FOUND);
+        }
+
+        int pageSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+        List<CreditTransactionRes> rows = creditTransactionRepository.findHistory(userId, req, cursor, pageSize);
+
+        return CursorPageRes.from(rows, pageSize, CreditTransactionRes::transactionId);
     }
 
     // 초기 크레딧 계좌 생성 및 지급
