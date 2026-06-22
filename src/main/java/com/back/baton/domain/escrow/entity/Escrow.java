@@ -80,6 +80,10 @@ public class Escrow extends BaseTimeEntity {
         if (this.status != EscrowStatus.HELD) {
             throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
         }
+        // 분쟁 사유 검증
+        if (reason == null || reason.isBlank() || reason.length() > 200) {
+            throw new IllegalArgumentException("올바르지 않은 분쟁 사유입니다.");
+        }
         this.status = EscrowStatus.FROZEN;
         this.rejectReason = reason;
         this.expiresAt = null; // 분쟁 발생 시 자동 확정 타이머 정지
