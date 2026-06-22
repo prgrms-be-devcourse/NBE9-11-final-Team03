@@ -1,5 +1,7 @@
 package com.back.baton.global.initData;
 
+import com.back.baton.domain.category.entity.Category;
+import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.domain.user.service.UserService;
@@ -13,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -27,13 +30,17 @@ public class BaseInitData {
     private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Bean
     public ApplicationRunner initData() {
         return args -> {
+            self.setCategory();
             self.setUser();
         };
     }
+
     @Transactional
     public void setUser() {
 
@@ -55,4 +62,21 @@ public class BaseInitData {
             userService.signup("user"+i+"@test.com", "password1234!", "user"+i, "간단한 설명",null);
         }
     }
+
+    // 순수 데이터만 static 보관
+    private static final List<SeedInfo> CATEGORY_SEEDS = List.of(
+            new SeedInfo("개발", 1),
+            new SeedInfo("디자인", 2),
+            new SeedInfo("문서정리", 3)
+    );
+
+    @Transactional
+    public void setCategory() {
+        for (SeedInfo seed : CATEGORY_SEEDS) {
+            if (!categoryRepository.existsByName(seed.name())) {
+                categoryRepository.save(Category.create(seed.name(), seed.sortOrder()));
+            }
+        }
+    }
+    private record SeedInfo(String name, int sortOrder) {}
 }
