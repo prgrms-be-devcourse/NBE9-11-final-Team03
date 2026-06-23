@@ -273,7 +273,7 @@ class TradeControllerTest {
     void disputeTrade_notUnderReview() throws Exception {
         Long tradeId = 1L;
         Long userId = 2L;
-        String reason = "사유";
+        String reason = "분쟁 사유입니다.";
 
         when(tradeService.disputeTrade(eq(tradeId), eq(userId), eq(reason)))
                 .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW));
@@ -292,7 +292,7 @@ class TradeControllerTest {
     void disputeTrade_alreadyDisputed() throws Exception {
         Long tradeId = 1L;
         Long userId = 2L;
-        String reason = "사유";
+        String reason = "분쟁 사유입니다.";
 
         when(tradeService.disputeTrade(eq(tradeId), eq(userId), eq(reason)))
                 .thenThrow(new CustomException(TradeErrorCode.TRADE_ALREADY_DISPUTED));
