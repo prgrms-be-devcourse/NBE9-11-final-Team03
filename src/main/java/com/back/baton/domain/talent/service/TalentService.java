@@ -14,6 +14,7 @@ import com.back.baton.domain.user.entity.User;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,9 @@ public class TalentService {
     private final TradeRepository tradeRepository;
     private static final int MAX_PAGE_SIZE = 100;
 
+    @Value("${talent.max-count-per-user:3}")
+    private int maxTalentCountPerUser;
+
     // 재능 등록
     @Transactional
     public TalentCreateRes createTalent(Long authorId, TalentCreateReq request) {
@@ -38,6 +42,12 @@ public class TalentService {
 
         if (!category.isActive()) { // 비활성 카테고리 등록 차단
             throw new CustomException(TalentErrorCode.CATEGORY_INACTIVE);
+        }
+
+        // 1인당 등록 개수 제한 (삭제되지 않은 재능 기준)
+        int currentCount = talentRepository.countByAuthorIdAndDeletedAtIsNull(authorId);
+        if (currentCount >= maxTalentCountPerUser) {
+            throw new CustomException(TalentErrorCode.TALENT_REGISTRATION_LIMIT_EXCEEDED);
         }
 
         Talent talent = Talent.create(authorId, category,
