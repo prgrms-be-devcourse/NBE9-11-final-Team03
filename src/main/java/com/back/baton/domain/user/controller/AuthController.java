@@ -17,7 +17,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,8 +42,7 @@ public class AuthController {
                 req.introduction(),
                 req.profileImageUrl()
         );
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success(SuccessCode.USER_SIGNUP_SUCCESS, res));
+        return ApiResponses.success(SuccessCode.USER_SIGNUP_SUCCESS, res);
     }
 
     @PostMapping("/login")
@@ -52,13 +50,13 @@ public class AuthController {
             summary = "로그인",
             description = "이메일과 비밀번호로 로그인하고 accessToken을 응답합니다. refreshToken은 HttpOnly 쿠키로 저장합니다."
     )
-    public ApiResponse<UserLoginRes> login(@Valid @RequestBody UserLoginReq req, HttpServletResponse response) {
+    public ResponseEntity<ApiResponse<UserLoginRes>> login(@Valid @RequestBody UserLoginReq req, HttpServletResponse response) {
         UserTokenDto res = authService.login(req.email(), req.password());
 
         // accessToken -> 인메모리 저장, refreshToken -> 쿠키 저장
         cookieUtil.setCookie(response, "refreshToken", res.refreshToken(), null);
 
-        return ApiResponse.success(SuccessCode.USER_LOGIN_SUCCESS, new UserLoginRes(res.accessToken()));
+        return ApiResponses.success(SuccessCode.USER_LOGIN_SUCCESS, new UserLoginRes(res.accessToken()));
     }
 
     @PostMapping("/reissue")
@@ -66,14 +64,14 @@ public class AuthController {
             summary = "토큰 재발급",
             description = "refreshToken 쿠키를 검증해 accessToken을 재발급하고 refreshToken도 함께 갱신합니다."
     )
-    public ApiResponse<UserLoginRes> reissue(
+    public ResponseEntity<ApiResponse<UserLoginRes>> reissue(
             @CookieValue(name = "refreshToken", required = false) String refreshTokenValue,
             HttpServletResponse response
     ) {
         UserTokenDto res = authService.reissue(refreshTokenValue);
         cookieUtil.setCookie(response, "refreshToken", res.refreshToken(), null);
 
-        return ApiResponse.success(SuccessCode.USER_REISSUE_SUCCESS, new UserLoginRes(res.accessToken()));
+        return ApiResponses.success(SuccessCode.USER_REISSUE_SUCCESS, new UserLoginRes(res.accessToken()));
     }
 
     @PostMapping("/logout")
