@@ -311,6 +311,105 @@ class TradeServiceTest {
         verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
     }
 
+    @Test
+    @DisplayName("구매자가 UNDER_REVIEW 거래에 분쟁을 신청하면 DISPUTED/FROZEN 상태로 변경되고 사유가 저장된다")
+    void disputeTrade_success() {
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+        Escrow escrow = createEscrow(buyerId, 3L);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
+
+        TradeRes result = tradeService.disputeTrade(1L, buyerId, "결과물이 약속한 조건과 다릅니다.");
+
+        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.DISPUTED);
+        assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.FROZEN);
+        assertThat(escrow.getRejectReason()).isEqualTo("결과물이 약속한 조건과 다릅니다.");
+        assertThat(escrow.getExpiresAt()).isNull(); // 자동 확정 타이머 정지
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+    }
+
+    @Test
+    @DisplayName("구매자가 아닌 사용자가 분쟁을 신청하면 TRADE_ACCESS_DENIED 예외가 발생한다")
+    void disputeTrade_notBuyer() {
+        Long sellerId = 3L;
+        Trade trade = createTrade(2L, sellerId);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeService.disputeTrade(1L, sellerId, "사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_ACCESS_DENIED);
+
+        verify(escrowRepository, never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("검토 중이 아닌 거래에 분쟁을 신청하면 TRADE_NOT_UNDER_REVIEW 예외가 발생한다")
+    void disputeTrade_notUnderReview() {
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L); // IN_PROGRESS
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeService.disputeTrade(1L, buyerId, "사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
+
+        verify(escrowRepository, never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("이미 분쟁 중인 거래에 다시 분쟁을 신청하면 TRADE_ALREADY_DISPUTED 예외가 발생한다")
+    void disputeTrade_alreadyDisputed() {
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.DISPUTED);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeService.disputeTrade(1L, buyerId, "사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_ALREADY_DISPUTED);
+
+        verify(escrowRepository, never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 거래에 분쟁을 신청하면 TRADE_NOT_FOUND 예외가 발생한다")
+    void disputeTrade_tradeNotFound() {
+        given(tradeRepository.findByIdWithLock(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeService.disputeTrade(999L, 2L, "사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+
+        verify(escrowRepository, never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("에스크로가 없는 거래에 분쟁을 신청하면 ESCROW_NOT_FOUND 예외가 발생한다")
+    void disputeTrade_escrowNotFound() {
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeService.disputeTrade(1L, buyerId, "사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
+    }
+
     private Trade createTrade(Long buyerId, Long sellerId) {
         Trade trade = Trade.create(1L, 10L, buyerId, sellerId, 5000, TradeType.PURCHASE);
         ReflectionTestUtils.setField(trade, "id", 1L);

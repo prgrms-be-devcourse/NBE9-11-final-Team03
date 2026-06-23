@@ -1,5 +1,6 @@
 package com.back.baton.domain.trade.controller;
 
+import com.back.baton.domain.trade.dto.request.DisputeReq;
 import com.back.baton.domain.trade.dto.request.PresignedUrlReq;
 import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
 import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
@@ -63,6 +64,22 @@ public class TradeController {
         Long userId = currentUser.getUserId();
         TradeRes response = tradeService.cancelTrade(tradeId, userId);
         return ApiResponses.success(SuccessCode.TRADE_CANCELLED, response);
+    }
+
+    @PatchMapping("/{tradeId}/dispute")
+    @Operation(
+            summary = "분쟁 신청",
+            description = "현재 로그인한 구매자가 결과물 검토 중인 거래에 대해 분쟁을 신청합니다. 에스크로 크레딧이 동결되고 자동 확정 타이머가 정지됩니다."
+    )
+    public ResponseEntity<ApiResponse<TradeRes>> disputeTrade(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser,
+            @RequestBody @Valid DisputeReq req
+    ) {
+        Long buyerId = currentUser.getUserId();
+        TradeRes response = tradeService.disputeTrade(tradeId, buyerId, req.reason());
+        return ApiResponses.success(SuccessCode.TRADE_DISPUTED, response);
     }
 
     @PatchMapping("/{tradeId}/confirm")

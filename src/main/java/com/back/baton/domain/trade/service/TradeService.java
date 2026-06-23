@@ -67,6 +67,23 @@ public class TradeService {
         return TradeRes.of(trade, escrow);
     }
 
+    @Transactional
+    public TradeRes disputeTrade(Long tradeId, Long buyerId, String reason) {
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+
+        validateBuyer(trade, buyerId);
+        validateDisputable(trade);
+
+        Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+        trade.dispute(); // 거래 상태 변경 (UNDER_REVIEW -> DISPUTED)
+        escrow.freeze(reason); // 에스크로 상태 변경 (HELD -> FROZEN)
+
+        return TradeRes.of(trade, escrow);
+    }
+
     private void validateTradeParticipant(Trade trade, Long userId) {
         if (!Objects.equals(trade.getBuyerId(), userId) && !Objects.equals(trade.getSellerId(), userId)) {
             throw new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED);
@@ -80,6 +97,20 @@ public class TradeService {
             case CANCELLED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_CANCELLED);
             case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_IN_DISPUTE);
             default -> {} // IN_PROGRESS 만 취소 가능
+        }
+    }
+
+    private void validateBuyer(Trade trade, Long buyerId) {
+        if (!Objects.equals(trade.getBuyerId(), buyerId)) {
+            throw new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED);
+        }
+    }
+
+    private void validateDisputable(Trade trade) {
+        switch (trade.getStatus()) {
+            case UNDER_REVIEW -> {} // 검토 중인 거래만 분쟁 신청 가능
+            case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_DISPUTED);
+            default -> throw new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
         }
     }
 }

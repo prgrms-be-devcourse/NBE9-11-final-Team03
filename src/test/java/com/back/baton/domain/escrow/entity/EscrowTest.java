@@ -87,4 +87,28 @@ class EscrowTest {
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(EscrowErrorCode.INVALID_ESCROW_STATUS);
     }
+
+    @Test
+    @DisplayName("에스크로 동결 시 FROZEN 상태로 변경되고 사유 저장 및 만료 시각이 초기화된다")
+    void freeze_status() {
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, LocalDateTime.now().plusDays(7));
+
+        escrow.freeze("결과물이 약속한 조건과 다릅니다.");
+
+        assertThat(escrow.getStatus()).isEqualTo(EscrowStatus.FROZEN);
+        assertThat(escrow.getRejectReason()).isEqualTo("결과물이 약속한 조건과 다릅니다.");
+        assertThat(escrow.getExpiresAt()).isNull(); // 자동 확정 타이머 정지
+    }
+
+    @Test
+    @DisplayName("HELD 상태가 아닌 에스크로를 동결하면 INVALID_ESCROW_STATUS 예외가 발생한다")
+    void freeze_invalidStatus() {
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, LocalDateTime.now().plusDays(7));
+        ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
+
+        assertThatThrownBy(() -> escrow.freeze("사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.INVALID_ESCROW_STATUS);
+    }
 }

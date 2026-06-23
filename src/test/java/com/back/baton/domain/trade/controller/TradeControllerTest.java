@@ -16,11 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -223,5 +225,83 @@ class TradeControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("TRADE-400-002"));
+    }
+
+    @Test
+    @DisplayName("dispute trade succeeds with current user")
+    @WithMockSecurityUser(userId = 2)
+    void disputeTrade_success() throws Exception {
+        Long tradeId = 1L;
+        Long userId = 2L;
+        String reason = "결과물이 약속한 조건과 다릅니다.";
+
+        TradeRes res = new TradeRes(
+                tradeId, 1L, 10L, 2L, 3L,
+                5000, TradeType.PURCHASE, TradeStatus.DISPUTED,
+                EscrowStatus.FROZEN, null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        when(tradeService.disputeTrade(tradeId, userId, reason)).thenReturn(res);
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"" + reason + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-11"))
+                .andExpect(jsonPath("$.data.tradeStatus").value("DISPUTED"))
+                .andExpect(jsonPath("$.data.escrowStatus").value("FROZEN"));
+    }
+
+    @Test
+    @DisplayName("dispute trade returns 400 when reason is blank")
+    @WithMockSecurityUser(userId = 2)
+    void disputeTrade_blankReason() throws Exception {
+        Long tradeId = 1L;
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    @DisplayName("dispute trade returns 400 when trade is not under review")
+    @WithMockSecurityUser(userId = 2)
+    void disputeTrade_notUnderReview() throws Exception {
+        Long tradeId = 1L;
+        Long userId = 2L;
+        String reason = "분쟁 사유입니다.";
+
+        when(tradeService.disputeTrade(eq(tradeId), eq(userId), eq(reason)))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW));
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"" + reason + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-400-005"));
+    }
+
+    @Test
+    @DisplayName("dispute trade returns 409 when trade is already disputed")
+    @WithMockSecurityUser(userId = 2)
+    void disputeTrade_alreadyDisputed() throws Exception {
+        Long tradeId = 1L;
+        Long userId = 2L;
+        String reason = "분쟁 사유입니다.";
+
+        when(tradeService.disputeTrade(eq(tradeId), eq(userId), eq(reason)))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_ALREADY_DISPUTED));
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"" + reason + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-409-002"));
     }
 }
