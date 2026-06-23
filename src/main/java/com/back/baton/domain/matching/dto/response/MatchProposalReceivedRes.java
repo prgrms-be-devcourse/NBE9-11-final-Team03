@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public record MatchProposalReceivedRes(
         Long proposalId,
+        Long tradeId,
         MatchProposalStatus status,
         String requestMessage,
         Long requesterId,
