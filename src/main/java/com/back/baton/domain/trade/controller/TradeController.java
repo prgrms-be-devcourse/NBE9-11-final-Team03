@@ -1,7 +1,6 @@
 package com.back.baton.domain.trade.controller;
 
 import com.back.baton.domain.trade.dto.request.DisputeReq;
-import com.back.baton.domain.trade.dto.request.DisputeResolveReq;
 import com.back.baton.domain.trade.dto.request.PresignedUrlReq;
 import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
 import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
@@ -81,20 +80,6 @@ public class TradeController {
         Long buyerId = currentUser.getUserId();
         TradeRes response = tradeService.disputeTrade(tradeId, buyerId, req.reason());
         return ApiResponses.success(SuccessCode.TRADE_DISPUTED, response);
-    }
-
-    @PatchMapping("/{tradeId}/dispute/resolve")
-    @Operation(
-            summary = "분쟁 처리 [관리자 전용]",
-            description = "관리자가 분쟁 중인 거래에 대해 판정을 내립니다. BUYER_WIN이면 구매자에게 환불, SELLER_WIN이면 판매자에게 정산됩니다."
-    )
-    public ResponseEntity<ApiResponse<TradeRes>> resolveDispute(
-            @Parameter(description = "거래 ID", example = "1", required = true)
-            @PathVariable Long tradeId,
-            @RequestBody @Valid DisputeResolveReq req
-    ) {
-        TradeRes response = tradeService.resolveDispute(tradeId, req.verdict());
-        return ApiResponses.success(SuccessCode.TRADE_DISPUTE_RESOLVED, response);
     }
 
     @PatchMapping("/{tradeId}/confirm")

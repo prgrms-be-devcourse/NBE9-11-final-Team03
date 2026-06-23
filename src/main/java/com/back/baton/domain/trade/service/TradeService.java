@@ -3,9 +3,11 @@ package com.back.baton.domain.trade.service;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.Trade;
+import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
@@ -15,7 +17,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -123,6 +128,23 @@ public class TradeService {
         }
 
         return TradeRes.of(trade, escrow);
+    }
+
+    public List<DisputeRes> getDisputedTrades() {
+        List<Trade> trades = tradeRepository.findAllByStatus(TradeStatus.DISPUTED);
+
+        if (trades.isEmpty()) {
+            throw new CustomException(TradeErrorCode.TRADE_NO_DISPUTES); // 분쟁 중인 거래 없음
+        }
+
+        List<Long> tradeIds = trades.stream().map(Trade::getId).toList();
+        Map<Long, Escrow> escrowByTradeId = escrowRepository.findAllByTradeIdIn(tradeIds).stream()
+                .collect(Collectors.toMap(Escrow::getTradeId, e -> e));
+
+        return trades.stream()
+                .filter(t -> escrowByTradeId.containsKey(t.getId()))
+                .map(t -> DisputeRes.of(t, escrowByTradeId.get(t.getId())))
+                .toList();
     }
 
     private void validateTradeParticipant(Trade trade, Long userId) {
