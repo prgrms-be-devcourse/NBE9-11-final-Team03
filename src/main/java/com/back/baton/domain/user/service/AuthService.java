@@ -120,10 +120,14 @@ public class AuthService {
         if(savedRefreshTokenValue==null){
             throw new CustomException(TokenErrorCode.TOKEN_NOT_FOUND);
         }
+
+        // 1-2. 서명, 알고리즘, 만료 시간 검증
+        jwtTokenProvider.validateToken(savedRefreshTokenValue);
+
+        // 2. 유저 검증
         Long userId = jwtTokenProvider.getUserIdFromToken(savedRefreshTokenValue); // userId 추출
         User user = userRepository.findById(userId).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        // 2. 유저 검증
         checkUserStatus(user.getStatus());
 
         // 3. 토큰 탈취 여부 검증 및 처리 - userId로 토큰 탐색, 탈취된 토큰이라면 삭제 처리
@@ -134,15 +138,6 @@ public class AuthService {
             refreshTokenRepository.delete(refreshToken);
             throw new CustomException(TokenErrorCode.REUSED_TOKEN);
         }
-
-        // 3-2: 만료된 토큰 처리
-        if(refreshToken.getExpiredAt().isBefore(LocalDateTime.now())){
-            refreshTokenRepository.delete(refreshToken);
-            throw new CustomException(TokenErrorCode.EXPIRED_TOKEN);
-        }
-
-        // 3-3: 서명, 알고리즘, 만료 시간 검증
-        jwtTokenProvider.validateToken(savedRefreshTokenValue);
 
         // 4. 토큰 발행 (RTR로 refreshToken도 발행)
         Date now = new Date(); // 발급 시간 고정

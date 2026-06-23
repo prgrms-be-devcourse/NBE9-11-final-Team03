@@ -5,15 +5,20 @@ import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
-import com.back.baton.domain.talent.dto.response.*;
+import com.back.baton.domain.talent.dto.response.TalentCreateRes;
+import com.back.baton.domain.talent.dto.response.TalentDetailRes;
+import com.back.baton.domain.talent.dto.response.TalentListRes;
+import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.TalentErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +34,9 @@ public class TalentService {
     private final TradeRepository tradeRepository;
     private static final int MAX_PAGE_SIZE = 100;
 
+    @Value("${talent.max-count-per-user:3}")
+    private int maxTalentCountPerUser;
+
     // 재능 등록
     @Transactional
     public TalentCreateRes createTalent(Long authorId, TalentCreateReq request) {
@@ -38,6 +46,12 @@ public class TalentService {
 
         if (!category.isActive()) { // 비활성 카테고리 등록 차단
             throw new CustomException(TalentErrorCode.CATEGORY_INACTIVE);
+        }
+
+        // 1인당 등록 개수 제한 (삭제되지 않은 재능 기준)
+        int currentCount = talentRepository.countByAuthorIdAndDeletedAtIsNull(authorId);
+        if (currentCount >= maxTalentCountPerUser) {
+            throw new CustomException(TalentErrorCode.TALENT_REGISTRATION_LIMIT_EXCEEDED);
         }
 
         Talent talent = Talent.create(authorId, category,
@@ -103,12 +117,12 @@ public class TalentService {
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
     }
 
-    //커서 페이징
+    //커서 페이징 (공통 CursorPageRes 사용)
     public CursorPageRes<TalentListRes> getTalentList(Long cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         List<TalentListRes> rows = talentRepository.findTalentList(cursor, pageSize);
 
-        return convertToCursorPage(rows, pageSize);
+        return CursorPageRes.from(rows, pageSize, TalentListRes::talentId);
     }
 
     // 재능 상세 조회 + 조회수 증가
@@ -128,24 +142,10 @@ public class TalentService {
         return response;
     }
 
-    // 검색,필터
+    // 검색,필터 (공통 CursorPageRes 사용)
     public CursorPageRes<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize);
-        return convertToCursorPage(rows, pageSize);
-    }
-
-    // 커서 페이징 후처리 공통화
-    private CursorPageRes<TalentListRes> convertToCursorPage(List<TalentListRes> rows, int pageSize) {
-        // size+1개 받았으면 다음 페이지 존재
-        boolean hasNext = rows.size() > pageSize;
-
-        // 실제 반환은 size개까지만 (마지막 +1개는 잘라냄)
-        List<TalentListRes> content = hasNext ? List.copyOf(rows.subList(0, pageSize)) : rows;
-
-        // 다음 커서 = 이번 페이지 마지막 항목의 id (마지막 페이지면 null)
-        Long nextCursor = hasNext ? content.get(content.size() - 1).talentId() : null;
-
-        return CursorPageRes.of(content, hasNext, nextCursor);
+        return CursorPageRes.from(rows, pageSize, TalentListRes::talentId);
     }
 }

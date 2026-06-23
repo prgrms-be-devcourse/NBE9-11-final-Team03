@@ -21,3 +21,6 @@ user:
 s3:
   presigned-put-expiry-minutes: 5 # 클라이언트 S3업로드 유효 시간 (분)
   presigned-get-expiry-hours: 3 # 조회 URL 유효 시간 (시간)
+
+talent:
+  max-count-per-user: 3 # 1인당 재능 등록 상한

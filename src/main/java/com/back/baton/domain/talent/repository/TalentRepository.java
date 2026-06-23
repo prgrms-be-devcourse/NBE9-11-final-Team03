@@ -35,4 +35,7 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
             WHERE t.authorId = :authorId
             """)
     void deleteTalentByUserId(@Param("authorId") Long authorId, @Param("now") LocalDateTime now);
+
+    // 삭제되지 않은 본인 재능 개수 (등록 제한 검사용)
+    int countByAuthorIdAndDeletedAtIsNull(Long authorId);
 }

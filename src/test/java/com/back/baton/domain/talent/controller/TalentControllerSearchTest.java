@@ -1,9 +1,9 @@
 package com.back.baton.domain.talent.controller;
 
 import com.back.baton.domain.talent.dto.request.TalentSearchReq;
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.service.TalentService;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
