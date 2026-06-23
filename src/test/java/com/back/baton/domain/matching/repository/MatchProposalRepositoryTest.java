@@ -307,6 +307,118 @@ class MatchProposalRepositoryTest {
         assertThat(proposal.providerId()).isEqualTo(fixture.provider().getId());
     }
 
+    @Test
+    @DisplayName("제공자 재능이 삭제된 제안은 받은 제안 목록에서 제외된다")
+    void findReceivedProposals_excludeDeletedProviderTalent() {
+        User requester = saveUser("requester@example.com", "요청자");
+        User provider = saveUser("provider@example.com", "제공자");
+        Category category = saveCategory("백엔드", 1);
+
+        Talent requesterTalent = saveTalent(
+                requester.getId(),
+                category,
+                "요청자 재능"
+        );
+
+        Talent activeProviderTalent = saveTalent(
+                provider.getId(),
+                category,
+                "정상 제공자 재능"
+        );
+
+        Talent deletedProviderTalent = saveTalent(
+                provider.getId(),
+                category,
+                "삭제된 제공자 재능"
+        );
+        deletedProviderTalent.softDelete();
+
+        MatchProposal visibleProposal = matchProposalRepository.save(
+                MatchProposal.create(
+                        activeProviderTalent.getId(),
+                        requesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "정상 재능에 대한 제안입니다."
+                )
+        );
+
+        matchProposalRepository.save(
+                MatchProposal.create(
+                        deletedProviderTalent.getId(),
+                        requesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "삭제된 재능에 대한 제안입니다."
+                )
+        );
+
+        List<MatchProposalReceivedRes> result = matchProposalRepository.findReceivedProposals(
+                provider.getId(),
+                null
+        );
+
+        assertThat(result)
+                .extracting(MatchProposalReceivedRes::proposalId)
+                .containsExactly(visibleProposal.getId());
+    }
+
+    @Test
+    @DisplayName("요청자 재능이 삭제된 교환 제안은 보낸 제안 목록에서 제외된다")
+    void findSentProposals_excludeDeletedRequesterTalent() {
+        User requester = saveUser("requester2@example.com", "요청자2");
+        User provider = saveUser("provider2@example.com", "제공자2");
+        Category category = saveCategory("프론트엔드", 2);
+
+        Talent providerTalent = saveTalent(
+                provider.getId(),
+                category,
+                "제공자 재능"
+        );
+
+        Talent activeRequesterTalent = saveTalent(
+                requester.getId(),
+                category,
+                "정상 요청자 재능"
+        );
+
+        Talent deletedRequesterTalent = saveTalent(
+                requester.getId(),
+                category,
+                "삭제된 요청자 재능"
+        );
+        deletedRequesterTalent.softDelete();
+
+        MatchProposal visibleProposal = matchProposalRepository.save(
+                MatchProposal.create(
+                        providerTalent.getId(),
+                        activeRequesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "정상 교환 제안입니다."
+                )
+        );
+
+        matchProposalRepository.save(
+                MatchProposal.create(
+                        providerTalent.getId(),
+                        deletedRequesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "삭제된 요청자 재능이 포함된 제안입니다."
+                )
+        );
+
+        List<MatchProposalSentRes> result = matchProposalRepository.findSentProposals(
+                requester.getId(),
+                null
+        );
+
+        assertThat(result)
+                .extracting(MatchProposalSentRes::proposalId)
+                .containsExactly(visibleProposal.getId());
+    }
+
     private TestFixture createProposalFixture() {
         User requester = userRepository.save(createUser(
                 "requester@test.com",
@@ -409,6 +521,36 @@ class MatchProposalRepositoryTest {
                 .introduction("테스트 소개")
                 .trustScore(BigDecimal.ZERO)
                 .build();
+    }
+
+    private User saveUser(String email, String nickname) {
+        return userRepository.save(
+                User.builder()
+                        .email(email)
+                        .password("password")
+                        .nickname(nickname)
+                        .profileImageUrl(null)
+                        .introduction("테스트 소개")
+                        .trustScore(BigDecimal.ZERO)
+                        .build()
+        );
+    }
+
+    private Category saveCategory(String name, int sortOrder) {
+        return categoryRepository.save(Category.create(name, sortOrder));
+    }
+
+    private Talent saveTalent(Long authorId, Category category, String title) {
+        return talentRepository.save(
+                Talent.create(
+                        authorId,
+                        category,
+                        title,
+                        "테스트 내용",
+                        2,
+                        100
+                )
+        );
     }
 
     private record TestFixture(
