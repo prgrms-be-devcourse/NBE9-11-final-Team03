@@ -12,7 +12,8 @@ public enum TradeErrorCode implements ErrorCode {
     TRADE_NOT_IN_PROGRESS(HttpStatus.BAD_REQUEST, "TRADE-400-004", "진행 중인 거래가 아닙니다."),
     TRADE_NOT_UNDER_REVIEW(HttpStatus.BAD_REQUEST, "TRADE-400-005", "결과물 검토 중인 거래가 아닙니다."),
     TRADE_ALREADY_DISPUTED(HttpStatus.CONFLICT, "TRADE-409-002", "이미 분쟁이 신청된 거래입니다."),
-    TRADE_SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "TRADE-404-002", "결과물 제출 내역을 찾을 수 없습니다.");
+    TRADE_SUBMISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "TRADE-404-002", "결과물 제출 내역을 찾을 수 없습니다."),
+    INVALID_DISPUTE_REASON(HttpStatus.BAD_REQUEST, "TRADE-400-006", "분쟁 사유는 5자 이상 200자 이하여야 합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

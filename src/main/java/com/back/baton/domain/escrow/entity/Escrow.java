@@ -3,6 +3,7 @@ package com.back.baton.domain.escrow.entity;
 import com.back.baton.global.entity.BaseTimeEntity;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.EscrowErrorCode;
+import com.back.baton.global.response.code.TradeErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -81,8 +82,8 @@ public class Escrow extends BaseTimeEntity {
             throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
         }
         // 분쟁 사유 검증
-        if (reason == null || reason.isBlank() || reason.length() > 200) {
-            throw new IllegalArgumentException("올바르지 않은 분쟁 사유입니다.");
+        if (reason == null || reason.isBlank() || reason.length() < 5 || reason.length() > 200) {
+            throw new CustomException(TradeErrorCode.INVALID_DISPUTE_REASON);
         }
         this.status = EscrowStatus.FROZEN;
         this.rejectReason = reason;
