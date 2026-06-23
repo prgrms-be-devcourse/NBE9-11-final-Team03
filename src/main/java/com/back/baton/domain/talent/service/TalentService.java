@@ -10,6 +10,7 @@ import com.back.baton.domain.talent.dto.response.TalentDetailRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
 import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.repository.TradeRepository;
@@ -117,13 +118,15 @@ public class TalentService {
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
     }
 
-    //커서 페이징 (공통 CursorPageRes 사용)
-    public CursorPageRes<TalentListRes> getTalentList(Long cursor, int size) {
+    // 커서 페이징 (공통 CursorPageRes 사용)
+    public CursorPageRes<TalentListRes> getTalentList(Long cursor, int size, TalentSortType sort) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        List<TalentListRes> rows = talentRepository.findTalentList(cursor, pageSize);
+        TalentSortType sortType = (sort != null) ? sort : TalentSortType.LATEST; // null 방어
+        List<TalentListRes> rows = talentRepository.findTalentList(cursor, pageSize, sortType);
 
         return CursorPageRes.from(rows, pageSize, TalentListRes::talentId);
     }
+
 
     // 재능 상세 조회 + 조회수 증가
     @Transactional
@@ -143,9 +146,10 @@ public class TalentService {
     }
 
     // 검색,필터 (공통 CursorPageRes 사용)
-    public CursorPageRes<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size) {
+    public CursorPageRes<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size, TalentSortType sort) {
         int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize);
+        TalentSortType sortType = (sort != null) ? sort : TalentSortType.LATEST;
+        List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize, sortType);
         return CursorPageRes.from(rows, pageSize, TalentListRes::talentId);
     }
 }

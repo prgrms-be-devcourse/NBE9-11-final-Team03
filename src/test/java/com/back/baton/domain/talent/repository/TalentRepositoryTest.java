@@ -4,6 +4,7 @@ import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +41,7 @@ class TalentRepositoryTest {
         talentRepository.save(t3);
 
         // when: 첫 페이지(cursor=null), size=2 -> 내부적으로 3개(size+1) 조회
-        List<TalentListRes> result = talentRepository.findTalentList(null, 2);
+        List<TalentListRes> result = talentRepository.findTalentList(null, 2, TalentSortType.LATEST);
 
         // then
         assertThat(result).hasSize(3);                          // size+1
@@ -61,7 +62,7 @@ class TalentRepositoryTest {
         Talent t4 = save(category, "재능4");
 
         // when: t4 id를 커서로 -> 그보다 작은 id만 (t3, t2, t1)
-        List<TalentListRes> result = talentRepository.findTalentList(t4.getId(), 2);
+        List<TalentListRes> result = talentRepository.findTalentList(t4.getId(), 2, TalentSortType.LATEST);
 
         // then: id < t4, 최신순, size+1=3개
         assertThat(result).extracting(TalentListRes::talentId)

@@ -39,7 +39,7 @@ class TalentControllerSearchTest {
         var item = new TalentListRes(5L, "백엔드", "스프링 리뷰", 100, 2,
                 BigDecimal.valueOf(4.5), 3, 10, LocalDateTime.now());
         var page = CursorPageRes.of(List.of(item), true, 5L);
-        given(talentService.searchTalents(any(), any(), eq(20))).willReturn(page);
+        given(talentService.searchTalents(any(), any(), eq(20), any())).willReturn(page);
 
         // when & then
         mockMvc.perform(get("/api/v1/talents/search")
@@ -58,7 +58,7 @@ class TalentControllerSearchTest {
     @DisplayName("필터 4종 쿼리스트링이 TalentSearchReq에 바인딩된다")
     void searchTalents_bindsAllFilters() throws Exception {
         // given
-        given(talentService.searchTalents(any(), any(), anyInt()))
+        given(talentService.searchTalents(any(), any(), anyInt(), any()))
                 .willReturn(CursorPageRes.of(List.<TalentListRes>of(), false, null));
 
         // when: 필터 4종 + 완료여부 전부 전달
@@ -73,7 +73,7 @@ class TalentControllerSearchTest {
         // then: 쿼리스트링이 record에 제대로 매핑됐는지 캡처해서 검증
         ArgumentCaptor<TalentSearchReq> reqCaptor = ArgumentCaptor.forClass(TalentSearchReq.class);
         org.mockito.BDDMockito.then(talentService).should()
-                .searchTalents(reqCaptor.capture(), any(), anyInt());
+                .searchTalents(reqCaptor.capture(), any(), anyInt(), any());
 
         TalentSearchReq req = reqCaptor.getValue();
         assertThat(req.categoryId()).isEqualTo(1L);
@@ -87,7 +87,7 @@ class TalentControllerSearchTest {
     @DisplayName("필터 없이 요청해도 정상 동작한다 (전부 null 바인딩)")
     void searchTalents_noFilter() throws Exception {
         // given
-        given(talentService.searchTalents(any(), any(), eq(20)))
+        given(talentService.searchTalents(any(), any(), eq(20), any()))
                 .willReturn(CursorPageRes.of(List.<TalentListRes>of(), false, null));
 
         // when & then: 파라미터 0개 -> record 전 필드 null, cursor null, size 기본 20
@@ -98,7 +98,7 @@ class TalentControllerSearchTest {
 
         ArgumentCaptor<TalentSearchReq> reqCaptor = ArgumentCaptor.forClass(TalentSearchReq.class);
         org.mockito.BDDMockito.then(talentService).should()
-                .searchTalents(reqCaptor.capture(), any(), eq(20));
+                .searchTalents(reqCaptor.capture(), any(), eq(20), any());
         assertThat(reqCaptor.getValue().categoryId()).isNull();
         assertThat(reqCaptor.getValue().completedOnly()).isNull();
     }
@@ -107,7 +107,7 @@ class TalentControllerSearchTest {
     @DisplayName("/search가 상세 조회(/{talentId})로 잘못 매핑되지 않는다")
     void searchTalents_pathNotConfusedWithDetail() throws Exception {
         // given
-        given(talentService.searchTalents(any(), any(), anyInt()))
+        given(talentService.searchTalents(any(), any(), anyInt(), any()))
                 .willReturn(CursorPageRes.of(List.<TalentListRes>of(), false, null));
 
         // when & then: /search가 talentId="search"로 잡혀 500 나면 이 테스트가 잡아줌
