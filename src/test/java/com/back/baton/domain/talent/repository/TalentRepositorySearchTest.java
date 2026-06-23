@@ -5,6 +5,7 @@ import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +39,7 @@ class TalentRepositorySearchTest {
         talentRepository.save(deleted);
 
         var req = new TalentSearchReq(null, null, null, null, null);
-        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10);
+        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10, TalentSortType.LATEST);
 
         assertThat(result).extracting(TalentListRes::title)
                 .containsExactly("재능2", "재능1"); // 최신순, 삭제 제외
@@ -53,7 +54,7 @@ class TalentRepositorySearchTest {
         save(design, "피그마", 100, dec(0), 0);
 
         var req = new TalentSearchReq(backend.getId(), null, null, null, null);
-        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10);
+        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10, TalentSortType.LATEST);
 
         assertThat(result).extracting(TalentListRes::title).containsExactly("스프링");
         assertThat(result).extracting(TalentListRes::categoryName).containsOnly("백엔드");
@@ -68,7 +69,7 @@ class TalentRepositorySearchTest {
         save(c, "비싼거", 500, dec(0), 0);
 
         var req = new TalentSearchReq(null, 100, 300, null, null);
-        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10);
+        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10, TalentSortType.LATEST);
 
         assertThat(result).extracting(TalentListRes::title).containsExactly("중간");
     }
@@ -81,7 +82,7 @@ class TalentRepositorySearchTest {
         save(c, "좋음", 100, dec(4.5), 0);
 
         var req = new TalentSearchReq(null, null, null, dec(4.0), null);
-        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10);
+        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10, TalentSortType.LATEST);
 
         assertThat(result).extracting(TalentListRes::title).containsExactly("좋음");
     }
@@ -95,16 +96,16 @@ class TalentRepositorySearchTest {
 
         // true: 완료 1건 이상만
         var reqOnly = new TalentSearchReq(null, null, null, null, true);
-        assertThat(talentRepository.searchTalents(reqOnly, null, 10))
+        assertThat(talentRepository.searchTalents(reqOnly, null, 10, TalentSortType.LATEST))
                 .extracting(TalentListRes::title).containsExactly("거래있음");
 
         // false: 필터 안 걸림(전체)
         var reqFalse = new TalentSearchReq(null, null, null, null, false);
-        assertThat(talentRepository.searchTalents(reqFalse, null, 10)).hasSize(2);
+        assertThat(talentRepository.searchTalents(reqFalse, null, 10, TalentSortType.LATEST)).hasSize(2);
 
         // null: 필터 안 걸림(전체)
         var reqNull = new TalentSearchReq(null, null, null, null, null);
-        assertThat(talentRepository.searchTalents(reqNull, null, 10)).hasSize(2);
+        assertThat(talentRepository.searchTalents(reqNull, null, 10, TalentSortType.LATEST)).hasSize(2);
     }
 
     @Test
@@ -118,7 +119,7 @@ class TalentRepositorySearchTest {
         save(design, "다른카테", 200, dec(0), 5);   // 카테고리 탈락
 
         var req = new TalentSearchReq(backend.getId(), 100, 300, null, true);
-        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10);
+        List<TalentListRes> result = talentRepository.searchTalents(req, null, 10, TalentSortType.LATEST);
 
         assertThat(result).extracting(TalentListRes::title).containsExactly("정답");
     }
@@ -132,7 +133,7 @@ class TalentRepositorySearchTest {
         Talent t3 = save(c, "재능3", 100, dec(0), 0);
 
         var req = new TalentSearchReq(c.getId(), null, null, null, null);
-        List<TalentListRes> result = talentRepository.searchTalents(req, t3.getId(), 10);
+        List<TalentListRes> result = talentRepository.searchTalents(req, t3.getId(), 10, TalentSortType.LATEST);
 
         assertThat(result).extracting(TalentListRes::talentId)
                 .containsExactly(t2.getId(), t1.getId()); // t3 미만

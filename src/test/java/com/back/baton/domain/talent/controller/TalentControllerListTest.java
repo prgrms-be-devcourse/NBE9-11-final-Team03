@@ -37,7 +37,7 @@ class TalentControllerListTest {
         var item = new TalentListRes(5L, "백엔드", "스프링 리뷰", 100, 2,
                 BigDecimal.valueOf(4.5), 3, 10, LocalDateTime.now());
         var page = CursorPageRes.of(List.of(item), true, 5L);
-        given(talentService.getTalentList(any(), eq(20))).willReturn(page);
+        given(talentService.getTalentList(any(), eq(20), any())).willReturn(page);
 
         // when & then
         mockMvc.perform(get("/api/v1/talents")
@@ -56,7 +56,7 @@ class TalentControllerListTest {
     void getTalentList_noCursor() throws Exception {
         // given: cursor=null로 서비스 호출되는지
         var page = CursorPageRes.of(List.<TalentListRes>of(), false, null);
-        given(talentService.getTalentList(eq(null), eq(20))).willReturn(page);
+        given(talentService.getTalentList(eq(null), eq(20), any())).willReturn(page);
 
         // when & then
         mockMvc.perform(get("/api/v1/talents"))

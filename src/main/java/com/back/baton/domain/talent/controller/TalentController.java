@@ -7,6 +7,7 @@ import com.back.baton.domain.talent.dto.response.TalentCreateRes;
 import com.back.baton.domain.talent.dto.response.TalentDetailRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.dto.response.TalentUpdateRes;
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
@@ -92,31 +93,35 @@ public class TalentController {
     @GetMapping
     @Operation(
             summary = "재능 목록 조회",
-            description = "커서 기반 페이지네이션으로 활성 재능 목록을 조회합니다. 첫 요청에서는 cursor를 생략합니다."
+            description = "커서 기반 페이지네이션으로 활성 재능 목록을 조회합니다. sort로 최신/평점/인기순 정렬을 지정합니다."
     )
     public ResponseEntity<ApiResponse<CursorPageRes<TalentListRes>>> getTalentList(
-            @Parameter(description = "마지막으로 조회한 재능 ID. 첫 요청은 생략합니다.", example = "30")
+            @Parameter(description = "마지막으로 조회한 커서. 첫 요청은 생략합니다.", example = "30")
             @RequestParam(required = false) Long cursor,
             @Parameter(description = "조회할 재능 개수", example = "20")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "정렬 기준 (LATEST/RATING/POPULAR)", example = "LATEST")
+            @RequestParam(defaultValue = "LATEST") TalentSortType sort
     ) {
-        CursorPageRes<TalentListRes> response = talentService.getTalentList(cursor, size);
+        CursorPageRes<TalentListRes> response = talentService.getTalentList(cursor, size, sort);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 
     @GetMapping("/search")
     @Operation(
             summary = "재능 검색 및 필터링",
-            description = "카테고리, 크레딧 범위, 최소 평점, 완료 이력 여부를 기준으로 재능을 검색합니다."
+            description = "카테고리, 크레딧 범위, 최소 평점, 완료 이력 여부로 검색하고 sort로 정렬합니다."
     )
     public ResponseEntity<ApiResponse<CursorPageRes<TalentListRes>>> searchTalents(
             @Valid @ParameterObject @ModelAttribute TalentSearchReq req,
-            @Parameter(description = "마지막으로 조회한 재능 ID. 첫 요청은 생략합니다.", example = "30")
+            @Parameter(description = "마지막으로 조회한 커서. 첫 요청은 생략합니다.", example = "30")
             @RequestParam(required = false) Long cursor,
             @Parameter(description = "조회할 재능 개수", example = "20")
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "정렬 기준 (LATEST/RATING/POPULAR)", example = "LATEST")
+            @RequestParam(defaultValue = "LATEST") TalentSortType sort
     ) {
-        CursorPageRes<TalentListRes> response = talentService.searchTalents(req, cursor, size);
+        CursorPageRes<TalentListRes> response = talentService.searchTalents(req, cursor, size, sort);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 
