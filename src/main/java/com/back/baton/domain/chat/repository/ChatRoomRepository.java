@@ -24,4 +24,14 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             @Param("sellerId") Long sellerId,
             @Param("status") ChatRoomType status
     );
+
+    @Query("""
+        select cr
+        from ChatRoom cr
+        where cr.tradeId = :tradeId
+          and cr.deletedAt is null
+        """)
+    Optional<ChatRoom> findActiveTransactionRoomByTradeId(
+            @Param("tradeId") Long tradeId
+    );
 }

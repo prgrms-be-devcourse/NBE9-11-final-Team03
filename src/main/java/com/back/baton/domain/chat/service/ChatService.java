@@ -65,6 +65,28 @@ public class ChatService {
         return chatRoom;
     }
 
+    @Transactional
+    public ChatRoomRes getOrCreateTransactionRoom(
+            Long tradeId,
+            Long talentId,
+            Long buyerId,
+            Long sellerId
+    ) {
+        validateSelfChat(buyerId, sellerId);
+
+        ChatRoom chatRoom = chatRoomRepository.findActiveTransactionRoomByTradeId(tradeId)
+                .orElseGet(() -> chatRoomRepository.save(
+                        ChatRoom.createForTransaction(
+                                talentId,
+                                buyerId,
+                                sellerId,
+                                tradeId
+                        )
+                ));
+
+        return ChatRoomRes.from(chatRoom);
+    }
+
     public ChatRoomRes getChatRoomInfo(
             Long roomId,
             Long userId
