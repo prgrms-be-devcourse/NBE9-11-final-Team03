@@ -417,6 +417,6 @@ class TradeServiceTest {
     }
 
     private Escrow createEscrow(Long payerId, Long payeeId) {
-        return Escrow.createHeld(1L, payerId, payeeId, 5000, LocalDateTime.now().plusDays(7));
+        return Escrow.createHeld(1L, payerId, payeeId, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
     }
 }

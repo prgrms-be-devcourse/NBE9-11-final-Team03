@@ -64,8 +64,8 @@ public class TradeSubmissionService {
         creditService.settleEscrow(
                 escrow.getPayerId(),
                 escrow.getPayeeId(),
-                escrow.getAmount(),
-                escrow.getSettlementAmount(),
+                escrow.getAmount(), // 구매자 escrow 차감액
+                escrow.getAmount(), // 판매자 지급액 (구매 확정 시 수수료 없이 전액 정산되므로, 구매자 차감액과 값이 동일)
                 tradeId,
                 "TRADE-SETTLE-" + tradeId
         );

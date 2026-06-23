@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.response.TradeRes;
+import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
@@ -80,6 +81,46 @@ public class TradeService {
 
         trade.dispute(); // 거래 상태 변경 (UNDER_REVIEW -> DISPUTED)
         escrow.freeze(reason); // 에스크로 상태 변경 (HELD -> FROZEN)
+
+        return TradeRes.of(trade, escrow);
+    }
+
+    @Transactional
+    public TradeRes resolveDispute(Long tradeId, DisputeVerdict verdict) {
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+
+        if (trade.getStatus() != com.back.baton.domain.trade.entity.TradeStatus.DISPUTED) {
+            throw new CustomException(TradeErrorCode.TRADE_NOT_DISPUTED);
+        }
+
+        Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+        // 판매자 승소 -> 거래 취소 + 에스크로 해제
+        if (verdict == DisputeVerdict.BUYER_WIN) {
+            trade.cancel(); // 거래 상태 변경 (UNDER_REVIEW -> CANCELLED)
+            escrow.refundFrozen(); // 에스크로 상태 변경 (FROZEN -> REFUNDED)
+            creditService.refundFromEscrow(
+                    escrow.getPayerId(),
+                    escrow.getAmount(),
+                    tradeId,
+                    "DISPUTE-REFUND-" + tradeId
+            );
+        }
+        // 구매자 승소 -> 거래 완료 + 에스크로 정산
+        else {
+            trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
+            escrow.releaseFrozen(); // 에스크로 상태 변경 (FROZEN -> RELEASED)
+            creditService.settleEscrow(
+                    escrow.getPayerId(),
+                    escrow.getPayeeId(),
+                    escrow.getAmount(),
+                    escrow.getSettlementAmount(),
+                    tradeId,
+                    "DISPUTE-SETTLE-" + tradeId
+            );
+        }
 
         return TradeRes.of(trade, escrow);
     }

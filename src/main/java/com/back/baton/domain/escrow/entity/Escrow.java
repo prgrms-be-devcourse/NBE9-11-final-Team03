@@ -76,6 +76,22 @@ public class Escrow extends BaseTimeEntity {
         this.settledAt = LocalDateTime.now();
     }
 
+    public void refundFrozen() {
+        if (this.status != EscrowStatus.FROZEN) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.status = EscrowStatus.REFUNDED;
+        this.settledAt = LocalDateTime.now();
+    }
+
+    public void releaseFrozen() {
+        if (this.status != EscrowStatus.FROZEN) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.status = EscrowStatus.RELEASED;
+        this.settledAt = LocalDateTime.now();
+    }
+
     public void freeze(String reason) {
         if (this.status != EscrowStatus.HELD) {
             throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
@@ -89,14 +105,14 @@ public class Escrow extends BaseTimeEntity {
         this.expiresAt = null; // 분쟁 발생 시 자동 확정 타이머 정지
     }
 
-    public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, LocalDateTime expiresAt) {
+    public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, Integer fee, Integer settlementAmount, LocalDateTime expiresAt) {
         Escrow escrow = new Escrow();
         escrow.tradeId = tradeId;
         escrow.payerId = payerId;
         escrow.payeeId = payeeId;
         escrow.amount = amount;
-        escrow.fee = 0; // TODO: 중개 수수료 설정
-        escrow.settlementAmount = amount; // TODO: 수수료 설정 시 반영
+        escrow.fee = fee;
+        escrow.settlementAmount = settlementAmount;
         escrow.status = EscrowStatus.HELD;
         escrow.expiresAt = expiresAt;
         return escrow;
