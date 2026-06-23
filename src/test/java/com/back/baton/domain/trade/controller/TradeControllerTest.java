@@ -2,6 +2,7 @@ package com.back.baton.domain.trade.controller;
 
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.trade.dto.response.TradeRes;
+import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.service.TradeService;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -303,5 +305,102 @@ class TradeControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("TRADE-409-002"));
+    }
+
+    @Test
+    @DisplayName("resolve dispute succeeds with BUYER_WIN verdict")
+    @WithMockSecurityUser(userId = 1)
+    void resolveDispute_buyerWin() throws Exception {
+        Long tradeId = 1L;
+
+        TradeRes res = new TradeRes(
+                tradeId, 1L, 10L, 2L, 3L,
+                5000, TradeType.PURCHASE, TradeStatus.CANCELLED,
+                EscrowStatus.REFUNDED, null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        when(tradeService.resolveDispute(eq(tradeId), eq(DisputeVerdict.BUYER_WIN))).thenReturn(res);
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute/resolve", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"verdict\":\"BUYER_WIN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-16"))
+                .andExpect(jsonPath("$.data.tradeStatus").value("CANCELLED"))
+                .andExpect(jsonPath("$.data.escrowStatus").value("REFUNDED"));
+    }
+
+    @Test
+    @DisplayName("resolve dispute succeeds with SELLER_WIN verdict")
+    @WithMockSecurityUser(userId = 1)
+    void resolveDispute_sellerWin() throws Exception {
+        Long tradeId = 1L;
+
+        TradeRes res = new TradeRes(
+                tradeId, 1L, 10L, 2L, 3L,
+                5000, TradeType.PURCHASE, TradeStatus.COMPLETED,
+                EscrowStatus.RELEASED, null,
+                LocalDateTime.now(), LocalDateTime.now()
+        );
+
+        when(tradeService.resolveDispute(eq(tradeId), eq(DisputeVerdict.SELLER_WIN))).thenReturn(res);
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute/resolve", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"verdict\":\"SELLER_WIN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-16"))
+                .andExpect(jsonPath("$.data.tradeStatus").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.escrowStatus").value("RELEASED"));
+    }
+
+    @Test
+    @DisplayName("resolve dispute returns 404 when trade does not exist")
+    @WithMockSecurityUser(userId = 1)
+    void resolveDispute_tradeNotFound() throws Exception {
+        Long tradeId = 999L;
+
+        when(tradeService.resolveDispute(eq(tradeId), any()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute/resolve", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"verdict\":\"BUYER_WIN\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-404-001"));
+    }
+
+    @Test
+    @DisplayName("resolve dispute returns 400 when trade is not in disputed state")
+    @WithMockSecurityUser(userId = 1)
+    void resolveDispute_tradeNotDisputed() throws Exception {
+        Long tradeId = 1L;
+
+        when(tradeService.resolveDispute(eq(tradeId), any()))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_DISPUTED));
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute/resolve", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"verdict\":\"SELLER_WIN\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-400-006"));
+    }
+
+    @Test
+    @DisplayName("resolve dispute returns 400 when verdict is null")
+    @WithMockSecurityUser(userId = 1)
+    void resolveDispute_nullVerdict() throws Exception {
+        Long tradeId = 1L;
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/dispute/resolve", tradeId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"verdict\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
     }
 }

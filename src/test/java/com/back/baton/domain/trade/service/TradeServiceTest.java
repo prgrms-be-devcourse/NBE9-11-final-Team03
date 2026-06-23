@@ -5,6 +5,7 @@ import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.response.TradeRes;
+import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
@@ -405,6 +406,93 @@ class TradeServiceTest {
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> tradeService.disputeTrade(1L, buyerId, "사유"))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("구매자 승소 시 거래가 CANCELLED, 에스크로가 REFUNDED 상태로 변경되고 환불이 실행된다")
+    void resolveDispute_buyerWin() {
+        Long buyerId = 2L;
+        Long sellerId = 3L;
+        Trade trade = createTrade(buyerId, sellerId);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.DISPUTED);
+        Escrow escrow = createEscrow(buyerId, sellerId);
+        ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
+
+        TradeRes result = tradeService.resolveDispute(1L, DisputeVerdict.BUYER_WIN);
+
+        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.CANCELLED);
+        assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.REFUNDED);
+        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L, "DISPUTE-REFUND-1");
+        then(creditService).should(never()).settleEscrow(any(), any(), anyInt(), anyInt(), any(), any());
+    }
+
+    @Test
+    @DisplayName("판매자 승소 시 거래가 COMPLETED, 에스크로가 RELEASED 상태로 변경되고 정산이 실행된다")
+    void resolveDispute_sellerWin() {
+        Long buyerId = 2L;
+        Long sellerId = 3L;
+        Trade trade = createTrade(buyerId, sellerId);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.DISPUTED);
+        Escrow escrow = createEscrow(buyerId, sellerId);
+        ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
+
+        TradeRes result = tradeService.resolveDispute(1L, DisputeVerdict.SELLER_WIN);
+
+        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.COMPLETED);
+        assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.RELEASED);
+        verify(creditService).settleEscrow(escrow.getPayerId(), escrow.getPayeeId(), escrow.getAmount(), escrow.getSettlementAmount(), 1L, "DISPUTE-SETTLE-1");
+        then(creditService).should(never()).refundFromEscrow(any(), anyInt(), any(), any());
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 거래에 분쟁 처리하면 TRADE_NOT_FOUND 예외가 발생한다")
+    void resolveDispute_tradeNotFound() {
+        given(tradeRepository.findByIdWithLock(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeService.resolveDispute(999L, DisputeVerdict.BUYER_WIN))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+
+        verify(escrowRepository, never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("DISPUTED 상태가 아닌 거래에 분쟁 처리하면 TRADE_NOT_DISPUTED 예외가 발생한다")
+    void resolveDispute_tradeNotDisputed() {
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L); // IN_PROGRESS
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeService.resolveDispute(1L, DisputeVerdict.SELLER_WIN))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_DISPUTED);
+
+        verify(escrowRepository, never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("에스크로가 없는 거래에 분쟁 처리하면 ESCROW_NOT_FOUND 예외가 발생한다")
+    void resolveDispute_escrowNotFound() {
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.DISPUTED);
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeService.resolveDispute(1L, DisputeVerdict.BUYER_WIN))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
