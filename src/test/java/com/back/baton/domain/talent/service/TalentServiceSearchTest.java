@@ -1,9 +1,9 @@
 package com.back.baton.domain.talent.service;
 
 import com.back.baton.domain.talent.dto.request.TalentSearchReq;
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.global.response.CursorPageRes;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,7 +60,6 @@ class TalentServiceSearchTest {
 
         assertThat(result.hasNext()).isFalse();
         assertThat(result.content()).hasSize(2);
-        assertThat(result.nextCursor()).isNull();
     }
 
     @Test

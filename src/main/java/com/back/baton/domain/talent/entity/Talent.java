@@ -21,7 +21,7 @@
         private Long id;
 
         @Column(name = "user_id", nullable = false)
-        private Long authorId; //TODO: Users 연관관계 설정
+        private Long authorId;
 
         @ManyToOne(fetch = FetchType.LAZY, optional = false)
         @JoinColumn(name = "category_id")

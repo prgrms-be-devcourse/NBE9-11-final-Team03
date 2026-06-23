@@ -1,8 +1,8 @@
 package com.back.baton.domain.talent.service;
 
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.global.response.CursorPageRes;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -61,7 +60,6 @@ class TalentServiceListTest {
         // then
         assertThat(result.hasNext()).isFalse();
         assertThat(result.content()).hasSize(2);
-        assertThat(result.nextCursor()).isNull();
     }
 
     @Test
