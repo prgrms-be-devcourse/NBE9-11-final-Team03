@@ -1,15 +1,15 @@
 # MVP PURCHASE 정상 흐름 테스트 기록
 
-기준일: 2026-06-23  
-기준 브랜치: `dev`  
-테스트 방식: `localhost:8080` 기준 실제 HTTP API 수동 호출  
+기준일: 2026-06-23
+기준 브랜치: `dev`
+테스트 방식: `localhost:8080` 기준 실제 HTTP API 수동 호출
 테스트 목적: 회원가입부터 PURCHASE 거래 완료, 에스크로 정산, 크레딧 변동 내역 조회까지 MVP 핵심 정상 흐름이 하나로 이어지는지 확인한다.
 
 ## 1. 결론
 
 | 항목 | 결과 |
 |---|---|
-| MVP 정상 흐름 통과 여부 | 통과 |
+| MVP 정상 흐름 통과 여부 | 부분 통과 |
 | 회원가입/로그인 | 성공 |
 | 초기 크레딧 지급 | 성공 |
 | 재능 등록 | 성공 |
@@ -17,10 +17,10 @@
 | PURCHASE Trade 생성 | 성공 |
 | 구매자 크레딧 에스크로 보관 | 성공 |
 | 결과물 제출 후 검토 상태 전환 | 성공 |
-| 구매 확정/정산 | 성공 |
+| 구매 확정/정산 | 부분 이슈 |
 | CreditTransaction 기록 조회 | 성공 |
 
-최종 판단: `Auth -> Credit -> Talent -> Matching -> Trade -> Escrow -> CreditTransaction` 정상 흐름은 API 기준으로 재현 가능하다.
+최종 판단: `Auth -> Credit -> Talent -> Matching -> Trade -> Escrow -> CreditTransaction` 정상 흐름은 API 기준으로 재현 가능하다. 다만 후속 상세 테스트에서 구매 확정 응답과 직후 거래 상세 재조회 상태가 불일치하는 현상이 확인되어 P0 재검증 대상으로 분리한다.
 
 ## 2. 테스트 환경
 
@@ -279,7 +279,9 @@ Endpoint: `GET /api/v1/credit/transactions?size=10`
 
 ### P0
 
-현재 정상 흐름 기준 P0 차단 이슈는 없다.
+| 항목 | 내용 | 조치 |
+|---|---|---|
+| 구매 확정 후 거래 재조회 상태 불일치 | 확정 응답은 `COMPLETED/RELEASED`이나 직후 `GET /api/v1/trade/{tradeId}` 응답은 `UNDER_REVIEW/HELD`로 관측됨 | Trade/Escrow 상태 저장 또는 조회 기준 확인 |
 
 ### P1
 
@@ -310,4 +312,4 @@ Endpoint: `GET /api/v1/credit/transactions?size=10`
 - 제공자에게 크레딧이 정산된다.
 - 구매자와 제공자의 CreditTransaction 내역이 기록되고 조회된다.
 
-최종 판단: MVP 정상 흐름은 API 기준으로 통과했다. 남은 검증은 실패 케이스와 시연 편의성 보강이다.
+최종 판단: MVP 정상 흐름은 API 기준으로 대부분 통과했다. 남은 검증은 구매 확정 후 상세 재조회 상태 불일치 해결, 실패 케이스, 시연 편의성 보강이다.

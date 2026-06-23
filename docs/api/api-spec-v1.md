@@ -1,10 +1,10 @@
 # Baton API Specification
 
-> 문서 버전: v1.2  
-> 기준일: 2026-06-22  
-> 기준 브랜치: `refactor/BATON-88-current-user`  
-> 기준 PR: `#63` 참고  
-> 문서 상태: 최신 구현 기준 요약  
+> 문서 버전: v1.3
+> 기준일: 2026-06-23
+> 기준 브랜치: `dev`
+> 기준 PR: `#62`, `#63`, `#64`, `#67`, `#68` 반영 기준
+> 문서 상태: MVP 수동 API 테스트 결과 반영
 > 관리 원칙: Swagger/OpenAPI와 실제 컨트롤러 구현을 최종 기준으로 갱신한다.
 
 ## 변경 이력
@@ -14,15 +14,16 @@
 | v1.0 | 2026-06-18 | 최초 API 명세 작성 | 작성 완료 |
 | v1.1 | 2026-06-22 | 문서 버전/기준 브랜치/문서 상태 추가 | 구현 반영 필요 |
 | v1.2 | 2026-06-22 | `@CurrentUser` 인증 사용자 기준, Trade/Submission/S3 API 반영 | 최신 구현 기준 요약 |
+| v1.3 | 2026-06-23 | 회원가입 초기 크레딧, CreditTransaction 조회, Security 인증 정책, MVP 수동 API 테스트 결과 반영 | 최신 테스트 기준 |
 
 ## 1. 문서 기준
 
-- 기준 브랜치: `refactor/BATON-88-current-user`
+- 기준 브랜치: `dev`
 - Swagger URL: `http://localhost:8080/swagger-ui/index.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 - 인증 사용자 식별: 컨트롤러에서 `@CurrentUser SecurityUser` 사용
-- 현재 `SecurityConfig`는 auth 일부 경로를 `permitAll`로 열고, 그 외 요청도 `permitAll` 상태이나 JWT 필터와 `@CurrentUser` 기반 구조는 적용되어 있다.
-- 회원가입 시 초기 크레딧 자동 지급은 아직 `AuthService.signup()`에서 연결되지 않은 P0 잔여 작업이다.
+- 현재 `SecurityConfig`는 회원가입/로그인/토큰 재발급, Swagger, websocket 경로만 `permitAll`이고 그 외 API는 인증이 필요하다.
+- 회원가입 시 `AuthService.signup()`에서 `CreditService.initializeAccount(userId)`를 호출해 초기 크레딧 계좌와 WELCOME 이력을 생성한다.
 
 ## 2. MVP API 요약
 
@@ -34,12 +35,13 @@
 | Auth | 로그아웃 | POST | `/api/v1/auth/logout` | `@CurrentUser` | 포함 |
 | User | 회원 탈퇴 | DELETE | `/api/v1/users` | `@CurrentUser` | 포함 |
 | Credit | 잔액 조회 | GET | `/api/v1/credit/balance` | `@CurrentUser` | 포함 |
+| Credit | 크레딧 거래 내역 조회 | GET | `/api/v1/credit/transactions` | `@CurrentUser` | 포함 |
 | Talent | 재능 등록 | POST | `/api/v1/talents` | `@CurrentUser` | 포함 |
 | Talent | 재능 수정 | PUT | `/api/v1/talents/{talentId}` | `@CurrentUser` | 포함 |
 | Talent | 재능 삭제 | DELETE | `/api/v1/talents/{talentId}` | `@CurrentUser` | 포함 |
-| Talent | 재능 목록 | GET | `/api/v1/talents` | 공개 | 포함 |
-| Talent | 재능 검색 | GET | `/api/v1/talents/search` | 공개 | 포함 |
-| Talent | 재능 상세 | GET | `/api/v1/talents/{talentId}` | 공개 | 포함 |
+| Talent | 재능 목록 | GET | `/api/v1/talents` | Bearer Token 필요 | 포함 |
+| Talent | 재능 검색 | GET | `/api/v1/talents/search` | Bearer Token 필요 | 포함 |
+| Talent | 재능 상세 | GET | `/api/v1/talents/{talentId}` | Bearer Token 필요 | 포함 |
 | Matching | 추천 목록 | GET | `/api/v1/match-recommendations?talentId={talentId}` | `@CurrentUser` | 보조 |
 | Matching | 추천 상세 | GET | `/api/v1/match-recommendations/{providerTalentId}?requesterTalentId={requesterTalentId}` | `@CurrentUser` | 보조 |
 | MatchProposal | 제안 생성 | POST | `/api/v1/match-proposals` | `@CurrentUser` | 포함 |
@@ -80,16 +82,19 @@
 12. 구매자 구매 확정
 13. Escrow RELEASED, Trade COMPLETED, 제공자 정산 확인
 
-## 5. 현재 P0 잔여 확인
+## 5. 현재 P0/P1 잔여 확인
 
 | 항목 | 상태 | 비고 |
 | --- | --- | --- |
-| 회원가입 후 초기 크레딧 자동 지급 | 미완료 | `AuthService.signup()`에 Account 생성 TODO 존재 |
-| CreditTransaction 조회 API | 미정 | 기록은 있으나 Swagger 시연용 조회 API는 별도 결정 필요 |
-| PURCHASE E2E 테스트 | 보강 필요 | 회원가입 또는 계좌 준비부터 구매 확정까지 검증 필요 |
+| 회원가입 후 초기 크레딧 자동 지급 | 구현/검증 완료 | `AuthService.signup()`에서 `CreditService.initializeAccount(userId)` 호출, 신규 사용자 balance `10000` 확인 |
+| CreditTransaction 조회 API | 구현 | `GET /api/v1/credit/transactions`로 본인 거래 내역 조회 가능 |
+| PURCHASE 정상 흐름 수동 API 테스트 | 완료 | 회원가입부터 구매 확정/정산/거래 내역 조회까지 localhost 기준 재현 |
+| 구매 확정 후 거래 재조회 상태 | P0 확인 필요 | 확정 응답은 `COMPLETED/RELEASED`, 직후 상세 재조회는 `UNDER_REVIEW/HELD`로 관측됨 |
+| 재능 조회 인증 정책 | P1 확인 필요 | 컨트롤러는 사용자 식별이 없지만 Security 정책상 Bearer Token 필요 |
 
 ## 6. 문서화 주의
 
 - 과거 문서의 `X-User-Id`, `userId query`, `requesterId/providerId query` 방식은 최신 컨트롤러 기준에서 제거되었다.
 - 매칭 수락 시 Trade/Credit/Escrow 연결은 현재 서비스 코드에 반영되어 있다.
-- 단, 신규 가입자 기준 전체 시연은 초기 크레딧 자동 지급 연결 전까지 막힐 수 있다.
+- 신규 가입자 기준 전체 시연은 가능하다. 단, 구매 확정 직후 거래 상세 재조회 상태 불일치는 수정 또는 발표 전 재검증이 필요하다.
+- 재능 목록/검색/상세 조회는 Swagger 시연 시 Bearer Token을 포함한다.
