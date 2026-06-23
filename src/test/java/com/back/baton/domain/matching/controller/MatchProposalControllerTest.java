@@ -93,6 +93,7 @@ class MatchProposalControllerTest {
         List<MatchProposalReceivedRes> res = List.of(
                 new MatchProposalReceivedRes(
                         1L,
+                        null,
                         MatchProposalStatus.REQUESTED,
                         "교환 제안드립니다.",
                         1L,
@@ -115,6 +116,7 @@ class MatchProposalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-14"))
                 .andExpect(jsonPath("$.data[0].proposalId").value(1L))
+                .andExpect(jsonPath("$.data[0].tradeId").isEmpty())
                 .andExpect(jsonPath("$.data[0].status").value("REQUESTED"))
                 .andExpect(jsonPath("$.data[0].requestMessage").value("교환 제안드립니다."))
                 .andExpect(jsonPath("$.data[0].requesterId").value(1L))
@@ -136,6 +138,7 @@ class MatchProposalControllerTest {
         List<MatchProposalSentRes> res = List.of(
                 new MatchProposalSentRes(
                         1L,
+                        100L,
                         MatchProposalStatus.ACCEPTED,
                         "교환 제안드립니다.",
                         requesterId,
@@ -158,6 +161,7 @@ class MatchProposalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-15"))
                 .andExpect(jsonPath("$.data[0].proposalId").value(1L))
+                .andExpect(jsonPath("$.data[0].tradeId").value(100L))
                 .andExpect(jsonPath("$.data[0].status").value("ACCEPTED"))
                 .andExpect(jsonPath("$.data[0].requestMessage").value("교환 제안드립니다."))
                 .andExpect(jsonPath("$.data[0].requesterId").value(requesterId))

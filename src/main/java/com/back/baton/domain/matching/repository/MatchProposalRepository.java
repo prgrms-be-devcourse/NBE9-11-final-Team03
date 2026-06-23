@@ -78,6 +78,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Query("""
     select new com.back.baton.domain.matching.dto.response.MatchProposalReceivedRes(
         mp.id,
+        trade.id,
         mp.status,
         mp.requestMessage,
         requester.id,
@@ -91,6 +92,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
         mp.createdAt
     )
     from MatchProposal mp
+    left join Trade trade on trade.matchId = mp.id
     join User requester on requester.id = mp.requesterId
     left join Talent requesterTalent on requesterTalent.id = mp.requesterTalentId
     join Talent providerTalent on providerTalent.id = mp.providerTalentId
@@ -109,6 +111,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Query("""
     select new com.back.baton.domain.matching.dto.response.MatchProposalReceivedRes(
         mp.id,
+        trade.id,
         mp.status,
         mp.requestMessage,
         requester.id,
@@ -122,6 +125,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
         mp.createdAt
     )
     from MatchProposal mp
+    left join Trade trade on trade.matchId = mp.id
     join User requester on requester.id = mp.requesterId
     left join Talent requesterTalent on requesterTalent.id = mp.requesterTalentId
     join Talent providerTalent on providerTalent.id = mp.providerTalentId
@@ -153,6 +157,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Query("""
     select new com.back.baton.domain.matching.dto.response.MatchProposalSentRes(
         mp.id,
+        trade.id,
         mp.status,
         mp.requestMessage,
         mp.requesterId,
@@ -166,6 +171,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
         mp.createdAt
     )
     from MatchProposal mp
+    left join Trade trade on trade.matchId = mp.id
     join User provider on provider.id = mp.providerId
     left join Talent requesterTalent on requesterTalent.id = mp.requesterTalentId
     join Talent providerTalent on providerTalent.id = mp.providerTalentId
@@ -184,6 +190,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Query("""
     select new com.back.baton.domain.matching.dto.response.MatchProposalSentRes(
         mp.id,
+        trade.id,
         mp.status,
         mp.requestMessage,
         mp.requesterId,
@@ -197,6 +204,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
         mp.createdAt
     )
     from MatchProposal mp
+    left join Trade trade on trade.matchId = mp.id
     join User provider on provider.id = mp.providerId
     left join Talent requesterTalent on requesterTalent.id = mp.requesterTalentId
     join Talent providerTalent on providerTalent.id = mp.providerTalentId
