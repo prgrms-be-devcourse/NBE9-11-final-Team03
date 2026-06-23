@@ -14,6 +14,8 @@ public enum SuccessCode {
     MATCH_PROPOSAL_REJECTED(HttpStatus.OK, "200-5", "매칭 제안이 거절되었습니다."),
     MATCH_RECOMMENDATIONS_FOUND(HttpStatus.OK, "200-6", "매칭 추천 상대 목록 조회에 성공했습니다."),
     MATCH_RECOMMENDATION_DETAIL_FOUND(HttpStatus.OK, "200-7", "매칭 추천 상대 정보 조회에 성공했습니다."),
+    MATCH_PROPOSALS_RECEIVED_FOUND(HttpStatus.OK, "200-14", "받은 매칭 제안 목록 조회에 성공했습니다."),
+    MATCH_PROPOSALS_SENT_FOUND(HttpStatus.OK, "200-15", "보낸 매칭 제안 목록 조회에 성공했습니다."),
 
     TRADE_OK(HttpStatus.OK, "200-7", "거래 조회에 성공했습니다."),
     TRADE_CANCELLED(HttpStatus.OK, "200-8", "거래가 취소되었습니다."),
@@ -22,7 +24,7 @@ public enum SuccessCode {
     TRADE_SUBMISSION_OK(HttpStatus.OK, "200-9", "결과물 조회에 성공했습니다."),
     TRADE_COMPLETED(HttpStatus.OK, "200-10", "거래가 완료되었습니다."),
     TRADE_DISPUTED(HttpStatus.OK, "200-11", "분쟁이 신청되었습니다."),
-    TRADE_DISPUTE_RESOLVED(HttpStatus.OK, "200-14", "분쟁이 처리되었습니다."),
+    TRADE_DISPUTE_RESOLVED(HttpStatus.OK, "200-16", "분쟁이 처리되었습니다."),
 
     TALENT_ATTACHMENT_CREATED(HttpStatus.CREATED, "201-4", "재능 첨부 등록에 성공했습니다."),
     TALENT_ATTACHMENT_OK(HttpStatus.OK, "200-3", "재능 첨부 요청에 성공했습니다."),
