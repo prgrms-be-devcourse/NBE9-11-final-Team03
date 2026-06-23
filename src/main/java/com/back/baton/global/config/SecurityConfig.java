@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                                 .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/reissue", "/ws/**").permitAll()
                                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() // swagger 활성화
+                                .requestMatchers("/api/v1/trade/*/dispute/resolve").hasRole("ADMIN") // 거래 분쟁 처리
 //                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                 )

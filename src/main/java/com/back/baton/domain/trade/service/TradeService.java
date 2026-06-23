@@ -97,7 +97,7 @@ public class TradeService {
         Escrow escrow = escrowRepository.findByTradeId(tradeId)
                 .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
 
-        // 판매자 승소 -> 거래 취소 + 에스크로 해제
+        // 구매자 승소 -> 거래 취소 + 에스크로 환불
         if (verdict == DisputeVerdict.BUYER_WIN) {
             trade.cancel(); // 거래 상태 변경 (UNDER_REVIEW -> CANCELLED)
             escrow.refundFrozen(); // 에스크로 상태 변경 (FROZEN -> REFUNDED)
@@ -108,7 +108,7 @@ public class TradeService {
                     "DISPUTE-REFUND-" + tradeId
             );
         }
-        // 구매자 승소 -> 거래 완료 + 에스크로 정산
+        // 판매자 승소 -> 거래 완료 + 에스크로 정산
         else {
             trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
             escrow.releaseFrozen(); // 에스크로 상태 변경 (FROZEN -> RELEASED)
