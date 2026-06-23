@@ -321,3 +321,21 @@ P0 기준 성공 흐름은 아래 순서로 정의한다.
 |---|---|---|---|
 | P1 | MatchProposal 수락 동시성 테스트 | 중복 accept, accept/reject 경쟁 상황에서 Trade/Escrow/Credit이 중복 생성되지 않는다. | 백엔드 / 테스트 |
 | P1 | MatchProposal lock 적용 여부 결정 | 수락/거절 경쟁을 DB lock 또는 상태 update 방식으로 방어할지 결정한다. | 백엔드 |
+
+## 작업 업데이트 (2026-06-23, MVP 정상 흐름 테스트)
+
+### 완료된 일
+
+| 우선순위 | 완료 항목 | 완료 기준 | 근거 |
+|---|---|---|---|
+| P0 | MVP PURCHASE 정상 흐름 API 테스트 | 신규 회원가입부터 구매 확정/정산/CreditTransaction 조회까지 localhost API로 재현된다. | 2026-06-23 수동 API 테스트 완료 |
+| P0 | 초기 크레딧 지급 검증 | 신규 구매자/제공자 모두 가입 직후 초기 크레딧 계좌와 WELCOME 내역이 생성된다. | balance 10000 확인 |
+| P0 | 에스크로 보관/정산 검증 | 매칭 수락 후 구매자 크레딧이 escrowBalance로 이동하고, 구매 확정 후 제공자에게 정산된다. | Trade COMPLETED, Escrow RELEASED 확인 |
+| P1 | MVP 테스트 상세 기록 문서 작성 | 요청/응답/생성 ID/잔액 변화가 `docs/testing`에 재현 가능하게 기록된다. | `docs/testing/mvp-purchase-flow-test-2026-06-23.md` |
+
+### 남은 일
+
+| 우선순위 | 해야 할 일 | 완료 기준 | 넘길 채팅/담당 |
+|---|---|---|---|
+| P1 | 실패 케이스 테스트 | 크레딧 부족, 중복 수락, 권한 없음, 재확정, idempotency 재사용이 검증된다. | 백엔드 / QA |
+| P1 | 재능 상세 조회 인증 정책 정리 | 비로그인 조회 허용 여부를 결정하고 Swagger/API 문서와 구현이 일치한다. | 백엔드 / API |
