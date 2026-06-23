@@ -5,7 +5,10 @@ import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.code.CommonErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +21,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.header.writers.frameoptions.XFrameOptionsHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,6 +37,13 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
 
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    }
+
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private String[] allowedOrigins;
 
@@ -50,7 +59,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
-                        .accessDeniedHandler(accessDeniedHandler())
+                        .accessDeniedHandler(accessDeniedHandler(objectMapper()))
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
@@ -58,8 +67,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AccessDeniedHandler accessDeniedHandler() {
-        ObjectMapper objectMapper = new ObjectMapper();
+    public AccessDeniedHandler accessDeniedHandler(ObjectMapper objectMapper) {
         return (request, response, accessDeniedException) -> {
             ApiResponse<Void> body = ApiResponse.fail(CommonErrorCode.ACCESS_DENIED);
             response.setStatus(CommonErrorCode.ACCESS_DENIED.getHttpStatus().value());

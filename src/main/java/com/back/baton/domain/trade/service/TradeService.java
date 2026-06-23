@@ -92,6 +92,7 @@ public class TradeService {
 
     @Transactional
     public TradeRes resolveDispute(Long tradeId, DisputeVerdict verdict) {
+        Objects.requireNonNull(verdict, "verdict값은 null이 될 수 없습니다.");
         Trade trade = tradeRepository.findByIdWithLock(tradeId)
                 .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
 
@@ -134,7 +135,7 @@ public class TradeService {
         List<Trade> trades = tradeRepository.findAllByStatus(TradeStatus.DISPUTED);
 
         if (trades.isEmpty()) {
-            throw new CustomException(TradeErrorCode.TRADE_NO_DISPUTES); // 분쟁 중인 거래 없음
+            return List.of();
         }
 
         List<Long> tradeIds = trades.stream().map(Trade::getId).toList();

@@ -166,15 +166,14 @@ class AdminTradeControllerTest {
     }
 
     @Test
-    @DisplayName("분쟁 목록 조회 - 분쟁 중인 거래가 없으면 404가 반환된다")
+    @DisplayName("분쟁 목록 조회 - 분쟁 중인 거래가 없으면 빈 리스트가 반환된다")
     @WithMockSecurityUser(userId = 1, role = "ADMIN")
     void getDisputedTrades_noDisputes() throws Exception {
-        when(tradeService.getDisputedTrades())
-                .thenThrow(new CustomException(TradeErrorCode.TRADE_NO_DISPUTES));
+        when(tradeService.getDisputedTrades()).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/admin/trade/disputes"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("TRADE-404-003"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isEmpty());
     }
 }
