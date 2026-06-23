@@ -1,4 +1,4 @@
-# MVP PURCHASE 정상 흐름 테스트 기록
+﻿# MVP PURCHASE 정상 흐름 테스트 기록
 
 기준일: 2026-06-23
 기준 브랜치: `dev`
@@ -9,7 +9,7 @@
 
 | 항목 | 결과 |
 |---|---|
-| MVP 정상 흐름 통과 여부 | 부분 통과 |
+| MVP 정상 흐름 통과 여부 | 코드 수정 후 통합 테스트 및 서버 API 재검증 통과 |
 | 회원가입/로그인 | 성공 |
 | 초기 크레딧 지급 | 성공 |
 | 재능 등록 | 성공 |
@@ -17,10 +17,10 @@
 | PURCHASE Trade 생성 | 성공 |
 | 구매자 크레딧 에스크로 보관 | 성공 |
 | 결과물 제출 후 검토 상태 전환 | 성공 |
-| 구매 확정/정산 | 부분 이슈 |
+| 구매 확정/정산 | 코드 수정/통합 테스트 완료 |
 | CreditTransaction 기록 조회 | 성공 |
 
-최종 판단: `Auth -> Credit -> Talent -> Matching -> Trade -> Escrow -> CreditTransaction` 정상 흐름은 API 기준으로 재현 가능하다. 다만 후속 상세 테스트에서 구매 확정 응답과 직후 거래 상세 재조회 상태가 불일치하는 현상이 확인되어 P0 재검증 대상으로 분리한다.
+최종 판단: `Auth -> Credit -> Talent -> Matching -> Trade -> Escrow -> CreditTransaction` 정상 흐름은 API 기준으로 재현 가능하다. 후속 상세 테스트에서 구매 확정 응답과 직후 거래 상세 재조회 상태가 어긋나는 현상이 확인되었고, 이후 코드 수정 및 통합 테스트로 DB 재조회 상태 저장을 해결 확인했다. 남은 것은 수정 코드가 반영된 서버에서 Swagger/Postman API 재검증이다.
 
 ## 2. 테스트 환경
 
@@ -281,7 +281,7 @@ Endpoint: `GET /api/v1/credit/transactions?size=10`
 
 | 항목 | 내용 | 조치 |
 |---|---|---|
-| 구매 확정 후 거래 재조회 상태 불일치 | 확정 응답은 `COMPLETED/RELEASED`이나 직후 `GET /api/v1/trade/{tradeId}` 응답은 `UNDER_REVIEW/HELD`로 관측됨 | Trade/Escrow 상태 저장 또는 조회 기준 확인 |
+| 구매 확정 후 거래 재조회 상태 저장 이슈 | 기존 수동 테스트에서는 직후 재조회가 `UNDER_REVIEW/HELD`로 관측되었으나, 코드 수정 후 통합 테스트에서 DB 재조회 `COMPLETED/RELEASED` 확인 | 서버 재기동 후 API 재검증 필요 |
 
 ### P1
 
@@ -312,4 +312,71 @@ Endpoint: `GET /api/v1/credit/transactions?size=10`
 - 제공자에게 크레딧이 정산된다.
 - 구매자와 제공자의 CreditTransaction 내역이 기록되고 조회된다.
 
-최종 판단: MVP 정상 흐름은 API 기준으로 대부분 통과했다. 남은 검증은 구매 확정 후 상세 재조회 상태 불일치 해결, 실패 케이스, 시연 편의성 보강이다.
+최종 판단: MVP 정상 흐름은 API 기준으로 대부분 통과했다. 구매 확정 후 상세 재조회 상태 저장 이슈는 코드 수정, 통합 테스트, 서버 API 재검증으로 해결 확인했다. 남은 검증은 실패 케이스와 시연 편의성 보강이다.
+
+## 7. 후속 코드 검증 업데이트
+
+기준일: 2026-06-23
+기준 브랜치: `dev`
+
+### 7.1 확인된 이슈
+
+| 우선순위 | 항목 | 기존 관측 결과 |
+|---|---|---|
+| P0 | 구매 확정 후 거래 상세 재조회 상태 저장 이슈 | `PATCH /api/v1/trade/{tradeId}/confirm` 응답은 `COMPLETED/RELEASED`였으나, 직후 `GET /api/v1/trade/{tradeId}` 기존 재조회는 `UNDER_REVIEW/HELD`, 코드 수정 후 통합 테스트는 `COMPLETED/RELEASED`로 관측됨 |
+
+### 7.2 원인 판단
+
+`TradeSubmissionService.confirmPurchase()`에서 `trade.complete()`와 `escrow.release()`를 호출한 뒤 `CreditService.settleEscrow()`를 실행한다. 정산 과정에서 `CreditAccountRepository`의 벌크 업데이트가 `@Modifying(clearAutomatically = true)`로 실행되면서, 앞서 변경한 `Trade`와 `Escrow` 엔티티가 flush되기 전에 영속성 컨텍스트에서 분리될 수 있었다.
+
+그 결과 confirm 응답 DTO는 메모리 객체 기준으로 `COMPLETED/RELEASED`를 반환하지만, DB 재조회 결과는 이전 상태인 `UNDER_REVIEW/HELD`로 남을 수 있었다.
+
+### 7.3 수정 내용
+
+| 파일 | 수정 내용 |
+|---|---|
+| `src/main/java/com/back/baton/domain/credit/repository/CreditAccountRepository.java` | 모든 벌크 업데이트 `@Modifying`에 `flushAutomatically = true` 추가 |
+| `src/test/java/com/back/baton/domain/trade/service/TradeSettlementPersistenceIntegrationTest.java` | 구매 확정/거래 취소 후 `EntityManager.clear()`를 수행하고 Repository로 `Trade/Escrow/CreditAccount`를 재조회하는 통합 테스트 추가 |
+
+### 7.4 테스트 결과
+
+실행 명령:
+
+```bash
+.\gradlew.bat test --rerun-tasks --tests "com.back.baton.domain.trade.service.TradeSettlementPersistenceIntegrationTest"
+```
+
+결과:
+
+| 검증 항목 | 결과 |
+|---|---|
+| 구매 확정 응답 `tradeStatus` | `COMPLETED` |
+| 구매 확정 응답 `escrowStatus` | `RELEASED` |
+| 구매 확정 후 DB 재조회 `Trade.status` | `COMPLETED` |
+| 구매 확정 후 DB 재조회 `Escrow.status` | `RELEASED` |
+| 구매자 크레딧 | `balance=900`, `escrowBalance=0` |
+| 제공자 크레딧 | `balance=1100`, `escrowBalance=0` |
+| 거래 취소 후 DB 재조회 `Trade.status` | `CANCELLED` |
+| 거래 취소 후 DB 재조회 `Escrow.status` | `REFUNDED` |
+| 거래 취소 후 구매자 크레딧 | `balance=1000`, `escrowBalance=0` |
+| Gradle 테스트 결과 | `BUILD SUCCESSFUL` |
+
+### 7.5 남은 확인
+
+| 우선순위 | 항목 | 완료 기준 |
+|---|---|---|
+| P0 | 서버 재기동 후 Swagger/Postman API 재검증 | 완료. 실제 API에서 confirm 직후 `GET /api/v1/trade/{tradeId}`가 `COMPLETED/RELEASED`로 응답 |
+
+### 7.6 서버 API 재검증 결과
+
+기준일: 2026-06-23
+
+| 항목 | 결과 |
+|---|---|
+| tradeId | `1` |
+| 확인 API | `GET /api/v1/trade/1` |
+| `tradeStatus` | `COMPLETED` |
+| `escrowStatus` | `RELEASED` |
+| 판단 | 구매 확정 후 상세 재조회 상태 저장 이슈 해결 확인 |
+| P1 | 거래 취소 후 API 재조회 검증 | 통합 테스트는 완료. 서버 API에서 `cancelTrade()` 이후 `GET /api/v1/trade/{tradeId}`가 `CANCELLED/REFUNDED`로 응답 |
+| P1 | PURCHASE E2E 자동 테스트 | 회원가입부터 구매 확정/정산/거래 내역 조회까지 자동 통합 테스트로 고정 |

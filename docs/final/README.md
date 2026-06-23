@@ -7,7 +7,7 @@
 | 폴더 | 역할 | 주요 문서 |
 | --- | --- | --- |
 | `overview` | 프로젝트 전체 서사와 기획 통합본 | `project-master.md`, `notion-project-plan-v4.md` |
-| `status` | MVP 달성도, 제출물 체크리스트, 남은 일 관리 | `final-submission-gap-checklist.md`, `mvp-achievement-status-2026-06-22.md` |
+| `status` | MVP 달성도, 제출물 체크리스트, 남은 일 관리 | `final-submission-gap-checklist.md`, `mvp-achievement-status-2026-06-22.md`, `post-mvp-required-scope-note.md`, `mentoring-brief-2026-06-23.md` |
 | `presentation` | 발표자료 구성과 시연 스크립트 | `presentation-outline.md`, `demo-script.md` |
 | `architecture` | 시스템 구조와 도메인 흐름 설명 | `system-architecture.md`, `match-proposal-accept-flow.md` |
 | `retrospective` | 자체 평가와 회고 | `self-evaluation-retrospective.md` |
@@ -18,8 +18,10 @@
 1. `overview/project-master.md`
 2. `status/final-submission-gap-checklist.md`
 3. `status/mvp-achievement-status-2026-06-22.md`
-4. `presentation/demo-script.md`
-5. `status/mvp-api-test-request-response-log.md`
+4. `status/post-mvp-required-scope-note.md`
+5. `status/mentoring-brief-2026-06-23.md`
+6. `presentation/demo-script.md`
+7. `status/mvp-api-test-request-response-log.md`
 
 ## 관리 원칙
 

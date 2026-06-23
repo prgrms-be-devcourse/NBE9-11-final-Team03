@@ -4,7 +4,7 @@
 > 기준일: 2026-06-23
 > 기준 브랜치: `dev`
 > 기준 PR: `#62`, `#63`, `#64`, `#67`, `#68` 반영 기준
-> 문서 상태: MVP 수동 API 테스트 결과 반영
+> 문서 상태: MVP 수동 API 테스트 결과와 채팅 구현 상태 반영
 > 관리 원칙: Swagger/OpenAPI와 실제 컨트롤러 구현을 최종 기준으로 갱신한다.
 
 ## 변경 이력
@@ -15,6 +15,7 @@
 | v1.1 | 2026-06-22 | 문서 버전/기준 브랜치/문서 상태 추가 | 구현 반영 필요 |
 | v1.2 | 2026-06-22 | `@CurrentUser` 인증 사용자 기준, Trade/Submission/S3 API 반영 | 최신 구현 기준 요약 |
 | v1.3 | 2026-06-23 | 회원가입 초기 크레딧, CreditTransaction 조회, Security 인증 정책, MVP 수동 API 테스트 결과 반영 | 최신 테스트 기준 |
+| v1.4 | 2026-06-23 | 채팅 REST/WebSocket 구현 상태와 P1 필수 구현 범위 반영 | 최신 총괄 기준 |
 
 ## 1. 문서 기준
 
@@ -54,7 +55,7 @@
 | Trade | 결과물 조회 | GET | `/api/v1/trade/{tradeId}/submission` | `@CurrentUser` | 포함 |
 | Trade | 구매 확정 | PATCH | `/api/v1/trade/{tradeId}/confirm` | `@CurrentUser` | 포함 |
 
-## 3. 고도화/보조 API
+## 3. P1 필수 구현/고도화 및 보조 API
 
 | 도메인 | 기능 | Method | Endpoint | 상태 |
 | --- | --- | --- | --- | --- |
@@ -62,9 +63,11 @@
 | Talent Attachment | 첨부 저장 | POST | `/api/v1/talents/{talentId}/attachments` | S3 고도화 |
 | Talent Attachment | 첨부 목록 | GET | `/api/v1/talents/{talentId}/attachments` | S3 고도화 |
 | Talent Attachment | 첨부 삭제 | DELETE | `/api/v1/talents/{talentId}/attachments/{attachmentId}` | S3 고도화 |
-| ChatRoom | 채팅방 생성/조회 | POST | `/api/v1/chat-rooms` | 고도화 |
-| ChatMessage | 메시지 전송 | POST | `/api/v1/chat-rooms/{chatRoomId}/messages` | 고도화 |
-| ChatMessage | 메시지 목록 | GET | `/api/v1/chat-rooms/{chatRoomId}/messages` | 고도화 |
+| ChatRoom | 채팅방 생성/조회 | POST | `/api/v1/chat-rooms` | 기본 구현 완료, 보조 시연 후보 |
+| ChatMessage | 메시지 전송 | POST | `/api/v1/chat-rooms/{chatRoomId}/messages` | 기본 구현 완료, 보조 시연 후보 |
+| ChatMessage | 메시지 목록 | GET | `/api/v1/chat-rooms/{chatRoomId}/messages` | 기본 구현 완료, 보조 시연 후보 |
+| Chat / WebSocket | 메시지 실시간 전송 | STOMP publish | `/app/chat-rooms/{chatRoomId}/messages` | 기본 구현 완료, WebSocket 시연 검증 필요 |
+| Chat / WebSocket | 메시지 읽음 처리 | STOMP publish | `/app/chat-rooms/{chatRoomId}/read` | 기본 구현 완료, WebSocket 시연 검증 필요 |
 
 ## 4. PURCHASE MVP 시연 순서
 
@@ -89,12 +92,13 @@
 | 회원가입 후 초기 크레딧 자동 지급 | 구현/검증 완료 | `AuthService.signup()`에서 `CreditService.initializeAccount(userId)` 호출, 신규 사용자 balance `10000` 확인 |
 | CreditTransaction 조회 API | 구현 | `GET /api/v1/credit/transactions`로 본인 거래 내역 조회 가능 |
 | PURCHASE 정상 흐름 수동 API 테스트 | 완료 | 회원가입부터 구매 확정/정산/거래 내역 조회까지 localhost 기준 재현 |
-| 구매 확정 후 거래 재조회 상태 | P0 확인 필요 | 확정 응답은 `COMPLETED/RELEASED`, 직후 상세 재조회는 `UNDER_REVIEW/HELD`로 관측됨 |
+| 구매 확정 후 거래 재조회 상태 | 코드 수정/통합 테스트 완료, API 재검증 필요 | 기존 수동 API 테스트에서는 재조회가 `UNDER_REVIEW/HELD`였으나, `flushAutomatically = true` 수정 후 통합 테스트에서 DB 재조회 `COMPLETED/RELEASED` 확인 |
 | 재능 조회 인증 정책 | P1 확인 필요 | 컨트롤러는 사용자 식별이 없지만 Security 정책상 Bearer Token 필요 |
 
 ## 6. 문서화 주의
 
 - 과거 문서의 `X-User-Id`, `userId query`, `requesterId/providerId query` 방식은 최신 컨트롤러 기준에서 제거되었다.
 - 매칭 수락 시 Trade/Credit/Escrow 연결은 현재 서비스 코드에 반영되어 있다.
-- 신규 가입자 기준 전체 시연은 가능하다. 단, 구매 확정 직후 거래 상세 재조회 상태 불일치는 수정 또는 발표 전 재검증이 필요하다.
+- 신규 가입자 기준 전체 시연은 가능하다. 구매 확정 직후 거래 상세 재조회 상태 저장 이슈는 코드 수정 및 통합 테스트로 해결 확인했으며, 발표 전 실행 서버 재기동 후 Swagger/Postman API 재검증이 필요하다.
 - 재능 목록/검색/상세 조회는 Swagger 시연 시 Bearer Token을 포함한다.
+- 채팅은 REST 채팅방/메시지 API와 WebSocket/STOMP 송수신 컨트롤러가 존재한다. 최종 발표에서는 실제 시연 가능한 범위를 별도로 검증한다.

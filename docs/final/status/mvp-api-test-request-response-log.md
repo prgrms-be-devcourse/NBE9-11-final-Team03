@@ -1,3 +1,4 @@
+﻿> 후속 업데이트: 이 문서는 2026-06-23 12:44~12:45 KST에 수행한 실제 API 요청/응답 원본 기록이다. 당시 구매 확정 직후 거래 재조회가 `UNDER_REVIEW/HELD`로 남는 문제가 관측되었고, 이후 `CreditAccountRepository` 벌크 업데이트 flush 설정을 수정했다. `TradeSettlementPersistenceIntegrationTest`에서 구매 확정 후 DB 재조회 `COMPLETED/RELEASED`, 거래 취소 후 DB 재조회 `CANCELLED/REFUNDED`를 확인했다. 실행 서버 기준 API 재검증은 서버 재기동 후 별도로 수행한다.
 # Baton MVP API 테스트 요청/응답 기록
 
 > 문서 버전: v1.1  

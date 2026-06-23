@@ -33,6 +33,8 @@ http://localhost:8080/swagger-ui/index.html
 | [프로젝트 기획서 v4.2](docs/final/overview/notion-project-plan-v4.md) | 서비스 방향, MVP 범위, 확장 계획 |
 | [최종 제출물 갭 체크리스트](docs/final/status/final-submission-gap-checklist.md) | 제출 항목, 남은 일, 완료 기준 |
 | [MVP 달성도 점검](docs/final/status/mvp-achievement-status-2026-06-22.md) | PURCHASE MVP 현재 상태 |
+| [MVP 이후 필수 구현 범위 메모](docs/final/status/post-mvp-required-scope-note.md) | SWAP, 관리자, 리뷰, 채팅의 P1 관리 기준 |
+| [멘토링 사전 브리프](docs/final/status/mentoring-brief-2026-06-23.md) | 멘토링 전 공유용 프로젝트 흐름과 질문 요약 |
 | [MVP 실제 요청/응답 기록](docs/final/status/mvp-api-test-request-response-log.md) | Swagger/Postman 재현용 실제 응답 |
 | [API 명세서](docs/api/api-spec-v1.md) | 주요 API 요약 |
 | [시연 스크립트](docs/final/presentation/demo-script.md) | Swagger/Postman 시연 순서 |
