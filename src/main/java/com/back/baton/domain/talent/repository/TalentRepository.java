@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRepositoryCustom {
 
@@ -38,4 +39,6 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
 
     // 삭제되지 않은 본인 재능 개수 (등록 제한 검사용)
     int countByAuthorIdAndDeletedAtIsNull(Long authorId);
+
+    Optional<Talent> findByIdAndDeletedAtIsNull(Long id);
 }

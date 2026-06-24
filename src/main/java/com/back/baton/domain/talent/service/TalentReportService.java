@@ -41,13 +41,9 @@ public class TalentReportService {
         return TalentReportRes.from(talentReportRepository.save(report));
     }
 
-    // 존재 -> 삭제 검증 (TalentAttachmentService와 동일 패턴)
+    // 존재 -> 삭제 검증
     private Talent getActiveTalent(Long talentId) {
-        Talent talent = talentRepository.findById(talentId)
+        return talentRepository.findByIdAndDeletedAtIsNull(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
-        if (talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
-        return talent;
     }
 }

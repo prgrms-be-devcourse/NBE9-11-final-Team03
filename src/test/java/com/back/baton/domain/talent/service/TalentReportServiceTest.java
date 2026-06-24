@@ -49,7 +49,7 @@ class TalentReportServiceTest {
     @DisplayName("타인의 활성 재능을 신고하면 PENDING 상태로 저장된다")
     void reportTalent_success() {
         Talent talent = activeTalent();
-        given(talentRepository.findById(TALENT_ID)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(TALENT_ID)).willReturn(Optional.of(talent));
         given(talentReportRepository.existsByTalentIdAndReporterId(TALENT_ID, REPORTER_ID)).willReturn(false);
         given(talentReportRepository.save(any(TalentReport.class)))
                 .willAnswer(invocation -> {
@@ -70,7 +70,7 @@ class TalentReportServiceTest {
     @Test
     @DisplayName("존재하지 않는 재능이면 TALENT_NOT_FOUND, 저장하지 않는다")
     void reportTalent_talentNotFound() {
-        given(talentRepository.findById(TALENT_ID)).willReturn(Optional.empty());
+        given(talentRepository.findByIdAndDeletedAtIsNull(TALENT_ID)).willReturn(Optional.empty());
 
         var req = new TalentReportReq(ReportReason.ETC, null);
         assertThatThrownBy(() -> talentReportService.reportTalent(TALENT_ID, REPORTER_ID, req))
@@ -83,9 +83,8 @@ class TalentReportServiceTest {
     @Test
     @DisplayName("삭제된 재능이면 TALENT_NOT_FOUND로 존재를 숨긴다")
     void reportTalent_deleted_notFound() {
-        Talent talent = activeTalent();
-        talent.softDelete();
-        given(talentRepository.findById(TALENT_ID)).willReturn(Optional.of(talent));
+        // 삭제된 재능은 findByIdAndDeletedAtIsNull에서 조회되지 않음 -> empty
+        given(talentRepository.findByIdAndDeletedAtIsNull(TALENT_ID)).willReturn(Optional.empty());
 
         var req = new TalentReportReq(ReportReason.ETC, null);
         assertThatThrownBy(() -> talentReportService.reportTalent(TALENT_ID, REPORTER_ID, req))
@@ -99,7 +98,7 @@ class TalentReportServiceTest {
     @DisplayName("본인 재능을 신고하면 SELF_REPORT_NOT_ALLOWED(403), 저장하지 않는다")
     void reportTalent_self_forbidden() {
         Talent talent = activeTalent();
-        given(talentRepository.findById(TALENT_ID)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(TALENT_ID)).willReturn(Optional.of(talent));
 
         var req = new TalentReportReq(ReportReason.ETC, null);
         // reporter = 작성자 본인(AUTHOR_ID)
@@ -114,7 +113,7 @@ class TalentReportServiceTest {
     @DisplayName("이미 신고한 재능이면 DUPLICATE_REPORT(409), 저장하지 않는다")
     void reportTalent_duplicate_conflict() {
         Talent talent = activeTalent();
-        given(talentRepository.findById(TALENT_ID)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(TALENT_ID)).willReturn(Optional.of(talent));
         given(talentReportRepository.existsByTalentIdAndReporterId(TALENT_ID, REPORTER_ID)).willReturn(true);
 
         var req = new TalentReportReq(ReportReason.ETC, null);
