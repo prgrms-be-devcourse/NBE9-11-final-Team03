@@ -17,7 +17,8 @@ public enum SuccessCode {
     MATCH_PROPOSALS_RECEIVED_FOUND(HttpStatus.OK, "200-14", "받은 매칭 제안 목록 조회에 성공했습니다."),
     MATCH_PROPOSALS_SENT_FOUND(HttpStatus.OK, "200-15", "보낸 매칭 제안 목록 조회에 성공했습니다."),
 
-    TRADE_OK(HttpStatus.OK, "200-7", "거래 조회에 성공했습니다."),
+    TRADE_LIST_OK(HttpStatus.OK, "200-16", "거래 목록 조회에 성공했습니다."),
+    TRADE_OK(HttpStatus.OK, "200-7", "거래 상세 조회에 성공했습니다."),
     TRADE_CANCELLED(HttpStatus.OK, "200-8", "거래가 취소되었습니다."),
     TRADE_PRESIGNED_URL_CREATED(HttpStatus.CREATED, "201-4", "Presigned URL이 발급되었습니다."),
     TRADE_SUBMISSION_CREATED(HttpStatus.CREATED, "201-5", "결과물이 제출되었습니다."),

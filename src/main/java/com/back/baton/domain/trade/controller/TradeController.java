@@ -4,12 +4,15 @@ import com.back.baton.domain.trade.dto.request.DisputeReq;
 import com.back.baton.domain.trade.dto.request.PresignedUrlReq;
 import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
 import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
+import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.dto.response.TradeSubmissionRes;
+import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.domain.trade.service.TradeSubmissionService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.SuccessCode;
 import com.back.baton.global.security.CurrentUser;
 import com.back.baton.global.security.SecurityUser;
@@ -25,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -38,7 +42,7 @@ public class TradeController {
 
     @GetMapping("/{tradeId}")
     @Operation(
-            summary = "거래 상태 조회",
+            summary = "내 거래 상세 조회",
             description = "현재 로그인한 거래 참여자가 거래 상태와 에스크로 정보를 조회합니다."
     )
     public ResponseEntity<ApiResponse<TradeRes>> getTrade(
@@ -47,8 +51,25 @@ public class TradeController {
             @CurrentUser SecurityUser currentUser
     ) {
         Long userId = currentUser.getUserId();
-        TradeRes response = tradeService.getTrade(tradeId, userId);
+        TradeRes response = tradeService.getMyTrade(tradeId, userId);
         return ApiResponses.success(SuccessCode.TRADE_OK, response);
+    }
+
+    @GetMapping
+    @Operation(
+            summary = "내 거래 목록 조회",
+            description = "현재 로그인한 사용자의 거래 목록을 커서 기반 페이지네이션으로 조회합니다. status 미입력 시 전체 조회됩니다."
+    )
+    public ResponseEntity<ApiResponse<CursorPageRes<TradeListRes>>> getMyTrades(
+            @CurrentUser SecurityUser currentUser,
+            @RequestParam(required = false) TradeStatus status,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int size
+
+    ) {
+        Long userId = currentUser.getUserId();
+        CursorPageRes<TradeListRes> response = tradeService.getMyTrades(userId, status, cursor, size);
+        return ApiResponses.success(SuccessCode.TRADE_LIST_OK, response);
     }
 
     @PatchMapping("/{tradeId}/cancel")
