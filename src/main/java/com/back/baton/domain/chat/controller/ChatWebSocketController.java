@@ -4,6 +4,8 @@ import com.back.baton.domain.chat.dto.request.ChatMessageSendReq;
 import com.back.baton.domain.chat.dto.response.ChatMessageReadEvent;
 import com.back.baton.domain.chat.dto.response.ChatMessageRes;
 import com.back.baton.domain.chat.service.ChatService;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.AuthErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,7 +47,7 @@ public class ChatWebSocketController {
             Principal principal,
             @Valid @Payload ChatMessageSendReq req
     ) {
-        Long senderId = Long.valueOf(principal.getName());
+        Long senderId = getCurrentUserId(principal);
 
         ChatMessageRes response = chatService.sendMessage(
                 chatRoomId,
@@ -75,7 +77,7 @@ public class ChatWebSocketController {
             @DestinationVariable Long chatRoomId,
             Principal principal
     ) {
-        Long readerId = Long.valueOf(principal.getName());
+        Long readerId = getCurrentUserId(principal);
 
         List<Long> readMessageIds = chatService.markMessagesAsRead(
                 chatRoomId,
@@ -94,5 +96,13 @@ public class ChatWebSocketController {
                         readMessageIds
                 )
         );
+    }
+
+    private Long getCurrentUserId(Principal principal) {
+        if (principal == null) {
+            throw new CustomException(AuthErrorCode.UNAUTHORIZED);
+        }
+
+        return Long.valueOf(principal.getName());
     }
 }
