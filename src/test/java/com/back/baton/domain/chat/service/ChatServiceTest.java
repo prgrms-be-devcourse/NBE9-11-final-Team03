@@ -1,5 +1,6 @@
 package com.back.baton.domain.chat.service;
 
+import com.back.baton.domain.chat.dto.response.ChatRoomListRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomRes;
 import com.back.baton.domain.chat.entity.ChatMessage;
 import com.back.baton.domain.chat.entity.ChatRoom;
@@ -9,6 +10,7 @@ import com.back.baton.domain.chat.repository.ChatRoomRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -130,6 +133,173 @@ class ChatServiceTest {
 
         then(talentRepository).should().findById(talentId);
         then(chatRoomRepository).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("거래 채팅방이 없으면 TRANSACTION 채팅방을 생성한다")
+    void getOrCreateTransactionRoom_createNewRoom() {
+        Long tradeId = 100L;
+        Long talentId = 1L;
+        Long buyerId = 10L;
+        Long sellerId = 20L;
+
+        ChatRoom savedChatRoom = ChatRoom.createForTransaction(
+                talentId,
+                buyerId,
+                sellerId,
+                tradeId
+        );
+        ReflectionTestUtils.setField(savedChatRoom, "id", 200L);
+
+        given(chatRoomRepository.findActiveTransactionRoomByTradeId(tradeId))
+                .willReturn(Optional.empty());
+        given(chatRoomRepository.save(org.mockito.ArgumentMatchers.any(ChatRoom.class)))
+                .willReturn(savedChatRoom);
+
+        ChatRoomRes result = chatService.getOrCreateTransactionRoom(
+                tradeId,
+                talentId,
+                buyerId,
+                sellerId
+        );
+
+        assertThat(result.id()).isEqualTo(200L);
+        assertThat(result.tradeId()).isEqualTo(tradeId);
+        assertThat(result.talentId()).isEqualTo(talentId);
+        assertThat(result.buyerId()).isEqualTo(buyerId);
+        assertThat(result.sellerId()).isEqualTo(sellerId);
+        assertThat(result.status()).isEqualTo(ChatRoomType.TRANSACTION);
+
+        then(chatRoomRepository).should().findActiveTransactionRoomByTradeId(tradeId);
+        then(chatRoomRepository).should().save(org.mockito.ArgumentMatchers.any(ChatRoom.class));
+    }
+
+    @Test
+    @DisplayName("거래 채팅방이 이미 있으면 새로 생성하지 않고 기존 채팅방을 반환한다")
+    void getOrCreateTransactionRoom_returnExistingRoom() {
+        Long tradeId = 100L;
+        Long talentId = 1L;
+        Long buyerId = 10L;
+        Long sellerId = 20L;
+
+        ChatRoom existingChatRoom = ChatRoom.createForTransaction(
+                talentId,
+                buyerId,
+                sellerId,
+                tradeId
+        );
+        ReflectionTestUtils.setField(existingChatRoom, "id", 200L);
+
+        given(chatRoomRepository.findActiveTransactionRoomByTradeId(tradeId))
+                .willReturn(Optional.of(existingChatRoom));
+
+        ChatRoomRes result = chatService.getOrCreateTransactionRoom(
+                tradeId,
+                talentId,
+                buyerId,
+                sellerId
+        );
+
+        assertThat(result.id()).isEqualTo(200L);
+        assertThat(result.tradeId()).isEqualTo(tradeId);
+        assertThat(result.status()).isEqualTo(ChatRoomType.TRANSACTION);
+
+        then(chatRoomRepository).should().findActiveTransactionRoomByTradeId(tradeId);
+        then(chatRoomRepository).shouldHaveNoMoreInteractions();
+    }
+
+    @Test
+    @DisplayName("거래 채팅방 생성 시 구매자와 판매자가 같으면 예외가 발생한다")
+    void getOrCreateTransactionRoom_selfChatNotAllowed() {
+        Long tradeId = 100L;
+        Long talentId = 1L;
+        Long userId = 10L;
+
+        assertThatThrownBy(() -> chatService.getOrCreateTransactionRoom(
+                tradeId,
+                talentId,
+                userId,
+                userId
+        ))
+                .isInstanceOf(CustomException.class);
+
+        then(chatRoomRepository).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("내 채팅방 목록을 커서 페이지 응답으로 반환한다")
+    void getMyChatRooms() {
+        Long userId = 10L;
+        Long cursor = null;
+        int size = 2;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        List<ChatRoomListRes> rows = List.of(
+                new ChatRoomListRes(
+                        5L,
+                        100L,
+                        1L,
+                        "Spring Boot API 구현 도와드립니다",
+                        10L,
+                        20L,
+                        20L,
+                        "판매자",
+                        null,
+                        "마지막 메시지 1",
+                        now,
+                        ChatRoomType.TRANSACTION,
+                        now.minusDays(1)
+                ),
+                new ChatRoomListRes(
+                        4L,
+                        null,
+                        2L,
+                        "React 화면 구현 도와드립니다",
+                        10L,
+                        30L,
+                        30L,
+                        "다른 판매자",
+                        null,
+                        "마지막 메시지 2",
+                        now.minusHours(1),
+                        ChatRoomType.MATCH,
+                        now.minusDays(2)
+                ),
+                new ChatRoomListRes(
+                        3L,
+                        null,
+                        3L,
+                        "코드 구현 도와드립니다",
+                        10L,
+                        40L,
+                        40L,
+                        "또 다른 판매자",
+                        null,
+                        null,
+                        null,
+                        ChatRoomType.MATCH,
+                        now.minusDays(3)
+                )
+        );
+
+        given(chatRoomRepository.findMyChatRooms(userId, cursor, size))
+                .willReturn(rows);
+
+        CursorPageRes<ChatRoomListRes> result = chatService.getMyChatRooms(
+                userId,
+                cursor,
+                size
+        );
+
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.content())
+                .extracting(ChatRoomListRes::roomId)
+                .containsExactly(5L, 4L);
+        assertThat(result.nextCursor()).isEqualTo(4L);
+
+        then(chatRoomRepository).should().findMyChatRooms(userId, cursor, size);
     }
 
     @Test

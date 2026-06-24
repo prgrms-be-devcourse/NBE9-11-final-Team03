@@ -1,6 +1,5 @@
 package com.back.baton.domain.chat.controller;
 
-import com.back.baton.domain.chat.dto.request.ChatMessageReadReq;
 import com.back.baton.domain.chat.dto.request.ChatMessageSendReq;
 import com.back.baton.domain.chat.dto.response.ChatMessageReadEvent;
 import com.back.baton.domain.chat.dto.response.ChatMessageRes;
@@ -17,6 +16,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 
+import java.security.Principal;
 import java.util.List;
 
 @Controller
@@ -42,12 +42,14 @@ public class ChatWebSocketController {
     public void sendMessage(
             @Parameter(description = "채팅방 ID", example = "1", required = true)
             @DestinationVariable Long chatRoomId,
-
+            Principal principal,
             @Valid @Payload ChatMessageSendReq req
     ) {
+        Long senderId = Long.valueOf(principal.getName());
+
         ChatMessageRes response = chatService.sendMessage(
                 chatRoomId,
-                req.senderId(),
+                senderId,
                 req.content()
         );
 
@@ -71,12 +73,13 @@ public class ChatWebSocketController {
     public void markAsRead(
             @Parameter(description = "채팅방 ID", example = "7", required = true)
             @DestinationVariable Long chatRoomId,
-
-            @Valid @Payload ChatMessageReadReq req
+            Principal principal
     ) {
+        Long readerId = Long.valueOf(principal.getName());
+
         List<Long> readMessageIds = chatService.markMessagesAsRead(
                 chatRoomId,
-                req.readerId()
+                readerId
         );
 
         if (readMessageIds.isEmpty()) {
@@ -87,7 +90,7 @@ public class ChatWebSocketController {
                 "/topic/chat-rooms/" + chatRoomId + "/read",
                 new ChatMessageReadEvent(
                         chatRoomId,
-                        req.readerId(),
+                        readerId,
                         readMessageIds
                 )
         );

@@ -1,6 +1,7 @@
 package com.back.baton.domain.matching.service;
 
 import com.back.baton.domain.category.entity.Category;
+import com.back.baton.domain.chat.service.ChatService;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.service.EscrowService;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
@@ -54,6 +55,9 @@ class MatchProposalServiceTest {
 
     @InjectMocks
     private MatchProposalService matchProposalService;
+
+    @Mock
+    private ChatService chatService;
 
     @Test
     @DisplayName("단방향 매칭 제안을 생성할 수 있다")
@@ -280,6 +284,13 @@ class MatchProposalServiceTest {
                 requesterId,
                 providerId,
                 creditPrice
+        );
+
+        verify(chatService).getOrCreateTransactionRoom(
+                tradeId,
+                providerTalentId,
+                requesterId,
+                providerId
         );
 
         verify(matchProposalRepository).save(matchProposal);

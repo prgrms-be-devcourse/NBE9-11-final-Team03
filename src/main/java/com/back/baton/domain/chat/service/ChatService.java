@@ -1,6 +1,7 @@
 package com.back.baton.domain.chat.service;
 
 import com.back.baton.domain.chat.dto.response.ChatMessageRes;
+import com.back.baton.domain.chat.dto.response.ChatRoomListRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomRes;
 import com.back.baton.domain.chat.entity.ChatMessage;
 import com.back.baton.domain.chat.entity.ChatRoom;
@@ -10,6 +11,7 @@ import com.back.baton.domain.chat.repository.ChatRoomRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.ChatErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
 
@@ -28,6 +30,7 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final TalentRepository talentRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private static final int MAX_CHAT_ROOM_PAGE_SIZE = 100;
 
     @Transactional
     public ChatRoomRes getOrCreateMatchRoom(
@@ -137,6 +140,13 @@ public class ChatService {
         }
 
         return unreadMessageIds;
+    }
+
+    public CursorPageRes<ChatRoomListRes> getMyChatRooms(Long userId, Long cursor, int size) {
+        int pageSize = Math.min(Math.max(size, 1), MAX_CHAT_ROOM_PAGE_SIZE);
+        List<ChatRoomListRes> rows = chatRoomRepository.findMyChatRooms(userId, cursor, pageSize);
+
+        return CursorPageRes.from(rows, pageSize, ChatRoomListRes::roomId);
     }
 
     private Talent getTalent(Long talentId) {
