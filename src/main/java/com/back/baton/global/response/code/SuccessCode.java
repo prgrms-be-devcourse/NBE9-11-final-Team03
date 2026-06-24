@@ -39,8 +39,9 @@ public enum SuccessCode {
     USER_WITHDRAW_SUCCESS(HttpStatus.OK, "200-11","탈퇴에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다."),
 
-    CATEGORY_OK(HttpStatus.OK, "200-13", "카테고리 조회에 성공했습니다.");
+    CATEGORY_OK(HttpStatus.OK, "200-13", "카테고리 조회에 성공했습니다."),
 
+    PROFILE_UPDATE_SUCCESS(HttpStatus.OK, "200-13","프로필 수정에 성공했습니다.");
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;

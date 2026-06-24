@@ -85,4 +85,13 @@ public class User extends BaseTimeEntity {
         this.deletedAt = LocalDateTime.now();
 
     }
+
+    public void updateProfile(String profileImageUrl, String introduction){
+        if(profileImageUrl!=null){
+            this.profileImageUrl = profileImageUrl;
+        }
+        if(introduction!=null){
+            this.introduction = introduction;
+        }
+    }
 }
