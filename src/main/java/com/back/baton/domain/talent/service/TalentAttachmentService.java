@@ -126,7 +126,7 @@ public class TalentAttachmentService {
         return url;
     }
 
-    // 공통 검증 (존재 -> 삭제 -> 소유권)
+    // 활성 재능 조회 (존재 + 삭제)
     private Talent getActiveTalent(Long talentId) {
         return talentRepository.findByIdAndDeletedAtIsNull(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
