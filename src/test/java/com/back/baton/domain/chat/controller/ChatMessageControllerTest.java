@@ -5,6 +5,7 @@ import com.back.baton.domain.chat.dto.response.ChatMessageRes;
 import com.back.baton.domain.chat.entity.ChatMessageType;
 import com.back.baton.domain.chat.service.ChatService;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.ChatErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.support.security.WithMockSecurityUser;
@@ -190,17 +191,10 @@ class ChatMessageControllerTest {
     void getMessages_success() throws Exception {
         Long chatRoomId = 1L;
         Long userId = 10L;
+        Long cursor = null;
+        int size = 20;
 
-        List<ChatMessageRes> res = List.of(
-                new ChatMessageRes(
-                        100L,
-                        chatRoomId,
-                        10L,
-                        ChatMessageType.TEXT,
-                        "첫 번째 메시지",
-                        false,
-                        LocalDateTime.now()
-                ),
+        List<ChatMessageRes> messages = List.of(
                 new ChatMessageRes(
                         101L,
                         chatRoomId,
@@ -209,29 +203,88 @@ class ChatMessageControllerTest {
                         "두 번째 메시지",
                         false,
                         LocalDateTime.now()
+                ),
+                new ChatMessageRes(
+                        100L,
+                        chatRoomId,
+                        10L,
+                        ChatMessageType.TEXT,
+                        "첫 번째 메시지",
+                        false,
+                        LocalDateTime.now()
                 )
         );
 
-        given(chatService.getMessages(eq(chatRoomId), eq(userId))).willReturn(res);
+        CursorPageRes<ChatMessageRes> res = CursorPageRes.from(
+                messages,
+                size,
+                ChatMessageRes::id
+        );
+
+        given(chatService.getMessages(eq(chatRoomId), eq(userId), eq(cursor), eq(size))).willReturn(res);
 
         mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-12"))
                 .andExpect(jsonPath("$.message").value("채팅 메시지 목록 조회에 성공했습니다."))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data[0].id").value(100L))
-                .andExpect(jsonPath("$.data[0].roomId").value(chatRoomId))
-                .andExpect(jsonPath("$.data[0].senderId").value(10L))
-                .andExpect(jsonPath("$.data[0].messageType").value("TEXT"))
-                .andExpect(jsonPath("$.data[0].content").value("첫 번째 메시지"))
-                .andExpect(jsonPath("$.data[1].id").value(101L))
-                .andExpect(jsonPath("$.data[1].roomId").value(chatRoomId))
-                .andExpect(jsonPath("$.data[1].senderId").value(20L))
-                .andExpect(jsonPath("$.data[1].messageType").value("TEXT"))
-                .andExpect(jsonPath("$.data[1].content").value("두 번째 메시지"));
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].id").value(101L))
+                .andExpect(jsonPath("$.data.content[0].roomId").value(chatRoomId))
+                .andExpect(jsonPath("$.data.content[0].senderId").value(20L))
+                .andExpect(jsonPath("$.data.content[0].messageType").value("TEXT"))
+                .andExpect(jsonPath("$.data.content[0].content").value("두 번째 메시지"))
+                .andExpect(jsonPath("$.data.content[1].id").value(100L))
+                .andExpect(jsonPath("$.data.content[1].roomId").value(chatRoomId))
+                .andExpect(jsonPath("$.data.content[1].senderId").value(10L))
+                .andExpect(jsonPath("$.data.content[1].messageType").value("TEXT"))
+                .andExpect(jsonPath("$.data.content[1].content").value("첫 번째 메시지"));
 
-        then(chatService).should().getMessages(chatRoomId, userId);
+        then(chatService).should().getMessages(chatRoomId, userId, cursor, size);
+    }
+
+    @Test
+    @DisplayName("채팅 메시지 목록 조회 API - cursor와 size를 전달하면 해당 조건으로 조회한다")
+    @WithMockSecurityUser(userId = 10)
+    void getMessages_withCursorAndSize() throws Exception {
+        Long chatRoomId = 1L;
+        Long userId = 10L;
+        Long cursor = 101L;
+        int size = 10;
+
+        List<ChatMessageRes> messages = List.of(
+                new ChatMessageRes(
+                        100L,
+                        chatRoomId,
+                        10L,
+                        ChatMessageType.TEXT,
+                        "첫 번째 메시지",
+                        false,
+                        LocalDateTime.now()
+                )
+        );
+
+        CursorPageRes<ChatMessageRes> res = CursorPageRes.from(
+                messages,
+                size,
+                ChatMessageRes::id
+        );
+
+        given(chatService.getMessages(eq(chatRoomId), eq(userId), eq(cursor), eq(size)))
+                .willReturn(res);
+
+        mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId)
+                        .param("cursor", String.valueOf(cursor))
+                        .param("size", String.valueOf(size)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-12"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].id").value(100L))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.nextCursor").value(100L));
+
+        then(chatService).should().getMessages(chatRoomId, userId, cursor, size);
     }
 
     @Test
@@ -253,16 +306,18 @@ class ChatMessageControllerTest {
     void getMessages_chatRoomNotFound() throws Exception {
         Long chatRoomId = 999L;
         Long userId = 10L;
+        Long cursor = null;
+        int size = 20;
 
         willThrow(new CustomException(ChatErrorCode.CHAT_ROOM_NOT_FOUND))
-                .given(chatService).getMessages(chatRoomId, userId);
+                .given(chatService).getMessages(chatRoomId, userId, cursor, size);
 
         mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("CHAT-404-001"));
 
-        then(chatService).should().getMessages(chatRoomId, userId);
+        then(chatService).should().getMessages(chatRoomId, userId, cursor, size);
     }
 
     @Test
@@ -271,15 +326,17 @@ class ChatMessageControllerTest {
     void getMessages_accessDenied() throws Exception {
         Long chatRoomId = 1L;
         Long userId = 999L;
+        Long cursor = null;
+        int size = 20;
 
         willThrow(new CustomException(ChatErrorCode.CHAT_ROOM_ACCESS_DENIED))
-                .given(chatService).getMessages(chatRoomId, userId);
+                .given(chatService).getMessages(chatRoomId, userId, cursor, size);
 
         mockMvc.perform(get("/api/v1/chat-rooms/{chatRoomId}/messages", chatRoomId))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("CHAT-403-001"));
 
-        then(chatService).should().getMessages(chatRoomId, userId);
+        then(chatService).should().getMessages(chatRoomId, userId, cursor, size);
     }
 }

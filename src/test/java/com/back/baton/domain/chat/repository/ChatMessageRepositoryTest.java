@@ -29,7 +29,7 @@ class ChatMessageRepositoryTest {
     private EntityManager entityManager;
 
     @Test
-    @DisplayName("findMessages - 특정 채팅방의 삭제되지 않은 메시지를 오래된 순으로 조회한다")
+    @DisplayName("특정 채팅방의 삭제되지 않은 메시지를 최신순으로 조회한다")
     void findMessages() {
         ChatRoom chatRoom = saveChatRoom(1L, 10L, 20L);
         ChatRoom otherChatRoom = saveChatRoom(2L, 10L, 30L);
@@ -46,17 +46,52 @@ class ChatMessageRepositoryTest {
         entityManager.flush();
         entityManager.clear();
 
-        List<ChatMessage> result = chatMessageRepository.findMessages(chatRoom.getId());
+        Long cursor = null;
+        int size = 20;
+
+        List<ChatMessage> result = chatMessageRepository.findMessages(
+                chatRoom.getId(),
+                cursor,
+                size
+        );
 
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(ChatMessage::getId)
-                .containsExactly(firstMessage.getId(), secondMessage.getId());
+        assertThat(result)
+                .extracting(ChatMessage::getId)
+                .containsExactly(secondMessage.getId(), firstMessage.getId());
         assertThat(result).extracting(ChatMessage::getContent)
-                .containsExactly("첫 번째 메시지", "두 번째 메시지");
+                .containsExactly("두 번째 메시지", "첫 번째 메시지");
     }
 
     @Test
-    @DisplayName("findUnreadMessageIdsFromOtherParticipant - 상대방이 보낸 미읽음 메시지 ID만 조회한다")
+    @DisplayName("커서가 있으면 해당 커서보다 오래된 메시지만 최신순으로 조회한다")
+    void findMessages_withCursor() {
+        ChatRoom chatRoom = saveChatRoom(1L, 10L, 20L);
+
+        ChatMessage firstMessage = saveMessage(chatRoom, 10L, "첫 번째 메시지");
+        ChatMessage secondMessage = saveMessage(chatRoom, 20L, "두 번째 메시지");
+        ChatMessage thirdMessage = saveMessage(chatRoom, 10L, "세 번째 메시지");
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ChatMessage> result = chatMessageRepository.findMessages(
+                chatRoom.getId(),
+                thirdMessage.getId(),
+                20
+        );
+
+        assertThat(result).hasSize(2);
+        assertThat(result)
+                .extracting(ChatMessage::getId)
+                .containsExactly(secondMessage.getId(), firstMessage.getId());
+        assertThat(result)
+                .extracting(ChatMessage::getContent)
+                .containsExactly("두 번째 메시지", "첫 번째 메시지");
+    }
+
+    @Test
+    @DisplayName("상대방이 보낸 미읽음 메시지 ID만 조회한다")
     void findUnreadMessageIdsFromOtherParticipant() {
         Long buyerId = 10L;
         Long sellerId = 20L;
@@ -95,7 +130,7 @@ class ChatMessageRepositoryTest {
     }
 
     @Test
-    @DisplayName("markAsReadByIds - 전달받은 메시지 ID 목록을 읽음 처리한다")
+    @DisplayName("전달받은 메시지 ID 목록을 읽음 처리한다")
     void markAsReadByIds() {
         Long buyerId = 10L;
         Long sellerId = 20L;
@@ -131,7 +166,7 @@ class ChatMessageRepositoryTest {
     }
 
     @Test
-    @DisplayName("findUnreadMessageIdsFromOtherParticipant - 읽음 처리 후에는 조회되지 않는다")
+    @DisplayName("읽음 처리 후에는 조회되지 않는다")
     void findUnreadMessageIdsFromOtherParticipant_afterMarkAsRead() {
         Long buyerId = 10L;
         Long sellerId = 20L;

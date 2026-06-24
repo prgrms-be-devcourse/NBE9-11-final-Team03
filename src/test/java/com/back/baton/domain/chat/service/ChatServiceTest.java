@@ -1,5 +1,6 @@
 package com.back.baton.domain.chat.service;
 
+import com.back.baton.domain.chat.dto.response.ChatMessageRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomListRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomRes;
 import com.back.baton.domain.chat.entity.ChatMessage;
@@ -368,40 +369,92 @@ class ChatServiceTest {
     }
 
     @Test
-    @DisplayName("채팅방 참여자는 메시지 목록을 조회할 수 있다")
+    @DisplayName("채팅방 참여자는 메시지 목록을 커서 페이지 응답으로 조회할 수 있다")
     void getMessages() {
         Long roomId = 1L;
         Long buyerId = 10L;
         Long sellerId = 20L;
         Long userId = buyerId;
+        Long cursor = null;
+        int size = 2;
 
         ChatRoom chatRoom = createChatRoom(roomId, buyerId, sellerId);
-
-        ChatMessage firstMessage = ChatMessage.createTextMessage(chatRoom, buyerId, "첫 번째 메시지");
-        ReflectionTestUtils.setField(firstMessage, "id", 100L);
 
         ChatMessage secondMessage = ChatMessage.createTextMessage(chatRoom, sellerId, "두 번째 메시지");
         ReflectionTestUtils.setField(secondMessage, "id", 101L);
 
+        ChatMessage firstMessage = ChatMessage.createTextMessage(chatRoom, buyerId, "첫 번째 메시지");
+        ReflectionTestUtils.setField(firstMessage, "id", 100L);
+
         given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(chatRoom));
-        given(chatMessageRepository.findMessages(roomId)).willReturn(List.of(firstMessage, secondMessage));
+        given(chatMessageRepository.findMessages(roomId, cursor, size))
+                .willReturn(List.of(secondMessage, firstMessage));
 
-        var result = chatService.getMessages(roomId, userId);
+        CursorPageRes<ChatMessageRes> result = chatService.getMessages(
+                roomId,
+                userId,
+                cursor,
+                size
+        );
 
-        assertThat(result).hasSize(2);
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.content()).hasSize(2);
 
-        assertThat(result.get(0).id()).isEqualTo(100L);
-        assertThat(result.get(0).roomId()).isEqualTo(roomId);
-        assertThat(result.get(0).senderId()).isEqualTo(buyerId);
-        assertThat(result.get(0).content()).isEqualTo("첫 번째 메시지");
+        assertThat(result.content().get(0).id()).isEqualTo(101L);
+        assertThat(result.content().get(0).roomId()).isEqualTo(roomId);
+        assertThat(result.content().get(0).senderId()).isEqualTo(sellerId);
+        assertThat(result.content().get(0).content()).isEqualTo("두 번째 메시지");
 
-        assertThat(result.get(1).id()).isEqualTo(101L);
-        assertThat(result.get(1).roomId()).isEqualTo(roomId);
-        assertThat(result.get(1).senderId()).isEqualTo(sellerId);
-        assertThat(result.get(1).content()).isEqualTo("두 번째 메시지");
+        assertThat(result.content().get(1).id()).isEqualTo(100L);
+        assertThat(result.content().get(1).roomId()).isEqualTo(roomId);
+        assertThat(result.content().get(1).senderId()).isEqualTo(buyerId);
+        assertThat(result.content().get(1).content()).isEqualTo("첫 번째 메시지");
 
         then(chatRoomRepository).should().findById(roomId);
-        then(chatMessageRepository).should().findMessages(roomId);
+        then(chatMessageRepository).should().findMessages(roomId, cursor, size);
+    }
+
+    @Test
+    @DisplayName("채팅방 참여자는 다음 페이지가 있는 메시지 목록을 조회할 수 있다")
+    void getMessages_hasNext() {
+        Long roomId = 1L;
+        Long buyerId = 10L;
+        Long sellerId = 20L;
+        Long userId = buyerId;
+        Long cursor = null;
+        int size = 2;
+
+        ChatRoom chatRoom = createChatRoom(roomId, buyerId, sellerId);
+
+        ChatMessage thirdMessage = ChatMessage.createTextMessage(chatRoom, buyerId, "세 번째 메시지");
+        ReflectionTestUtils.setField(thirdMessage, "id", 102L);
+
+        ChatMessage secondMessage = ChatMessage.createTextMessage(chatRoom, sellerId, "두 번째 메시지");
+        ReflectionTestUtils.setField(secondMessage, "id", 101L);
+
+        ChatMessage firstMessage = ChatMessage.createTextMessage(chatRoom, buyerId, "첫 번째 메시지");
+        ReflectionTestUtils.setField(firstMessage, "id", 100L);
+
+        given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(chatRoom));
+        given(chatMessageRepository.findMessages(roomId, cursor, size))
+                .willReturn(List.of(thirdMessage, secondMessage, firstMessage));
+
+        CursorPageRes<ChatMessageRes> result = chatService.getMessages(
+                roomId,
+                userId,
+                cursor,
+                size
+        );
+
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.content())
+                .extracting(ChatMessageRes::id)
+                .containsExactly(102L, 101L);
+        assertThat(result.nextCursor()).isEqualTo(101L);
+
+        then(chatRoomRepository).should().findById(roomId);
+        then(chatMessageRepository).should().findMessages(roomId, cursor, size);
     }
 
     @Test
@@ -411,12 +464,14 @@ class ChatServiceTest {
         Long buyerId = 10L;
         Long sellerId = 20L;
         Long nonParticipantId = 999L;
+        Long cursor = null;
+        int size = 20;
 
         ChatRoom chatRoom = createChatRoom(roomId, buyerId, sellerId);
 
         given(chatRoomRepository.findById(roomId)).willReturn(Optional.of(chatRoom));
 
-        assertThatThrownBy(() -> chatService.getMessages(roomId, nonParticipantId))
+        assertThatThrownBy(() -> chatService.getMessages(roomId, nonParticipantId, cursor, size))
                 .isInstanceOf(CustomException.class);
 
         then(chatRoomRepository).should().findById(roomId);
@@ -428,10 +483,12 @@ class ChatServiceTest {
     void getMessages_chatRoomNotFound() {
         Long roomId = 999L;
         Long userId = 10L;
+        Long cursor = null;
+        int size = 20;
 
         given(chatRoomRepository.findById(roomId)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> chatService.getMessages(roomId, userId))
+        assertThatThrownBy(() -> chatService.getMessages(roomId, userId, cursor, size))
                 .isInstanceOf(CustomException.class);
 
         then(chatRoomRepository).should().findById(roomId);

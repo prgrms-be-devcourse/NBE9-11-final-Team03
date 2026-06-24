@@ -23,8 +23,8 @@ import lombok.NoArgsConstructor;
 @Table(name = "chat_message",
         indexes = {
                 @Index(
-                        name = "idx_chat_message_room_deleted_created",
-                        columnList = "room_id, deleted_at, created_at"
+                        name = "idx_chat_message_room_deleted_id",
+                        columnList = "room_id, deleted_at, id"
                 )
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

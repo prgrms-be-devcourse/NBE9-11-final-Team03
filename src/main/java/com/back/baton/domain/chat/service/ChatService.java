@@ -31,6 +31,7 @@ public class ChatService {
     private final TalentRepository talentRepository;
     private final ChatMessageRepository chatMessageRepository;
     private static final int MAX_CHAT_ROOM_PAGE_SIZE = 100;
+    private static final int MAX_CHAT_MESSAGE_PAGE_SIZE = 100;
 
     @Transactional
     public ChatRoomRes getOrCreateMatchRoom(
@@ -116,13 +117,26 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChatMessageRes> getMessages(Long roomId, Long userId) {
+    public CursorPageRes<ChatMessageRes> getMessages(
+            Long roomId,
+            Long userId,
+            Long cursor,
+            int size
+    ) {
         getChatRoom(roomId, userId);
 
-        return chatMessageRepository.findMessages(roomId)
+        int pageSize = Math.min(Math.max(size, 1), MAX_CHAT_MESSAGE_PAGE_SIZE);
+
+        List<ChatMessageRes> messages = chatMessageRepository.findMessages(
+                        roomId,
+                        cursor,
+                        pageSize
+                )
                 .stream()
                 .map(ChatMessageRes::from)
                 .toList();
+
+        return CursorPageRes.from(messages, pageSize, ChatMessageRes::id);
     }
 
     @Transactional
