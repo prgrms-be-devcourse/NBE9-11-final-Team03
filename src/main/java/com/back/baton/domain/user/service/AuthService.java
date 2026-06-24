@@ -14,11 +14,11 @@ import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

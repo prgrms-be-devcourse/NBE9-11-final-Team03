@@ -44,7 +44,7 @@ class ProfileControllerTest {
         var req = new ProfileUpdateReq("https://image.png", "안녕하세요 개발자입니다.", List.of(1L), List.of(2L), List.of("https://git.com"));
 
         // 서비스 모킹 (Category.create()는 서비스 내부에서 쓰이므로 여기선 생략 가능)
-        given(profileService.updateProfile(eq(7L), any(), any(), any(), any(), any()))
+        given(profileService.updateProfile(eq(1L), any(), any(), any(), any(), any()))
                 .willReturn(null);
 
         mockMvc.perform(patch(BASE)

@@ -8,7 +8,7 @@ import com.back.baton.domain.profile.repository.ProfileRepository;
 import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.exception.CustomException;
-import com.back.baton.global.response.code.UserErrorCode;
+import com.back.baton.global.response.code.ProfileErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,10 +30,11 @@ public class ProfileService {
 
     public ProfileUpdateRes updateProfile(Long userId, String profileImageUrl, String introduction,
                                           List<Long> myTalentCategoryIds, List<Long> wantTalentCategoryIds, List<String> portfolioLinkList) {
-        // 프로필이 없다면 유저 정보로 생성
-        Profile profile = getOrCreateProfile(userId);
+        // 프로필이 없다면 에러 반환
+        Profile profile = profileRepository.findByUserId(userId)
+                .orElseThrow(() ->new CustomException(ProfileErrorCode.PROFILE_NOT_FOUND));
 
-        // 가진/원하는 재능 카테고리 ID -> 카테고리 매핑 및 Active만 필터링
+        // 가진/원하는 재능 카테고리 ID -> 카테고리 매핑 및 검증
         List<Category> myTalentCategories = getTalentCategoriesById(myTalentCategoryIds);
         List<Category> wantTalentCategories = getTalentCategoriesById(wantTalentCategoryIds);
 
@@ -41,26 +42,25 @@ public class ProfileService {
         profile.update(myTalentCategories, wantTalentCategories, portfolioLinkList);
 
         // 연관된 유저 업데이트
-        introduction = introduction!=null&& introduction.length()<5? null : introduction;
+        if(introduction!=null&& introduction.length()<5){
+            throw new CustomException(ProfileErrorCode.INVALID_INTRODUCTION);
+        }
         profile.getUser().updateProfile(profileImageUrl,introduction);
 
         profileRepository.save(profile);
         return new ProfileUpdateRes(profile);
     }
 
-    private Profile getOrCreateProfile(Long userId){
-        return profileRepository.findByUserId(userId)
-                .orElseGet(() -> {
-                    User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
-                    return profileRepository.save(new Profile(user));
-                });
-    }
     private List<Category> getTalentCategoriesById(List<Long> idList){
         // 재능 카테고리 ID 리스트 -> 재능 카테고리 리스트
-        // active 상태인 것만 반영
-        return idList == null? null
+        // active 상태가 아닌 게 있거나 카테고리가 없으면 에러 반환
+        List<Category> categories = idList == null? null
                 : categoryRepository.findAllById(idList).stream()
                     .filter(Category::isActive).toList();
+
+        if(idList!=null && categories.size()!=idList.size()){
+            throw new CustomException(ProfileErrorCode.INVALID_CATEGORIES);
+        }
+        return categories;
     }
 }

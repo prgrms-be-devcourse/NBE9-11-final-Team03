@@ -12,8 +12,8 @@ public record ProfileUpdateRes(
         String profileImageUrl,
         String introduction,
         List<String> portfolioLinkList,
-        List<Category> myTalentCategories,
-        List<Category> wantTalentCategories,
+        List<ProfileCategoryRes> myTalentCategories,
+        List<ProfileCategoryRes> wantTalentCategories,
         boolean visible,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -25,11 +25,14 @@ public record ProfileUpdateRes(
                 profile.getUser().getProfileImageUrl(),
                 profile.getUser().getIntroduction(),
                 profile.getPortfolioLinkList(),
-                profile.getMyTalentCategories(),
-                profile.getWantTalentCategories(),
+                getCategoryResList(profile.getMyTalentCategories()),
+                getCategoryResList(profile.getWantTalentCategories()),
                 profile.isVisible(),
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()
         );
+    }
+    private static List<ProfileCategoryRes> getCategoryResList(List<Category> list){
+        return list.stream().map(ProfileCategoryRes::new).toList();
     }
 }

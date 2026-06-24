@@ -6,6 +6,8 @@ import com.back.baton.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,12 @@ public class Profile extends BaseTimeEntity {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ElementCollection
+    @CollectionTable(
+            name = "profile_portfolio_links",
+            joinColumns = @JoinColumn(name = "profile_id")
+    )
+    @Column(name = "portfolio_link")
     private List<String> portfolioLinkList = new ArrayList<>();
 
     // 1. 보유 재능 리스트
@@ -31,6 +39,8 @@ public class Profile extends BaseTimeEntity {
             joinColumns = @JoinColumn(name = "profile_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id")
     )
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
     private List<Category> myTalentCategories = new ArrayList<>();
 
     // 2. 원하는 재능 리스트
