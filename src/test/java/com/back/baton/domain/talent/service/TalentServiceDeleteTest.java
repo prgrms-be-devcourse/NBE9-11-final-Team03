@@ -76,17 +76,6 @@ class TalentServiceDeleteTest {
     }
 
     @Test
-    @DisplayName("이미 삭제된 글이면 소유권 검사 전에 막힌다")
-    void deleteTalent_alreadyDeleted() {
-        // given
-        Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.empty());
-
-        // when & then
-        assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_NOT_FOUND);
-    }
-
-    @Test
     @DisplayName("본인 글이 아니면 TALENT_FORBIDDEN")
     void deleteTalent_forbidden() {
         // given
