@@ -2,7 +2,8 @@ package com.back.baton.domain.profile.service;
 
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
-import com.back.baton.domain.profile.dto.requset.ProfileUpdateReq;
+import com.back.baton.domain.profile.dto.request.ProfileUpdateReq;
+import com.back.baton.domain.profile.dto.response.MyProfileDetailRes;
 import com.back.baton.domain.profile.dto.response.ProfileUpdateRes;
 import com.back.baton.domain.profile.entity.Profile;
 import com.back.baton.domain.profile.repository.ProfileRepository;
@@ -49,7 +50,6 @@ public class ProfileService {
         }
         profile.getUser().updateProfile(req.profileImageUrl(), introduction);
 
-//        profileRepository.save(profile);
         return new ProfileUpdateRes(profile);
     }
 
@@ -64,5 +64,13 @@ public class ProfileService {
             throw new CustomException(ProfileErrorCode.INVALID_CATEGORIES);
         }
         return categories;
+    }
+
+    @Transactional(readOnly = true)
+    public MyProfileDetailRes getMyProfile(Long userId){
+        Profile profile = profileRepository.findDetailByUserId(userId)
+                .orElseThrow(()->new CustomException(ProfileErrorCode.PROFILE_NOT_FOUND));
+
+        return new MyProfileDetailRes(profile);
     }
 }
