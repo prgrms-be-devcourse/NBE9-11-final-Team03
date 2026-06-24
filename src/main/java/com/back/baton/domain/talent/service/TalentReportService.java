@@ -9,6 +9,7 @@ import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TalentErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,25 +26,26 @@ public class TalentReportService {
     // 재능 신고 (존재 -> 삭제 -> 자기신고 -> 중복)
     @Transactional
     public TalentReportRes reportTalent(Long talentId, Long reporterId, TalentReportReq req) {
-        Talent talent = getActiveTalent(talentId);
+        Talent talent = talentRepository.findByIdAndDeletedAtIsNull(talentId)
+                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
 
         // 자기 재능 신고 차단 (소유권 위반 → 403)
         if (Objects.equals(talent.getAuthorId(), reporterId)) {
             throw new CustomException(TalentErrorCode.SELF_REPORT_NOT_ALLOWED);
         }
 
-        // 중복 신고 차단 (409) - 규모상(동접 150) 애플리케이션 레벨 체크로 충분
+        // 1차 중복 신고 차단 (409) 일반적인 중복 - 메세지 차단
         if (talentReportRepository.existsByTalentIdAndReporterId(talentId, reporterId)) {
             throw new CustomException(TalentErrorCode.DUPLICATE_REPORT);
         }
 
-        TalentReport report = TalentReport.create(talent, reporterId, req.reason(), req.description());
-        return TalentReportRes.from(talentReportRepository.save(report));
+        // 2차 중복 신고 차단 - DB unique 제약 중복 저장 차단
+        try {
+            TalentReport report = TalentReport.create(talent, reporterId, req.reason(), req.description());
+            return TalentReportRes.from(talentReportRepository.saveAndFlush(report));
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(TalentErrorCode.DUPLICATE_REPORT);
+        }
     }
 
-    // 존재 -> 삭제 검증
-    private Talent getActiveTalent(Long talentId) {
-        return talentRepository.findByIdAndDeletedAtIsNull(talentId)
-                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
-    }
 }

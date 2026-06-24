@@ -51,7 +51,7 @@ class TalentReportServiceTest {
         Talent talent = activeTalent();
         given(talentRepository.findByIdAndDeletedAtIsNull(TALENT_ID)).willReturn(Optional.of(talent));
         given(talentReportRepository.existsByTalentIdAndReporterId(TALENT_ID, REPORTER_ID)).willReturn(false);
-        given(talentReportRepository.save(any(TalentReport.class)))
+        given(talentReportRepository.saveAndFlush(any(TalentReport.class)))
                 .willAnswer(invocation -> {
                     TalentReport saved = invocation.getArgument(0);
                     ReflectionTestUtils.setField(saved, "id", 10L);
@@ -64,7 +64,7 @@ class TalentReportServiceTest {
         assertThat(res.reportId()).isEqualTo(10L);
         assertThat(res.talentId()).isEqualTo(TALENT_ID);
         assertThat(res.status()).isEqualTo(ReportStatus.PENDING);
-        then(talentReportRepository).should().save(any(TalentReport.class));
+        then(talentReportRepository).should().saveAndFlush(any(TalentReport.class));
     }
 
     @Test
@@ -123,4 +123,5 @@ class TalentReportServiceTest {
                         .isEqualTo(TalentErrorCode.DUPLICATE_REPORT));
         then(talentReportRepository).should(never()).save(any());
     }
+
 }

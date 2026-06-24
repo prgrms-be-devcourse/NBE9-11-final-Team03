@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.util.ReflectionTestUtils;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Constructor;
 
@@ -55,6 +56,17 @@ class TalentReportRepositoryTest {
         TalentReport found = talentReportRepository.findById(saved.getId()).orElseThrow();
         assertThat(found.getStatus()).isEqualTo(ReportStatus.PENDING);
         assertThat(found.getReason()).isEqualTo(ReportReason.INAPPROPRIATE_CONTENT);
+    }
+
+    @Test
+    @DisplayName("같은 reporter가 같은 talent를 두 번 저장하면 unique 제약 위반 예외")
+    void uniqueConstraint_blocksDuplicate() {
+        Talent talent = saveTalent();
+        talentReportRepository.saveAndFlush(TalentReport.create(talent, 99L, ReportReason.ETC, "1차"));
+
+        assertThatThrownBy(() ->
+                talentReportRepository.saveAndFlush(TalentReport.create(talent, 99L, ReportReason.ETC, "2차"))
+        ).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     private Talent saveTalent() {
