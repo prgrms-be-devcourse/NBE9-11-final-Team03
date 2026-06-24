@@ -31,9 +31,10 @@ public class ProfileController {
             @RequestBody @Valid ProfileUpdateReq req,
             @CurrentUser SecurityUser currentUser
     ){
-        ProfileUpdateRes res = profileService.updateProfile(currentUser.getUserId(),
-                req.profileImageUrl(), req.introduction(),
-                req.myTalentCategoryIds(), req.wantTalentCategoryIds(), req.portfolioLinkList());
+        ProfileUpdateRes res = profileService.updateProfile(
+                currentUser.getUserId(),
+                req
+        );
         return ApiResponses.success(SuccessCode.PROFILE_UPDATE_SUCCESS, res);
     }
 }

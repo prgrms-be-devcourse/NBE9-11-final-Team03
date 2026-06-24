@@ -44,7 +44,7 @@ class ProfileControllerTest {
         var req = new ProfileUpdateReq("https://image.png", "안녕하세요 개발자입니다.", List.of(1L), List.of(2L), List.of("https://git.com"));
 
         // 서비스 모킹 (Category.create()는 서비스 내부에서 쓰이므로 여기선 생략 가능)
-        given(profileService.updateProfile(eq(1L), any(), any(), any(), any(), any()))
+        given(profileService.updateProfile(eq(1L), eq(req)))
                 .willReturn(null);
 
         mockMvc.perform(patch(BASE)
@@ -58,14 +58,17 @@ class ProfileControllerTest {
     @DisplayName("유저를 찾을 수 없는 경우 404/400 (로직에 따른 예외)")
     @WithMockSecurityUser(userId = 1)
     void updateProfile_user_not_found() throws Exception {
+        // 1. 서비스 모킹: 파라미터 2개(Long, ProfileUpdateReq)에 맞게 수정
         willThrow(new CustomException(UserErrorCode.USER_NOT_FOUND))
-                .given(profileService).updateProfile(any(), any(), any(), any(), any(), any());
+                .given(profileService).updateProfile(eq(1L), any(ProfileUpdateReq.class));
 
+        // 2. 요청 DTO 생성
         var req = new ProfileUpdateReq("url", "정상적인소개글입니다", null, null, null);
 
+        // 3. 실행
         mockMvc.perform(patch(BASE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isNotFound()); // 혹은 지정한 에러 코드에 맞게 변경
+                .andExpect(status().isNotFound());
     }
 }
