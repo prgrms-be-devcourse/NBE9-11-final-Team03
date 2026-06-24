@@ -7,12 +7,14 @@ import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
+import com.back.baton.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.util.ReflectionTestUtils;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
@@ -97,6 +99,13 @@ class TalentRepositoryTest {
 
         // then
         assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getActiveTalentOrThrow - 없으면 TALENT_NOT_FOUND")
+    void getActiveTalentOrThrow_notFound() {
+        assertThatThrownBy(() -> talentRepository.getActiveTalentOrThrow(999L))
+                .isInstanceOf(CustomException.class);
     }
 
     private Category saveCategory() {

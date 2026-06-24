@@ -49,7 +49,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(s3Service.generatePresignedPutUrl(anyString()))
                 .willReturn("https://bucket.s3.ap-northeast-2.amazonaws.com/signed");
 
@@ -66,7 +66,7 @@ class TalentAttachmentServiceTest {
     @Test
     @DisplayName("남의 재능에 발급 시도하면 ATTACHMENT_FORBIDDEN(403), S3 호출 안 함")
     void createPresignedUrl_forbidden() {
-        given(talentRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(talent(7L)));
+        given(talentRepository.getActiveTalentOrThrow(1L)).willReturn(talent(7L));
         var req = new PresignedUrlReq("photo.png", "image/png");
 
         assertErrorCode(() -> talentAttachmentService.createPresignedUrl(1L, 2L, req),
@@ -77,7 +77,8 @@ class TalentAttachmentServiceTest {
     @Test
     @DisplayName("없는 재능이면 TALENT_NOT_FOUND(404)")
     void createPresignedUrl_talentNotFound() {
-        given(talentRepository.findByIdAndDeletedAtIsNull(99L)).willReturn(Optional.empty());
+        given(talentRepository.getActiveTalentOrThrow(99L))
+                .willThrow(new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
         var req = new PresignedUrlReq("photo.png", "image/png");
 
         assertErrorCode(() -> talentAttachmentService.createPresignedUrl(99L, 7L, req),
@@ -87,7 +88,8 @@ class TalentAttachmentServiceTest {
     @Test
     @DisplayName("삭제된 재능이면 TALENT_NOT_FOUND(404) - 소유권 검사 전에 막힌다")
     void createPresignedUrl_deletedTalent() {
-        given(talentRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
+        given(talentRepository.getActiveTalentOrThrow(1L))
+                .willThrow(new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
         var req = new PresignedUrlReq("photo.png", "image/png");
 
         assertErrorCode(() -> talentAttachmentService.createPresignedUrl(1L, 7L, req),
@@ -102,7 +104,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(talentAttachmentRepository.save(any(TalentAttachment.class)))
                 .willAnswer(inv -> inv.getArgument(0));
         // 저장된 값이 S3 key이므로 presigned GET 변환이 일어남
@@ -123,7 +125,7 @@ class TalentAttachmentServiceTest {
     @Test
     @DisplayName("남의 재능에 저장 시도하면 ATTACHMENT_FORBIDDEN(403), 저장 안 함")
     void saveAttachment_forbidden() {
-        given(talentRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(talent(7L)));
+        given(talentRepository.getActiveTalentOrThrow(1L)).willReturn(talent(7L));
         var req = new AttachmentSaveReq("url", "desc");
 
         assertErrorCode(() -> talentAttachmentService.saveAttachment(1L, 2L, req),
@@ -139,7 +141,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L;
         Talent talent = talent(7L);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId))
                 .willReturn(List.of(
                         attachment(talent, "talents/1/key1.png", "첫번째"),
@@ -158,7 +160,8 @@ class TalentAttachmentServiceTest {
     @Test
     @DisplayName("없는 재능의 첨부 목록 조회는 TALENT_NOT_FOUND(404)")
     void getAttachments_talentNotFound() {
-        given(talentRepository.findByIdAndDeletedAtIsNull(99L)).willReturn(Optional.empty());
+        given(talentRepository.getActiveTalentOrThrow(99L))
+                .willThrow(new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
 
         assertErrorCode(() -> talentAttachmentService.getAttachments(99L),
                 TalentErrorCode.TALENT_NOT_FOUND);
@@ -172,7 +175,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, attachmentId = 10L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
 
         TalentAttachment attachment = attachment(talent, "talents/1/key.png", "desc");
         given(talentAttachmentRepository.findById(attachmentId)).willReturn(Optional.of(attachment));
@@ -189,7 +192,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, attachmentId = 10L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
 
         TalentAttachment attachment = attachment(talent, "https://github.com/user/repo", "외부 링크");
         given(talentAttachmentRepository.findById(attachmentId)).willReturn(Optional.of(attachment));
@@ -205,7 +208,7 @@ class TalentAttachmentServiceTest {
     void deleteAttachment_forbidden() {
         Talent talent = talent(7L);
         ReflectionTestUtils.setField(talent, "id", 1L);
-        given(talentRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(1L)).willReturn(talent);
 
         assertErrorCode(() -> talentAttachmentService.deleteAttachment(1L, 10L, 2L),
                 TalentErrorCode.ATTACHMENT_FORBIDDEN);
@@ -218,7 +221,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(talentAttachmentRepository.findById(99L)).willReturn(Optional.empty());
 
         assertErrorCode(() -> talentAttachmentService.deleteAttachment(talentId, 99L, authorId),
@@ -232,7 +235,7 @@ class TalentAttachmentServiceTest {
 
         Talent pathTalent = talent(authorId);
         ReflectionTestUtils.setField(pathTalent, "id", pathTalentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(pathTalentId)).willReturn(Optional.of(pathTalent));
+        given(talentRepository.getActiveTalentOrThrow(pathTalentId)).willReturn(pathTalent);
 
         Talent otherTalent = talent(authorId);
         ReflectionTestUtils.setField(otherTalent, "id", 2L);
@@ -250,7 +253,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L;
         Talent talent = talent(7L);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId))
                 .willReturn(List.of(
                         attachment(talent, "https://github.com/user/repo", "참고 링크")
@@ -269,7 +272,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L;
         Talent talent = talent(7L);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId))
                 .willReturn(List.of(
                         attachment(talent, "talents/1/key.png", "S3 업로드"),
@@ -292,7 +295,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
 
         // 남의 재능(999) 경로 key를 본인 재능(1)에 등록 시도
         var req = new AttachmentSaveReq("talents/999/private.png", "탈취 시도");
@@ -308,7 +311,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(talentAttachmentRepository.save(any(TalentAttachment.class)))
                 .willAnswer(inv -> inv.getArgument(0));
 
@@ -326,7 +329,7 @@ class TalentAttachmentServiceTest {
         Long talentId = 1L, authorId = 7L;
         Talent talent = talent(authorId);
         ReflectionTestUtils.setField(talent, "id", talentId);
-        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(s3Service.generatePresignedPutUrl(anyString())).willReturn("https://signed");
 
         var req = new PresignedUrlReq("../../etc/passwd.png", "image/png");
