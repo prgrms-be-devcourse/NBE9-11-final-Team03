@@ -69,11 +69,6 @@ public class TalentService {
         // 대상 재능 확인
         Talent talent = getActiveTalent(talentId);
 
-        // 삭제 된 글은 없는 것으로 취급
-        if(talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
-
         // 소유권 확인, 다른 사람 글이면 차단
         if(!talent.getAuthorId().equals(authorId)) {
             throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
@@ -94,11 +89,6 @@ public class TalentService {
     @Transactional
     public void deleteTalent(Long talentId, Long authorId) {
         Talent talent = getActiveTalent(talentId);
-
-        // 이미 삭제된 글은 없는 것 (소유권보다 먼저)
-        if(talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
 
         //소유권 확인
         if(!talent.getAuthorId().equals(authorId)) {

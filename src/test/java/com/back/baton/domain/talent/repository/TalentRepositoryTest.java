@@ -83,6 +83,22 @@ class TalentRepositoryTest {
         assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("soft delete된 talent는 findByIdAndDeletedAtIsNull로 조회되지 않는다")
+    void findByIdAndDeletedAtIsNull_excludesSoftDeleted() {
+        // given
+        Category category = saveCategory();
+        Talent talent = save(category, "재능1");
+        talent.softDelete();
+        talentRepository.save(talent);
+
+        // when
+        var found = talentRepository.findByIdAndDeletedAtIsNull(talent.getId());
+
+        // then
+        assertThat(found).isEmpty();
+    }
+
     private Category saveCategory() {
         try {
             Constructor<Category> constructor = Category.class.getDeclaredConstructor();

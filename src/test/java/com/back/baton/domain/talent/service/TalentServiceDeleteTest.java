@@ -80,8 +80,7 @@ class TalentServiceDeleteTest {
     void deleteTalent_alreadyDeleted() {
         // given
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        talent.softDelete();
-        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.empty());
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_NOT_FOUND);
