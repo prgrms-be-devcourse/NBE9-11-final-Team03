@@ -127,14 +127,9 @@ public class TalentAttachmentService {
     }
 
     // 공통 검증 (존재 -> 삭제 -> 소유권)
-
     private Talent getActiveTalent(Long talentId) {
-        Talent talent = talentRepository.findById(talentId)
+        return talentRepository.findByIdAndDeletedAtIsNull(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
-        if (talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
-        return talent;
     }
 
     private void validateOwner(Talent talent, Long authorId) {

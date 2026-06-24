@@ -38,7 +38,7 @@ class TalentServiceDeleteTest {
         Long authorId = 1L;
         Long talentId = 10L;
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
         given(tradeRepository.existsByTalentIdAndStatusIn(eq(talentId), anyList())).willReturn(false);
 
         // when
@@ -52,7 +52,7 @@ class TalentServiceDeleteTest {
     @DisplayName("재능이 없으면 TALENT_NOT_FOUND")
     void deleteTalent_notFound() {
         // given
-        given(talentRepository.findById(99L)).willReturn(Optional.empty());
+        given(talentRepository.findByIdAndDeletedAtIsNull(99L)).willReturn(Optional.empty());
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(99L, 1L), TalentErrorCode.TALENT_NOT_FOUND);
@@ -65,7 +65,7 @@ class TalentServiceDeleteTest {
         Long authorId = 1L;
         Long talentId = 10L;
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(talentId)).willReturn(Optional.of(talent));
         given(tradeRepository.existsByTalentIdAndStatusIn(eq(talentId), anyList())).willReturn(true);
 
         // when & then
@@ -81,7 +81,7 @@ class TalentServiceDeleteTest {
         // given
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
         talent.softDelete();
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_NOT_FOUND);
@@ -92,7 +92,7 @@ class TalentServiceDeleteTest {
     void deleteTalent_forbidden() {
         // given
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_FORBIDDEN);

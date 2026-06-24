@@ -37,7 +37,7 @@ class TalentServiceUpdateTest {
         given(newCat.isActive()).willReturn(true);
 
         Talent talent = Talent.create(authorId, mock(Category.class), "기존", "기존내용", 2, 100);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
         given(categoryRepository.findById(9L)).willReturn(Optional.of(newCat));
 
         // when
@@ -55,7 +55,7 @@ class TalentServiceUpdateTest {
     @DisplayName("재능이 없으면 TALENT_NOT_FOUND")
     void updateTalent_notFound() {
         // given: 조회 결과 없음
-        given(talentRepository.findById(99L)).willReturn(Optional.empty());
+        given(talentRepository.findByIdAndDeletedAtIsNull(99L)).willReturn(Optional.empty());
         var request = new TalentUpdateReq(1L, "t", "c", 1, 0);
 
         // when & then: 존재 검증에서 막힘
@@ -70,7 +70,7 @@ class TalentServiceUpdateTest {
     void updateTalent_forbidden() {
         // given: 작성자는 1L
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
         var request = new TalentUpdateReq(1L, "t", "c", 1, 0);
 
         // when & then: 요청자 2L(남의 글) -> 소유권에서 막히고 카테고리 조회까지 가지 않음
@@ -86,7 +86,7 @@ class TalentServiceUpdateTest {
     void updateTalent_categoryNotFound() {
         // given: 본인 글이지만 변경할 카테고리 9L이 존재하지 않음
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
         given(categoryRepository.findById(9L)).willReturn(Optional.empty());
         var request = new TalentUpdateReq(9L, "t", "c", 1, 0);
 
@@ -104,7 +104,7 @@ class TalentServiceUpdateTest {
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
         Category inactive = mock(Category.class);
         given(inactive.isActive()).willReturn(false);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(talent));
         given(categoryRepository.findById(9L)).willReturn(Optional.of(inactive));
         var request = new TalentUpdateReq(9L, "t", "c", 1, 0);
 
