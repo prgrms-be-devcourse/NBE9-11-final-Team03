@@ -38,14 +38,14 @@ public class AuthService {
     private final WithdrawnUserRepository withdrawnUserRepository;
     private final WithdrawnEncoder withdrawnEncoder;
     private final ProfileService profileService;
+    private final EmailVerificationService emailVerificationService;
 
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
         // 1. 이메일 검증
-        email = email.strip();
-        email = email.toLowerCase();
+        email = normalizeEmail(email);
         if(userRepository.existsByEmail(email)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
@@ -53,7 +53,6 @@ public class AuthService {
         if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
             throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
         }
-        // TODO: 1-3. 이메일 인증 여부 확인
 
         // 2. 닉네임 검증
         checkNicknameDuplicated(nickname);
@@ -97,6 +96,17 @@ public class AuthService {
         if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
+    }
+
+    public void sendEmailVerificationCode(String email) {
+        email = normalizeEmail(email);
+        if(userRepository.existsByEmail(email)){
+            throw new CustomException(UserErrorCode.DUPLICATED_USER);
+        }
+        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
+            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
+        }
+        emailVerificationService.sendVerificationCode(email);
     }
 
     public UserTokenDto login(String email, String password) {
@@ -191,5 +201,9 @@ public class AuthService {
 
     public void logout(Long userId){
         refreshTokenRepository.deleteByUserIdCustom(userId); // refreshToken 삭제
+    }
+
+    private String normalizeEmail(String email) {
+        return email.strip().toLowerCase();
     }
 }

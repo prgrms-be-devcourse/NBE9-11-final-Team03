@@ -42,6 +42,7 @@ public enum SuccessCode {
     USER_LOGOUT_SUCCESS(HttpStatus.OK, "200-3","로그아웃에 성공했습니다."),
     USER_WITHDRAW_SUCCESS(HttpStatus.OK, "200-11","탈퇴에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다."),
+    USER_EMAIL_SEND_SUCCESS(HttpStatus.OK, "200-18", "이메일 인증 코드 발송에 성공했습니다."),
 
     CATEGORY_OK(HttpStatus.OK, "200-13", "카테고리 조회에 성공했습니다."),
 
