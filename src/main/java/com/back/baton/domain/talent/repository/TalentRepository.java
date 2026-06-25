@@ -1,6 +1,8 @@
 package com.back.baton.domain.talent.repository;
 
 import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TalentErrorCode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -41,4 +43,9 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
     int countByAuthorIdAndDeletedAtIsNull(Long authorId);
 
     Optional<Talent> findByIdAndDeletedAtIsNull(Long id);
+
+    default Talent getActiveTalentOrThrow(Long id) {
+        return findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+    }
 }
