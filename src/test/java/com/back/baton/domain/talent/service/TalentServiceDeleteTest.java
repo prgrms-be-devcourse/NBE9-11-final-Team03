@@ -103,6 +103,7 @@ class TalentServiceDeleteTest {
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_FORBIDDEN);
+        then(matchProposalRepository).should(never()).cancelRequestedByTalentId(eq(10L));
     }
 
     @Test
