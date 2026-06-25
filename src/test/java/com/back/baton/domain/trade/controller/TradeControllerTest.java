@@ -1,6 +1,7 @@
 package com.back.baton.domain.trade.controller;
 
 import com.back.baton.domain.escrow.entity.EscrowStatus;
+import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
@@ -8,6 +9,7 @@ import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.domain.trade.service.TradeSubmissionService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.exception.GlobalExceptionHandler;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.TradeErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.support.security.WithMockSecurityUser;
@@ -21,8 +23,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -46,6 +50,86 @@ class TradeControllerTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Test
+    @DisplayName("내 거래 목록을 조회하면 커서 페이지 응답을 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_success() throws Exception {
+        Long userId = 2L;
+        List<TradeListRes> content = List.of(
+                new TradeListRes(2L, 10L, userId, 3L, 5000, TradeType.PURCHASE, TradeStatus.COMPLETED, LocalDateTime.now(), LocalDateTime.now()),
+                new TradeListRes(1L, 10L, userId, 3L, 5000, TradeType.PURCHASE, TradeStatus.IN_PROGRESS, LocalDateTime.now(), LocalDateTime.now())
+        );
+        CursorPageRes<TradeListRes> page = new CursorPageRes<>(content, false, null);
+
+        when(tradeService.getMyTrades(eq(userId), isNull(), isNull(), eq(20))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/trade"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("200-16"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.nextCursor").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("status 필터를 전달하면 해당 상태의 거래 목록만 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_withStatusFilter() throws Exception {
+        Long userId = 2L;
+        List<TradeListRes> content = List.of(
+                new TradeListRes(1L, 10L, userId, 3L, 5000, TradeType.PURCHASE, TradeStatus.IN_PROGRESS, LocalDateTime.now(), LocalDateTime.now())
+        );
+        CursorPageRes<TradeListRes> page = new CursorPageRes<>(content, false, null);
+
+        when(tradeService.getMyTrades(eq(userId), eq(TradeStatus.IN_PROGRESS), isNull(), eq(20))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/trade").param("status", "IN_PROGRESS"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].tradeStatus").value("IN_PROGRESS"));
+    }
+
+    @Test
+    @DisplayName("다음 페이지가 있으면 hasNext=true이고 nextCursor가 존재한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_hasNext() throws Exception {
+        Long userId = 2L;
+        List<TradeListRes> content = List.of(
+                new TradeListRes(2L, 10L, userId, 3L, 5000, TradeType.PURCHASE, TradeStatus.IN_PROGRESS, LocalDateTime.now(), LocalDateTime.now()),
+                new TradeListRes(1L, 10L, userId, 3L, 5000, TradeType.PURCHASE, TradeStatus.IN_PROGRESS, LocalDateTime.now(), LocalDateTime.now())
+        );
+        CursorPageRes<TradeListRes> page = new CursorPageRes<>(content, true, 1L);
+
+        when(tradeService.getMyTrades(eq(userId), isNull(), isNull(), eq(2))).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/trade").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").value(1));
+    }
+
+    @Test
+    @DisplayName("size가 1 미만이면 400을 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_invalidSize_tooSmall() throws Exception {
+        mockMvc.perform(get("/api/v1/trade").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.size").value("페이지 크기는 1 이상이어야 합니다."));
+    }
+
+    @Test
+    @DisplayName("size가 50 초과이면 400을 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_invalidSize_tooLarge() throws Exception {
+        mockMvc.perform(get("/api/v1/trade").param("size", "51"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.size").value("페이지 크기는 50 이하이어야 합니다."));
+    }
+
+    @Test
     @DisplayName("get trade succeeds with current user")
     @WithMockSecurityUser(userId = 2)
     void getTrade_success() throws Exception {
@@ -60,7 +144,7 @@ class TradeControllerTest {
                 LocalDateTime.now(), LocalDateTime.now()
         );
 
-        when(tradeService.getTrade(tradeId, userId)).thenReturn(res);
+        when(tradeService.getMyTrade(tradeId, userId)).thenReturn(res);
 
         mockMvc.perform(get("/api/v1/trade/{tradeId}", tradeId))
                 .andExpect(status().isOk())
@@ -82,7 +166,7 @@ class TradeControllerTest {
         Long tradeId = 999L;
         Long userId = 2L;
 
-        when(tradeService.getTrade(tradeId, userId))
+        when(tradeService.getMyTrade(tradeId, userId))
                 .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
 
         mockMvc.perform(get("/api/v1/trade/{tradeId}", tradeId))
@@ -98,7 +182,7 @@ class TradeControllerTest {
         Long tradeId = 1L;
         Long outsiderId = 999L;
 
-        when(tradeService.getTrade(tradeId, outsiderId))
+        when(tradeService.getMyTrade(tradeId, outsiderId))
                 .thenThrow(new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED));
 
         mockMvc.perform(get("/api/v1/trade/{tradeId}", tradeId))

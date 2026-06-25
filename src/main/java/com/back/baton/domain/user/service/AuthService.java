@@ -1,6 +1,7 @@
 package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
+import com.back.baton.domain.profile.service.ProfileService;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -13,11 +14,11 @@ import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.TokenErrorCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -36,6 +37,8 @@ public class AuthService {
     private final CreditService creditService;
     private final WithdrawnUserRepository withdrawnUserRepository;
     private final WithdrawnEncoder withdrawnEncoder;
+    private final ProfileService profileService;
+
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
@@ -81,6 +84,9 @@ public class AuthService {
 
         // 6. Account 생성
         creditService.initializeAccount(user.getId());
+
+        //7. 기본 profile 생성
+        profileService.initializeProfile(user);
 
         return new UserSignupRes(user);
     }

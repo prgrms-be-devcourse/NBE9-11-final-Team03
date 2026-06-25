@@ -13,27 +13,27 @@ public interface CreditAccountRepository extends JpaRepository<CreditAccount, Lo
 
     Optional<CreditAccount> findByUserId(Long userId);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.balance = c.balance + :amount WHERE c.userId = :userId")
     int addBalance(@Param("userId") Long userId, @Param("amount") int amount);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.balance = c.balance - :amount WHERE c.userId = :userId AND c.balance >= :amount")
     int deductBalance(@Param("userId") Long userId, @Param("amount") int amount);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.balance = c.balance - :amount, c.escrowBalance = c.escrowBalance + :amount WHERE c.userId = :userId AND c.balance >= :amount")
     int holdForEscrow(@Param("userId") Long userId, @Param("amount") int amount);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.escrowBalance = c.escrowBalance - :amount, c.balance = c.balance + :amount WHERE c.userId = :userId AND c.escrowBalance >= :amount")
     int releaseEscrow(@Param("userId") Long userId, @Param("amount") int amount);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.escrowBalance = c.escrowBalance - :amount WHERE c.userId = :userId AND c.escrowBalance >= :amount")
     int deductEscrowBalance(@Param("userId") Long userId, @Param("amount") int amount);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE CreditAccount c SET c.escrowBalance = 0, c.balance = 0, c.deletedAt = :now WHERE c.userId = :userId")
     void deleteAccountByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 }

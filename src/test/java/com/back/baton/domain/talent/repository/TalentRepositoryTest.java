@@ -4,14 +4,17 @@ import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
+import com.back.baton.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.util.ReflectionTestUtils;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
@@ -40,7 +43,7 @@ class TalentRepositoryTest {
         talentRepository.save(t3);
 
         // when: 첫 페이지(cursor=null), size=2 -> 내부적으로 3개(size+1) 조회
-        List<TalentListRes> result = talentRepository.findTalentList(null, 2);
+        List<TalentListRes> result = talentRepository.findTalentList(null, 2, TalentSortType.LATEST);
 
         // then
         assertThat(result).hasSize(3);                          // size+1
@@ -61,7 +64,7 @@ class TalentRepositoryTest {
         Talent t4 = save(category, "재능4");
 
         // when: t4 id를 커서로 -> 그보다 작은 id만 (t3, t2, t1)
-        List<TalentListRes> result = talentRepository.findTalentList(t4.getId(), 2);
+        List<TalentListRes> result = talentRepository.findTalentList(t4.getId(), 2, TalentSortType.LATEST);
 
         // then: id < t4, 최신순, size+1=3개
         assertThat(result).extracting(TalentListRes::talentId)
@@ -80,6 +83,29 @@ class TalentRepositoryTest {
         talentRepository.save(Talent.create(2L, category, "남의재능", "내용", 2, 100)); // 다른 author
 
         assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("soft delete된 talent는 findByIdAndDeletedAtIsNull로 조회되지 않는다")
+    void findByIdAndDeletedAtIsNull_excludesSoftDeleted() {
+        // given
+        Category category = saveCategory();
+        Talent talent = save(category, "재능1");
+        talent.softDelete();
+        talentRepository.save(talent);
+
+        // when
+        var found = talentRepository.findByIdAndDeletedAtIsNull(talent.getId());
+
+        // then
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getActiveTalentOrThrow - 없으면 TALENT_NOT_FOUND")
+    void getActiveTalentOrThrow_notFound() {
+        assertThatThrownBy(() -> talentRepository.getActiveTalentOrThrow(999L))
+                .isInstanceOf(CustomException.class);
     }
 
     private Category saveCategory() {

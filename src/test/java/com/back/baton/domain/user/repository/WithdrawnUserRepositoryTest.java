@@ -29,7 +29,7 @@ class WithdrawnUserRepositoryTest {
     @DisplayName("생성일 기준 만료 데이터 삭제 테스트")
     void notDeleteValidUsersTest() {
         // 1. 데이터 준비 (일부러 만료된 데이터와 아닌 것을 섞음)
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thresholdDate = LocalDateTime.now().minusDays(1);
         WithdrawnUser validUser = new WithdrawnUser("asgwerwer", UserStatus.ACTIVE);    // 삭제 제외
         WithdrawnUser bannedUser = new WithdrawnUser("asgwerweasfdsr", UserStatus.BANNED);    // 삭제 제외(영구정지)
 
@@ -41,7 +41,7 @@ class WithdrawnUserRepositoryTest {
         entityManager.clear();
 
         // 2. 실행
-        repository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(now);
+        repository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
 
         // 3. 검증
         assertThat(repository.findById(bannedUser.getId())).isPresent();
@@ -51,7 +51,7 @@ class WithdrawnUserRepositoryTest {
     @DisplayName("생성일 기준 만료 데이터 삭제 테스트")
     void deleteExpiredUsersTest() {
         // 1. 데이터 준비 (일부러 만료된 데이터와 아닌 것을 섞음)
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime thresholdDate = LocalDateTime.now().plusDays(100);
         WithdrawnUser expiredUser = new WithdrawnUser("awtewttwe", UserStatus.ACTIVE); // 삭제 대상
         WithdrawnUser bannedUser = new WithdrawnUser("asgwerweasfdsr", UserStatus.BANNED);    // 삭제 제외(영구정지)
 
@@ -63,7 +63,7 @@ class WithdrawnUserRepositoryTest {
         entityManager.clear();
 
         // 2. 실행
-        repository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(now.plusDays(100));
+        repository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
 
         // 3. 검증
         assertThat(repository.findById(expiredUser.getId())).isEmpty();

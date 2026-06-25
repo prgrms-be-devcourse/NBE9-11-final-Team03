@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface TradeRepository extends JpaRepository<Trade, Long> {
+public interface TradeRepository extends JpaRepository<Trade, Long>, TradeRepositoryCustom {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM Trade t WHERE t.id = :id")

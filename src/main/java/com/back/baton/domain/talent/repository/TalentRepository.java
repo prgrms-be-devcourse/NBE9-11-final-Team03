@@ -1,6 +1,8 @@
 package com.back.baton.domain.talent.repository;
 
 import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TalentErrorCode;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -8,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRepositoryCustom {
 
@@ -38,4 +41,11 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
 
     // 삭제되지 않은 본인 재능 개수 (등록 제한 검사용)
     int countByAuthorIdAndDeletedAtIsNull(Long authorId);
+
+    Optional<Talent> findByIdAndDeletedAtIsNull(Long id);
+
+    default Talent getActiveTalentOrThrow(Long id) {
+        return findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+    }
 }

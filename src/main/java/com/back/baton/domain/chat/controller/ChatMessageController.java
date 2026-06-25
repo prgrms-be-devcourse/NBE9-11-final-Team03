@@ -5,6 +5,7 @@ import com.back.baton.domain.chat.dto.response.ChatMessageRes;
 import com.back.baton.domain.chat.service.ChatService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.SuccessCode;
 import com.back.baton.global.security.CurrentUser;
 import com.back.baton.global.security.SecurityUser;
@@ -19,9 +20,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/chat-rooms/{chatRoomId}/messages")
@@ -54,16 +54,20 @@ public class ChatMessageController {
     @GetMapping
     @Operation(
             summary = "채팅 메시지 목록 조회",
-            description = "현재 로그인한 채팅방 참여자가 특정 채팅방의 메시지 목록을 조회합니다. 메시지는 오래된 순서로 조회됩니다."
+            description = "현재 로그인한 채팅방 참여자가 특정 채팅방의 메시지 목록을 조회합니다. 메시지는 최신순으로 조회됩니다."
     )
-    public ResponseEntity<ApiResponse<List<ChatMessageRes>>> getMessages(
+    public ResponseEntity<ApiResponse<CursorPageRes<ChatMessageRes>>> getMessages(
             @Parameter(description = "채팅방 ID", example = "1", required = true)
             @PathVariable Long chatRoomId,
-            @CurrentUser SecurityUser currentUser
+            @CurrentUser SecurityUser currentUser,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int size
     ) {
-        List<ChatMessageRes> response = chatService.getMessages(
+        CursorPageRes<ChatMessageRes> response = chatService.getMessages(
                 chatRoomId,
-                currentUser.getUserId()
+                currentUser.getUserId(),
+                cursor,
+                size
         );
 
         return ApiResponses.success(SuccessCode.CHAT_MESSAGES_FOUND, response);

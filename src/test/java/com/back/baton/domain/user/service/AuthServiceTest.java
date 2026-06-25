@@ -1,6 +1,7 @@
 package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
+import com.back.baton.domain.profile.service.ProfileService;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -50,7 +51,7 @@ public class AuthServiceTest {
     @Mock private WithdrawnEncoder withdrawnEncoder;
     @Mock private WithdrawnUserRepository withdrawnUserRepository;
     @Mock private CreditService creditService;
-
+    @Mock private ProfileService profileService;
     private User validUser;
     @BeforeEach
     void setUp() {

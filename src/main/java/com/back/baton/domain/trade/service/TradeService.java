@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.response.DisputeRes;
+import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.Trade;
@@ -11,6 +12,7 @@ import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.EscrowErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +39,7 @@ public class TradeService {
         return tradeRepository.save(trade);
     }
 
-    public TradeRes getTrade(Long tradeId, Long userId) {
+    public TradeRes getMyTrade(Long tradeId, Long userId) {
         Trade trade = tradeRepository.findById(tradeId)
                 .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
 
@@ -168,6 +170,11 @@ public class TradeService {
         if (!Objects.equals(trade.getBuyerId(), buyerId)) {
             throw new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED);
         }
+    }
+
+    public CursorPageRes<TradeListRes> getMyTrades(Long userId, TradeStatus status, Long cursor, int size) {
+        List<TradeListRes> rows = tradeRepository.findMyTrades(userId, status, cursor, size);
+        return CursorPageRes.from(rows, size, TradeListRes::tradeId);
     }
 
     private void validateDisputable(Trade trade) {

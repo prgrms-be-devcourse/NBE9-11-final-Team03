@@ -1,0 +1,51 @@
+package com.back.baton.domain.talent.service;
+
+import com.back.baton.domain.talent.dto.request.TalentReportReq;
+import com.back.baton.domain.talent.dto.response.TalentReportRes;
+import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.domain.talent.entity.TalentReport;
+import com.back.baton.domain.talent.repository.TalentReportRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.TalentErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class TalentReportService {
+
+    private final TalentRepository talentRepository;
+    private final TalentReportRepository talentReportRepository;
+
+    // 재능 신고 (존재 -> 삭제 -> 자기신고 -> 중복)
+    @Transactional
+    public TalentReportRes reportTalent(Long talentId, Long reporterId, TalentReportReq req) {
+        Talent talent = talentRepository.findByIdAndDeletedAtIsNull(talentId)
+                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+
+        // 자기 재능 신고 차단 (소유권 위반 → 403)
+        if (Objects.equals(talent.getAuthorId(), reporterId)) {
+            throw new CustomException(TalentErrorCode.SELF_REPORT_NOT_ALLOWED);
+        }
+
+        // 1차 중복 신고 차단 (409) 일반적인 중복 - 메세지 차단
+        if (talentReportRepository.existsByTalentIdAndReporterId(talentId, reporterId)) {
+            throw new CustomException(TalentErrorCode.DUPLICATE_REPORT);
+        }
+
+        // 2차 중복 신고 차단 - DB unique 제약 중복 저장 차단
+        try {
+            TalentReport report = TalentReport.create(talent, reporterId, req.reason(), req.description());
+            return TalentReportRes.from(talentReportRepository.saveAndFlush(report));
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(TalentErrorCode.DUPLICATE_REPORT);
+        }
+    }
+
+}

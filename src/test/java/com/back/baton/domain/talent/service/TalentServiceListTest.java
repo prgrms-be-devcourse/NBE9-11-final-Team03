@@ -1,6 +1,7 @@
 package com.back.baton.domain.talent.service;
 
 import com.back.baton.domain.talent.dto.response.TalentListRes;
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.response.CursorPageRes;
 import org.junit.jupiter.api.DisplayName;
@@ -33,10 +34,10 @@ class TalentServiceListTest {
         // given: size=2인데 리포지토리가 3개(size+1) 반환 -> 다음 페이지 있음
         int size = 2;
         List<TalentListRes> rows = List.of(row(5L), row(4L), row(3L));
-        given(talentRepository.findTalentList(null, size)).willReturn(rows);
+        given(talentRepository.findTalentList(null, size, TalentSortType.LATEST)).willReturn(rows);
 
         // when
-        CursorPageRes<TalentListRes> result = talentService.getTalentList(null, size);
+        CursorPageRes<TalentListRes> result = talentService.getTalentList(null, size, TalentSortType.LATEST);
 
         // then
         assertThat(result.hasNext()).isTrue();
@@ -51,11 +52,11 @@ class TalentServiceListTest {
     void getTalentList_lastPage() {
         // given: size=2인데 2개만 옴 -> 마지막 페이지
         int size = 2;
-        given(talentRepository.findTalentList(null, size))
+        given(talentRepository.findTalentList(null, size, TalentSortType.LATEST))
                 .willReturn(List.of(row(2L), row(1L)));
 
         // when
-        CursorPageRes<TalentListRes> result = talentService.getTalentList(null, size);
+        CursorPageRes<TalentListRes> result = talentService.getTalentList(null, size, TalentSortType.LATEST);
 
         // then
         assertThat(result.hasNext()).isFalse();
@@ -66,14 +67,14 @@ class TalentServiceListTest {
     @DisplayName("size가 상한(100)을 넘으면 100으로 잘라 조회한다")
     void getTalentList_sizeClamp() {
         // given
-        given(talentRepository.findTalentList(any(), anyInt())).willReturn(List.of());
+        given(talentRepository.findTalentList(any(), anyInt(), any())).willReturn(List.of());
 
         // when: 99999 요청
-        talentService.getTalentList(null, 99999);
+        talentService.getTalentList(null, 99999, TalentSortType.LATEST);
 
         // then: 리포지토리엔 100으로 전달됐는지 캡처해서 확인
         ArgumentCaptor<Integer> sizeCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(talentRepository).findTalentList(any(), sizeCaptor.capture());
+        verify(talentRepository).findTalentList(any(), sizeCaptor.capture(), any());
         assertThat(sizeCaptor.getValue()).isEqualTo(100);
     }
 
@@ -81,14 +82,14 @@ class TalentServiceListTest {
     @DisplayName("size가 0 이하이면 최소 1로 보정한다")
     void getTalentList_sizeMin() {
         // given
-        given(talentRepository.findTalentList(any(), anyInt())).willReturn(List.of());
+        given(talentRepository.findTalentList(any(), anyInt(), any())).willReturn(List.of());
 
         // when
-        talentService.getTalentList(null, 0);
+        talentService.getTalentList(null, 0, TalentSortType.LATEST);
 
         // then
         ArgumentCaptor<Integer> sizeCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(talentRepository).findTalentList(any(), sizeCaptor.capture());
+        verify(talentRepository).findTalentList(any(), sizeCaptor.capture(), any());
         assertThat(sizeCaptor.getValue()).isEqualTo(1);
     }
 

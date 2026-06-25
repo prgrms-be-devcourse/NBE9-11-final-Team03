@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.Trade;
@@ -11,6 +12,7 @@ import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.EscrowErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -23,6 +25,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -89,7 +93,7 @@ class TradeServiceTest {
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
-        TradeRes result = tradeService.getTrade(1L, buyerId);
+        TradeRes result = tradeService.getMyTrade(1L, buyerId);
 
         assertThat(result.tradeId()).isEqualTo(1L);
         assertThat(result.buyerId()).isEqualTo(buyerId);
@@ -101,7 +105,7 @@ class TradeServiceTest {
 
     @Test
     @DisplayName("판매자가 거래를 조회하면 거래와 에스크로 정보를 반환한다")
-    void getTrade_seller() {
+    void getMyTrade_seller() {
         Long sellerId = 3L;
         Trade trade = createTrade(2L, sellerId);
         Escrow escrow = createEscrow(2L, sellerId);
@@ -109,7 +113,7 @@ class TradeServiceTest {
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
-        TradeRes result = tradeService.getTrade(1L, sellerId);
+        TradeRes result = tradeService.getMyTrade(1L, sellerId);
 
         assertThat(result.sellerId()).isEqualTo(sellerId);
         assertThat(result.tradeStatus()).isEqualTo(TradeStatus.IN_PROGRESS);
@@ -118,10 +122,10 @@ class TradeServiceTest {
 
     @Test
     @DisplayName("존재하지 않는 거래를 조회하면 TRADE_NOT_FOUND 예외가 발생한다")
-    void getTrade_tradeNotFound() {
+    void getMyTrade_tradeNotFound() {
         given(tradeRepository.findById(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> tradeService.getTrade(999L, 2L))
+        assertThatThrownBy(() -> tradeService.getMyTrade(999L, 2L))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
@@ -131,14 +135,14 @@ class TradeServiceTest {
 
     @Test
     @DisplayName("에스크로가 없는 거래를 조회하면 ESCROW_NOT_FOUND 예외가 발생한다")
-    void getTrade_escrowNotFound() {
+    void getMyTrade_escrowNotFound() {
         Long buyerId = 2L;
         Trade trade = createTrade(buyerId, 3L);
 
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> tradeService.getTrade(1L, buyerId))
+        assertThatThrownBy(() -> tradeService.getMyTrade(1L, buyerId))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
@@ -146,13 +150,13 @@ class TradeServiceTest {
 
     @Test
     @DisplayName("거래 참여자가 아닌 사용자가 조회하면 TRADE_ACCESS_DENIED 예외가 발생한다")
-    void getTrade_accessDenied() {
+    void getMyTrade_accessDenied() {
         Long outsiderId = 999L;
         Trade trade = createTrade(2L, 3L);
 
         given(tradeRepository.findById(1L)).willReturn(Optional.of(trade));
 
-        assertThatThrownBy(() -> tradeService.getTrade(1L, outsiderId))
+        assertThatThrownBy(() -> tradeService.getMyTrade(1L, outsiderId))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(TradeErrorCode.TRADE_ACCESS_DENIED);
@@ -496,6 +500,91 @@ class TradeServiceTest {
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
+
+    @DisplayName("status 필터 없이 조회하면 내 모든 거래 목록을 반환한다")
+    void getMyTrades_noFilter() {
+        Long userId = 2L;
+        List<TradeListRes> rows = List.of(
+                createTradeListRes(1L, TradeStatus.IN_PROGRESS, userId, 3L),
+                createTradeListRes(2L, TradeStatus.COMPLETED, userId, 3L)
+        );
+        given(tradeRepository.findMyTrades(userId, null, null, 20)).willReturn(rows);
+
+        CursorPageRes<TradeListRes> result = tradeService.getMyTrades(userId, null, null, 20);
+
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("status 필터를 적용하면 해당 상태의 거래만 반환한다")
+    void getMyTrades_filteredByStatus() {
+        Long userId = 2L;
+        List<TradeListRes> rows = List.of(
+                createTradeListRes(1L, TradeStatus.IN_PROGRESS, userId, 3L)
+        );
+        given(tradeRepository.findMyTrades(userId, TradeStatus.IN_PROGRESS, null, 20)).willReturn(rows);
+
+        CursorPageRes<TradeListRes> result = tradeService.getMyTrades(userId, TradeStatus.IN_PROGRESS, null, 20);
+
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.content().get(0).tradeStatus()).isEqualTo(TradeStatus.IN_PROGRESS);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("거래가 없으면 빈 목록과 hasNext=false를 반환한다")
+    void getMyTrades_emptyResult() {
+        Long userId = 2L;
+        given(tradeRepository.findMyTrades(userId, null, null, 20)).willReturn(List.of());
+
+        CursorPageRes<TradeListRes> result = tradeService.getMyTrades(userId, null, null, 20);
+
+        assertThat(result.content()).isEmpty();
+        assertThat(result.hasNext()).isFalse();
+        assertThat(result.nextCursor()).isNull();
+    }
+
+    @Test
+    @DisplayName("다음 페이지가 있으면 hasNext=true이고 nextCursor가 마지막 항목의 tradeId다")
+    void getMyTrades_hasNextTrue() {
+        Long userId = 2L;
+        int size = 2;
+        List<TradeListRes> rows = List.of(
+                createTradeListRes(3L, TradeStatus.IN_PROGRESS, userId, 3L),
+                createTradeListRes(2L, TradeStatus.IN_PROGRESS, userId, 3L),
+                createTradeListRes(1L, TradeStatus.IN_PROGRESS, userId, 3L) // size+1 번째
+        );
+        given(tradeRepository.findMyTrades(userId, null, null, size)).willReturn(rows);
+
+        CursorPageRes<TradeListRes> result = tradeService.getMyTrades(userId, null, null, size);
+
+        assertThat(result.hasNext()).isTrue();
+        assertThat(result.content()).hasSize(size);
+        assertThat(result.nextCursor()).isEqualTo(2L); // 마지막으로 반환된 항목의 tradeId
+    }
+
+    @Test
+    @DisplayName("cursor를 전달하면 해당 cursor 이후의 거래 목록을 반환한다")
+    void getMyTrades_withCursor() {
+        Long userId = 2L;
+        Long cursor = 5L;
+        List<TradeListRes> rows = List.of(
+                createTradeListRes(4L, TradeStatus.IN_PROGRESS, userId, 3L),
+                createTradeListRes(3L, TradeStatus.COMPLETED, userId, 3L)
+        );
+        given(tradeRepository.findMyTrades(userId, null, cursor, 20)).willReturn(rows);
+
+        CursorPageRes<TradeListRes> result = tradeService.getMyTrades(userId, null, cursor, 20);
+
+        assertThat(result.content()).hasSize(2);
+        assertThat(result.content().get(0).tradeId()).isEqualTo(4L);
+        assertThat(result.nextCursor()).isEqualTo(3L);
+    }
+
+    private TradeListRes createTradeListRes(Long tradeId, TradeStatus status, Long buyerId, Long sellerId) {
+        return new TradeListRes(tradeId, 10L, buyerId, sellerId, 5000, TradeType.PURCHASE, status,
+                LocalDateTime.now(), LocalDateTime.now());
     }
 
     private Trade createTrade(Long buyerId, Long sellerId) {

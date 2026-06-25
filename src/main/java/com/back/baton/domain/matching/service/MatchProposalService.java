@@ -1,5 +1,7 @@
 package com.back.baton.domain.matching.service;
 
+import com.back.baton.domain.chat.dto.request.TradeChatRoomCreateReq;
+import com.back.baton.domain.chat.service.ChatService;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.service.EscrowService;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
@@ -35,6 +37,7 @@ public class MatchProposalService {
     private final TradeService tradeService;
     private final CreditService creditService;
     private final EscrowService escrowService;
+    private final ChatService chatService;
 
     @Transactional
     public MatchProposalRes createMatchProposal(Long requesterId, MatchProposalCreateReq req) {
@@ -119,6 +122,9 @@ public class MatchProposalService {
         );
 
         matchProposal.accept();
+
+        chatService.getOrCreateTransactionRoom(TradeChatRoomCreateReq.from(trade));
+
         MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
 
         return MatchProposalRes.from(savedMatchProposal);

@@ -1,5 +1,6 @@
 package com.back.baton.domain.talent.service;
 
+import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.repository.TalentRepository;
@@ -34,11 +35,11 @@ class TalentServiceSearchTest {
         // given: size=2인데 리포지토리가 3개(size+1) 반환
         int size = 2;
         TalentSearchReq req = new TalentSearchReq(1L, null, null, null, null);
-        given(talentRepository.searchTalents(any(), any(), anyInt()))
+        given(talentRepository.searchTalents(any(), any(), anyInt(), any()))
                 .willReturn(List.of(row(5L), row(4L), row(3L)));
 
         // when
-        CursorPageRes<TalentListRes> result = talentService.searchTalents(req, null, size);
+        CursorPageRes<TalentListRes> result = talentService.searchTalents(req, null, size, TalentSortType.LATEST);
 
         // then
         assertThat(result.hasNext()).isTrue();
@@ -53,10 +54,10 @@ class TalentServiceSearchTest {
     void searchTalents_lastPage() {
         int size = 2;
         TalentSearchReq req = new TalentSearchReq(null, null, null, null, null);
-        given(talentRepository.searchTalents(any(), any(), anyInt()))
+        given(talentRepository.searchTalents(any(), any(), anyInt(), any()))
                 .willReturn(List.of(row(2L), row(1L)));
 
-        CursorPageRes<TalentListRes> result = talentService.searchTalents(req, null, size);
+        CursorPageRes<TalentListRes> result = talentService.searchTalents(req, null, size, TalentSortType.LATEST);
 
         assertThat(result.hasNext()).isFalse();
         assertThat(result.content()).hasSize(2);
@@ -66,12 +67,12 @@ class TalentServiceSearchTest {
     @DisplayName("size가 상한(100)을 넘으면 100으로 잘라 조회한다")
     void searchTalents_sizeClamp() {
         TalentSearchReq req = new TalentSearchReq(null, null, null, null, null);
-        given(talentRepository.searchTalents(any(), any(), anyInt())).willReturn(List.of());
+        given(talentRepository.searchTalents(any(), any(), anyInt(), any())).willReturn(List.of());
 
-        talentService.searchTalents(req, null, 99999);
+        talentService.searchTalents(req, null, 99999, TalentSortType.LATEST);
 
         ArgumentCaptor<Integer> sizeCaptor = ArgumentCaptor.forClass(Integer.class);
-        verify(talentRepository).searchTalents(any(), any(), sizeCaptor.capture());
+        verify(talentRepository).searchTalents(any(), any(), sizeCaptor.capture(), any());
         assertThat(sizeCaptor.getValue()).isEqualTo(100);
     }
 
@@ -79,12 +80,12 @@ class TalentServiceSearchTest {
     @DisplayName("검색 조건(req)이 그대로 리포지토리로 전달된다")
     void searchTalents_passesCondition() {
         TalentSearchReq req = new TalentSearchReq(1L, 100, 500, BigDecimal.valueOf(4.0), true);
-        given(talentRepository.searchTalents(any(), any(), anyInt())).willReturn(List.of());
+        given(talentRepository.searchTalents(any(), any(), anyInt(), any())).willReturn(List.of());
 
-        talentService.searchTalents(req, 10L, 20);
+        talentService.searchTalents(req, 10L, 20, TalentSortType.LATEST);
 
         ArgumentCaptor<TalentSearchReq> reqCaptor = ArgumentCaptor.forClass(TalentSearchReq.class);
-        verify(talentRepository).searchTalents(reqCaptor.capture(), any(), anyInt());
+        verify(talentRepository).searchTalents(reqCaptor.capture(), any(), anyInt(), any());
         assertThat(reqCaptor.getValue().categoryId()).isEqualTo(1L);
         assertThat(reqCaptor.getValue().completedOnly()).isTrue();
     }
