@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Check;
 
+import java.time.LocalDateTime;
+
 @Getter
 @NoArgsConstructor
 @Entity
@@ -18,7 +20,7 @@ public class CreditAccount extends BaseTimeEntity {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private Long userId; // TODO: Users 연관관계 설정
+    private Long userId;
 
     @Column(nullable = false)
     private int balance;
@@ -28,6 +30,8 @@ public class CreditAccount extends BaseTimeEntity {
 
     @Version
     private Long version;
+
+    private LocalDateTime deletedAt;
 
     public static CreditAccount create(Long userId, int initialBalance) {
         CreditAccount account = new CreditAccount();

@@ -1,0 +1,163 @@
+package com.back.baton.domain.trade.controller;
+
+import com.back.baton.domain.trade.dto.request.DisputeReq;
+import com.back.baton.domain.trade.dto.request.PresignedUrlReq;
+import com.back.baton.domain.trade.dto.request.TradeSearchReq;
+import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
+import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
+import com.back.baton.domain.trade.dto.response.TradeListRes;
+import com.back.baton.domain.trade.dto.response.TradeRes;
+import com.back.baton.domain.trade.dto.response.TradeSubmissionRes;
+import com.back.baton.domain.trade.service.TradeService;
+import com.back.baton.domain.trade.service.TradeSubmissionService;
+import com.back.baton.global.response.ApiResponse;
+import com.back.baton.global.response.ApiResponses;
+import com.back.baton.global.response.CursorPageRes;
+import com.back.baton.global.response.code.SuccessCode;
+import com.back.baton.global.security.CurrentUser;
+import com.back.baton.global.security.SecurityUser;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/v1/trade")
+@RequiredArgsConstructor
+@Tag(name = "Trade", description = "거래 상태, 결과물 제출 및 구매 확정 API")
+public class TradeController {
+
+    private final TradeService tradeService;
+    private final TradeSubmissionService tradeSubmissionService;
+
+    @GetMapping("/{tradeId}")
+    @Operation(
+            summary = "내 거래 상세 조회",
+            description = "현재 로그인한 거래 참여자가 거래 상태와 에스크로 정보를 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<TradeRes>> getTrade(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser
+    ) {
+        Long userId = currentUser.getUserId();
+        TradeRes response = tradeService.getMyTrade(tradeId, userId);
+        return ApiResponses.success(SuccessCode.TRADE_OK, response);
+    }
+
+    @GetMapping
+    @Operation(
+            summary = "내 거래 목록 조회",
+            description = "현재 로그인한 사용자의 거래 목록을 커서 기반 페이지네이션으로 조회합니다. status 미입력 시 전체 조회됩니다."
+    )
+    public ResponseEntity<ApiResponse<CursorPageRes<TradeListRes>>> getMyTrades(
+            @CurrentUser SecurityUser currentUser,
+            @ModelAttribute @Valid TradeSearchReq req
+
+    ) {
+        Long userId = currentUser.getUserId();
+        CursorPageRes<TradeListRes> response = tradeService.getMyTrades(
+                userId,
+                req.status(),
+                req.cursor(),
+                req.size()
+        );
+        return ApiResponses.success(SuccessCode.TRADE_LIST_OK, response);
+    }
+
+    @PatchMapping("/{tradeId}/cancel")
+    @Operation(
+            summary = "거래 취소",
+            description = "현재 로그인한 거래 참여자가 진행 중인 거래를 취소합니다."
+    )
+    public ResponseEntity<ApiResponse<TradeRes>> cancelTrade(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser
+    ) {
+        Long userId = currentUser.getUserId();
+        TradeRes response = tradeService.cancelTrade(tradeId, userId);
+        return ApiResponses.success(SuccessCode.TRADE_CANCELLED, response);
+    }
+
+    @PatchMapping("/{tradeId}/dispute")
+    @Operation(
+            summary = "분쟁 신청",
+            description = "현재 로그인한 구매자가 결과물 검토 중인 거래에 대해 분쟁을 신청합니다. 에스크로 크레딧이 동결되고 자동 확정 타이머가 정지됩니다."
+    )
+    public ResponseEntity<ApiResponse<TradeRes>> disputeTrade(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser,
+            @RequestBody @Valid DisputeReq req
+    ) {
+        Long buyerId = currentUser.getUserId();
+        TradeRes response = tradeService.disputeTrade(tradeId, buyerId, req.reason());
+        return ApiResponses.success(SuccessCode.TRADE_DISPUTED, response);
+    }
+
+    @PatchMapping("/{tradeId}/confirm")
+    @Operation(
+            summary = "구매 확정",
+            description = "현재 로그인한 구매자가 결과물을 확인 후 구매를 확정합니다. 에스크로가 해제되고 판매자에게 크레딧이 지급됩니다."
+    )
+    public ResponseEntity<ApiResponse<TradeRes>> confirmPurchase(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser
+    ) {
+        Long buyerId = currentUser.getUserId();
+        TradeRes response = tradeSubmissionService.confirmPurchase(tradeId, buyerId);
+        return ApiResponses.success(SuccessCode.TRADE_COMPLETED, response);
+    }
+
+    @GetMapping("/{tradeId}/submission")
+    @Operation(
+            summary = "결과물 확인",
+            description = "현재 로그인한 구매자가 판매자가 제출한 결과물을 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<TradeSubmissionRes>> getSubmission(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser
+    ) {
+        Long buyerId = currentUser.getUserId();
+        TradeSubmissionRes response = tradeSubmissionService.getSubmission(tradeId, buyerId);
+        return ApiResponses.success(SuccessCode.TRADE_SUBMISSION_OK, response);
+    }
+
+    @PostMapping("/{tradeId}/submission/presigned-url")
+    @Operation(
+            summary = "결과물 업로드 URL 발급",
+            description = "현재 로그인한 판매자가 결과물을 S3에 업로드하기 위한 presigned PUT URL을 발급합니다."
+    )
+    public ResponseEntity<ApiResponse<PresignedUrlRes>> getPresignedUrl(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser,
+            @RequestBody @Valid PresignedUrlReq req
+    ) {
+        Long sellerId = currentUser.getUserId();
+        PresignedUrlRes response = tradeSubmissionService.getPresignedUrl(tradeId, sellerId, req.fileName());
+        return ApiResponses.success(SuccessCode.TRADE_PRESIGNED_URL_CREATED, response);
+    }
+
+    @PostMapping("/{tradeId}/submission")
+    @Operation(
+            summary = "결과물 제출",
+            description = "현재 로그인한 판매자가 S3에 업로드한 결과물을 제출하고 거래 상태를 검토 중으로 변경합니다."
+    )
+    public ResponseEntity<ApiResponse<TradeSubmissionRes>> submitResult(
+            @Parameter(description = "거래 ID", example = "1", required = true)
+            @PathVariable Long tradeId,
+            @CurrentUser SecurityUser currentUser,
+            @RequestBody @Valid TradeSubmissionReq req
+    ) {
+        Long sellerId = currentUser.getUserId();
+        TradeSubmissionRes response = tradeSubmissionService.submitResult(tradeId, sellerId, req);
+        return ApiResponses.success(SuccessCode.TRADE_SUBMISSION_CREATED, response);
+    }
+}

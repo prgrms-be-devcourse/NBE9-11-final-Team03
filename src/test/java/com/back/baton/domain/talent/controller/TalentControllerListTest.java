@@ -1,8 +1,9 @@
 package com.back.baton.domain.talent.controller;
 
-import com.back.baton.domain.talent.dto.response.CursorPageRes;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.service.TalentService;
+import com.back.baton.global.response.CursorPageRes;
+import com.back.baton.global.security.JwtTokenProvider;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,9 @@ class TalentControllerListTest {
     @Autowired MockMvc mockMvc;
     @MockitoBean TalentService talentService;
 
+    @MockitoBean // 또는 @MockBean
+    private JwtTokenProvider jwtTokenProvider;
+
     @Test
     @DisplayName("목록 조회 성공 - 200과 커서 페이지 응답을 반환한다")
     void getTalentList_success() throws Exception {
@@ -33,7 +37,7 @@ class TalentControllerListTest {
         var item = new TalentListRes(5L, "백엔드", "스프링 리뷰", 100, 2,
                 BigDecimal.valueOf(4.5), 3, 10, LocalDateTime.now());
         var page = CursorPageRes.of(List.of(item), true, 5L);
-        given(talentService.getTalentList(any(), eq(20))).willReturn(page);
+        given(talentService.getTalentList(any(), eq(20), any())).willReturn(page);
 
         // when & then
         mockMvc.perform(get("/api/v1/talents")
@@ -52,7 +56,7 @@ class TalentControllerListTest {
     void getTalentList_noCursor() throws Exception {
         // given: cursor=null로 서비스 호출되는지
         var page = CursorPageRes.of(List.<TalentListRes>of(), false, null);
-        given(talentService.getTalentList(eq(null), eq(20))).willReturn(page);
+        given(talentService.getTalentList(eq(null), eq(20), any())).willReturn(page);
 
         // when & then
         mockMvc.perform(get("/api/v1/talents"))

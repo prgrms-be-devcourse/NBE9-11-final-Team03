@@ -1,0 +1,569 @@
+package com.back.baton.domain.matching.repository;
+
+import com.back.baton.domain.category.entity.Category;
+import com.back.baton.domain.category.repository.CategoryRepository;
+import com.back.baton.domain.matching.dto.response.MatchProposalReceivedRes;
+import com.back.baton.domain.matching.dto.response.MatchProposalSentRes;
+import com.back.baton.domain.matching.entity.MatchProposal;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
+import com.back.baton.domain.talent.entity.Talent;
+import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.repository.UserRepository;
+import com.back.baton.global.config.JpaAuditingConfig;
+import com.back.baton.global.config.QueryDslConfig;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.context.annotation.Import;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@DataJpaTest
+@Import({JpaAuditingConfig.class, QueryDslConfig.class})
+class MatchProposalRepositoryTest {
+
+    @Autowired
+    private MatchProposalRepository matchProposalRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private TalentRepository talentRepository;
+
+    @Test
+    @DisplayName("지정한 상태에 해당하는 providerTalentId만 조회한다")
+    void findUnavailableProviderTalentIds() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+
+        MatchProposal requestedProposal = MatchProposal.create(
+                10L,
+                requesterTalentId,
+                requesterId,
+                3L,
+                "요청 중인 제안입니다."
+        );
+
+        MatchProposal acceptedProposal = MatchProposal.create(
+                20L,
+                requesterTalentId,
+                requesterId,
+                4L,
+                "수락된 제안입니다."
+        );
+        acceptedProposal.accept();
+
+        matchProposalRepository.save(requestedProposal);
+        matchProposalRepository.save(acceptedProposal);
+
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(MatchProposalStatus.REQUESTED)
+        );
+
+        assertThat(result).containsExactly(10L);
+    }
+
+    @Test
+    @DisplayName("여러 상태에 해당하는 providerTalentId를 조회한다")
+    void findUnavailableProviderTalentIds_withMultipleStatuses() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+
+        MatchProposal requestedProposal = MatchProposal.create(
+                10L,
+                requesterTalentId,
+                requesterId,
+                3L,
+                "요청 중인 제안입니다."
+        );
+
+        MatchProposal acceptedProposal = MatchProposal.create(
+                20L,
+                requesterTalentId,
+                requesterId,
+                4L,
+                "수락된 제안입니다."
+        );
+        acceptedProposal.accept();
+
+        matchProposalRepository.save(requestedProposal);
+        matchProposalRepository.save(acceptedProposal);
+
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(
+                        MatchProposalStatus.REQUESTED,
+                        MatchProposalStatus.ACCEPTED
+                )
+        );
+
+        assertThat(result).containsExactlyInAnyOrder(10L, 20L);
+    }
+
+    @Test
+    @DisplayName("다른 요청자의 제안은 조회하지 않는다")
+    void findUnavailableProviderTalentIds_excludeOtherRequester() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+
+        MatchProposal myProposal = MatchProposal.create(
+                10L,
+                requesterTalentId,
+                requesterId,
+                3L,
+                "내가 보낸 제안입니다."
+        );
+
+        MatchProposal otherRequesterProposal = MatchProposal.create(
+                20L,
+                requesterTalentId,
+                999L,
+                4L,
+                "다른 사용자가 보낸 제안입니다."
+        );
+
+        matchProposalRepository.save(myProposal);
+        matchProposalRepository.save(otherRequesterProposal);
+
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(MatchProposalStatus.REQUESTED)
+        );
+
+        assertThat(result).containsExactly(10L);
+    }
+
+    @Test
+    @DisplayName("다른 요청자 재능의 제안은 조회하지 않는다")
+    void findUnavailableProviderTalentIds_excludeOtherRequesterTalent() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+
+        MatchProposal myTalentProposal = MatchProposal.create(
+                10L,
+                requesterTalentId,
+                requesterId,
+                3L,
+                "내 재능으로 보낸 제안입니다."
+        );
+
+        MatchProposal otherTalentProposal = MatchProposal.create(
+                20L,
+                999L,
+                requesterId,
+                4L,
+                "다른 재능으로 보낸 제안입니다."
+        );
+
+        matchProposalRepository.save(myTalentProposal);
+        matchProposalRepository.save(otherTalentProposal);
+
+        List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
+                requesterId,
+                requesterTalentId,
+                List.of(MatchProposalStatus.REQUESTED)
+        );
+
+        assertThat(result).containsExactly(10L);
+    }
+
+    @Test
+    @DisplayName("현재 로그인한 제공자가 받은 매칭 제안 목록을 조회한다")
+    void findReceivedProposals() {
+        TestFixture fixture = createProposalFixture();
+
+        List<MatchProposalReceivedRes> result =
+                matchProposalRepository.findReceivedProposals(
+                        fixture.provider().getId(),
+                        null
+                );
+
+        assertThat(result).hasSize(3);
+        assertThat(result)
+                .extracting(MatchProposalReceivedRes::proposalId)
+                .containsExactly(
+                        fixture.otherRequesterProposal().getId(),
+                        fixture.acceptedProposal().getId(),
+                        fixture.requestedProposal().getId()
+                );
+
+        MatchProposalReceivedRes first = result.get(0);
+
+        assertThat(first.status()).isEqualTo(MatchProposalStatus.REQUESTED);
+        assertThat(first.requestMessage()).isEqualTo("다른 요청자가 보낸 제안입니다.");
+        assertThat(first.requesterId()).isEqualTo(fixture.otherProvider().getId());
+        assertThat(first.requesterNickname()).isEqualTo("다른제공자");
+        assertThat(first.requesterProfileImageUrl()).isNull();
+        assertThat(first.requesterTalentId()).isNull();
+        assertThat(first.requesterTalentTitle()).isNull();
+        assertThat(first.providerId()).isEqualTo(fixture.provider().getId());
+        assertThat(first.providerTalentId()).isEqualTo(fixture.providerTalent().getId());
+        assertThat(first.providerTalentTitle()).isEqualTo("React 화면 구현 도와드립니다");
+    }
+
+    @Test
+    @DisplayName("받은 매칭 제안 목록은 상태로 필터링할 수 있다")
+    void findReceivedProposals_withStatus() {
+        TestFixture fixture = createProposalFixture();
+
+        List<MatchProposalReceivedRes> result =
+                matchProposalRepository.findReceivedProposals(
+                        fixture.provider().getId(),
+                        MatchProposalStatus.REQUESTED
+                );
+
+        assertThat(result).hasSize(2);
+        assertThat(result)
+                .extracting(MatchProposalReceivedRes::proposalId)
+                .containsExactly(
+                        fixture.otherRequesterProposal().getId(),
+                        fixture.requestedProposal().getId()
+                );
+
+        MatchProposalReceivedRes first = result.get(0);
+
+        assertThat(first.proposalId()).isEqualTo(fixture.otherRequesterProposal().getId());
+        assertThat(first.status()).isEqualTo(MatchProposalStatus.REQUESTED);
+        assertThat(first.requestMessage()).isEqualTo("다른 요청자가 보낸 제안입니다.");
+        assertThat(first.requesterId()).isEqualTo(fixture.otherProvider().getId());
+        assertThat(first.requesterTalentId()).isNull();
+        assertThat(first.requesterTalentTitle()).isNull();
+
+        MatchProposalReceivedRes second = result.get(1);
+
+        assertThat(second.proposalId()).isEqualTo(fixture.requestedProposal().getId());
+        assertThat(second.status()).isEqualTo(MatchProposalStatus.REQUESTED);
+        assertThat(second.requestMessage()).isEqualTo("요청 중인 제안입니다.");
+        assertThat(second.requesterId()).isEqualTo(fixture.requester().getId());
+        assertThat(second.providerId()).isEqualTo(fixture.provider().getId());
+    }
+
+    @Test
+    @DisplayName("현재 로그인한 요청자가 보낸 매칭 제안 목록을 조회한다")
+    void findSentProposals() {
+        TestFixture fixture = createProposalFixture();
+
+        List<MatchProposalSentRes> result =
+                matchProposalRepository.findSentProposals(
+                        fixture.requester().getId(),
+                        null
+                );
+
+        assertThat(result).hasSize(3);
+        assertThat(result)
+                .extracting(MatchProposalSentRes::proposalId)
+                .containsExactly(
+                        fixture.otherProviderProposal().getId(),
+                        fixture.acceptedProposal().getId(),
+                        fixture.requestedProposal().getId()
+                );
+
+        MatchProposalSentRes first = result.get(0);
+
+        assertThat(first.status()).isEqualTo(MatchProposalStatus.REQUESTED);
+        assertThat(first.requestMessage()).isEqualTo("다른 제공자에게 보낸 제안입니다.");
+        assertThat(first.requesterId()).isEqualTo(fixture.requester().getId());
+        assertThat(first.requesterTalentId()).isEqualTo(fixture.requesterTalent().getId());
+        assertThat(first.requesterTalentTitle()).isEqualTo("Spring Boot API 구현 도와드립니다");
+        assertThat(first.providerId()).isEqualTo(fixture.otherProvider().getId());
+        assertThat(first.providerNickname()).isEqualTo("다른제공자");
+        assertThat(first.providerProfileImageUrl()).isNull();
+        assertThat(first.providerTalentId()).isEqualTo(fixture.otherProviderTalent().getId());
+        assertThat(first.providerTalentTitle()).isEqualTo("문서 정리 도와드립니다");
+    }
+
+    @Test
+    @DisplayName("보낸 매칭 제안 목록은 상태로 필터링할 수 있다")
+    void findSentProposals_withStatus() {
+        TestFixture fixture = createProposalFixture();
+
+        List<MatchProposalSentRes> result =
+                matchProposalRepository.findSentProposals(
+                        fixture.requester().getId(),
+                        MatchProposalStatus.ACCEPTED
+                );
+
+        assertThat(result).hasSize(1);
+
+        MatchProposalSentRes proposal = result.get(0);
+
+        assertThat(proposal.proposalId()).isEqualTo(fixture.acceptedProposal().getId());
+        assertThat(proposal.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
+        assertThat(proposal.requestMessage()).isEqualTo("수락된 제안입니다.");
+        assertThat(proposal.requesterId()).isEqualTo(fixture.requester().getId());
+        assertThat(proposal.providerId()).isEqualTo(fixture.provider().getId());
+    }
+
+    @Test
+    @DisplayName("제공자 재능이 삭제된 제안은 받은 제안 목록에서 제외된다")
+    void findReceivedProposals_excludeDeletedProviderTalent() {
+        User requester = saveUser("requester@example.com", "요청자");
+        User provider = saveUser("provider@example.com", "제공자");
+        Category category = saveCategory("백엔드", 1);
+
+        Talent requesterTalent = saveTalent(
+                requester.getId(),
+                category,
+                "요청자 재능"
+        );
+
+        Talent activeProviderTalent = saveTalent(
+                provider.getId(),
+                category,
+                "정상 제공자 재능"
+        );
+
+        Talent deletedProviderTalent = saveTalent(
+                provider.getId(),
+                category,
+                "삭제된 제공자 재능"
+        );
+        deletedProviderTalent.softDelete();
+
+        MatchProposal visibleProposal = matchProposalRepository.save(
+                MatchProposal.create(
+                        activeProviderTalent.getId(),
+                        requesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "정상 재능에 대한 제안입니다."
+                )
+        );
+
+        matchProposalRepository.save(
+                MatchProposal.create(
+                        deletedProviderTalent.getId(),
+                        requesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "삭제된 재능에 대한 제안입니다."
+                )
+        );
+
+        List<MatchProposalReceivedRes> result = matchProposalRepository.findReceivedProposals(
+                provider.getId(),
+                null
+        );
+
+        assertThat(result)
+                .extracting(MatchProposalReceivedRes::proposalId)
+                .containsExactly(visibleProposal.getId());
+    }
+
+    @Test
+    @DisplayName("요청자 재능이 삭제된 교환 제안은 보낸 제안 목록에서 제외된다")
+    void findSentProposals_excludeDeletedRequesterTalent() {
+        User requester = saveUser("requester2@example.com", "요청자2");
+        User provider = saveUser("provider2@example.com", "제공자2");
+        Category category = saveCategory("프론트엔드", 2);
+
+        Talent providerTalent = saveTalent(
+                provider.getId(),
+                category,
+                "제공자 재능"
+        );
+
+        Talent activeRequesterTalent = saveTalent(
+                requester.getId(),
+                category,
+                "정상 요청자 재능"
+        );
+
+        Talent deletedRequesterTalent = saveTalent(
+                requester.getId(),
+                category,
+                "삭제된 요청자 재능"
+        );
+        deletedRequesterTalent.softDelete();
+
+        MatchProposal visibleProposal = matchProposalRepository.save(
+                MatchProposal.create(
+                        providerTalent.getId(),
+                        activeRequesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "정상 교환 제안입니다."
+                )
+        );
+
+        matchProposalRepository.save(
+                MatchProposal.create(
+                        providerTalent.getId(),
+                        deletedRequesterTalent.getId(),
+                        requester.getId(),
+                        provider.getId(),
+                        "삭제된 요청자 재능이 포함된 제안입니다."
+                )
+        );
+
+        List<MatchProposalSentRes> result = matchProposalRepository.findSentProposals(
+                requester.getId(),
+                null
+        );
+
+        assertThat(result)
+                .extracting(MatchProposalSentRes::proposalId)
+                .containsExactly(visibleProposal.getId());
+    }
+
+    private TestFixture createProposalFixture() {
+        User requester = userRepository.save(createUser(
+                "requester@test.com",
+                "요청자"
+        ));
+
+        User provider = userRepository.save(createUser(
+                "provider@test.com",
+                "제공자"
+        ));
+
+        User otherProvider = userRepository.save(createUser(
+                "other-provider@test.com",
+                "다른제공자"
+        ));
+
+        Category category = categoryRepository.save(Category.create("개발", 1));
+
+        Talent requesterTalent = talentRepository.save(Talent.create(
+                requester.getId(),
+                category,
+                "Spring Boot API 구현 도와드립니다",
+                "Spring Boot 기반 API 구현을 도와드립니다.",
+                24,
+                100
+        ));
+
+        Talent providerTalent = talentRepository.save(Talent.create(
+                provider.getId(),
+                category,
+                "React 화면 구현 도와드립니다",
+                "React 기반 화면 구현을 도와드립니다.",
+                24,
+                100
+        ));
+
+        Talent otherProviderTalent = talentRepository.save(Talent.create(
+                otherProvider.getId(),
+                category,
+                "문서 정리 도와드립니다",
+                "문서 정리와 README 작성을 도와드립니다.",
+                24,
+                100
+        ));
+
+        MatchProposal requestedProposal = matchProposalRepository.save(MatchProposal.create(
+                providerTalent.getId(),
+                requesterTalent.getId(),
+                requester.getId(),
+                provider.getId(),
+                "요청 중인 제안입니다."
+        ));
+
+        MatchProposal acceptedProposal = MatchProposal.create(
+                providerTalent.getId(),
+                requesterTalent.getId(),
+                requester.getId(),
+                provider.getId(),
+                "수락된 제안입니다."
+        );
+        acceptedProposal.accept();
+        acceptedProposal = matchProposalRepository.save(acceptedProposal);
+
+        MatchProposal otherProviderProposal = matchProposalRepository.save(MatchProposal.create(
+                otherProviderTalent.getId(),
+                requesterTalent.getId(),
+                requester.getId(),
+                otherProvider.getId(),
+                "다른 제공자에게 보낸 제안입니다."
+        ));
+
+        MatchProposal otherRequesterProposal = matchProposalRepository.save(MatchProposal.create(
+                providerTalent.getId(),
+                null,
+                otherProvider.getId(),
+                provider.getId(),
+                "다른 요청자가 보낸 제안입니다."
+        ));
+
+        return new TestFixture(
+                requester,
+                provider,
+                otherProvider,
+                requesterTalent,
+                providerTalent,
+                otherProviderTalent,
+                requestedProposal,
+                acceptedProposal,
+                otherProviderProposal,
+                otherRequesterProposal
+        );
+    }
+
+    private User createUser(String email, String nickname) {
+        return User.builder()
+                .email(email)
+                .password("password")
+                .nickname(nickname)
+                .profileImageUrl(null)
+                .introduction("테스트 소개")
+                .trustScore(BigDecimal.ZERO)
+                .build();
+    }
+
+    private User saveUser(String email, String nickname) {
+        return userRepository.save(
+                User.builder()
+                        .email(email)
+                        .password("password")
+                        .nickname(nickname)
+                        .profileImageUrl(null)
+                        .introduction("테스트 소개")
+                        .trustScore(BigDecimal.ZERO)
+                        .build()
+        );
+    }
+
+    private Category saveCategory(String name, int sortOrder) {
+        return categoryRepository.save(Category.create(name, sortOrder));
+    }
+
+    private Talent saveTalent(Long authorId, Category category, String title) {
+        return talentRepository.save(
+                Talent.create(
+                        authorId,
+                        category,
+                        title,
+                        "테스트 내용",
+                        2,
+                        100
+                )
+        );
+    }
+
+    private record TestFixture(
+            User requester,
+            User provider,
+            User otherProvider,
+            Talent requesterTalent,
+            Talent providerTalent,
+            Talent otherProviderTalent,
+            MatchProposal requestedProposal,
+            MatchProposal acceptedProposal,
+            MatchProposal otherProviderProposal,
+            MatchProposal otherRequesterProposal
+    ) {
+    }
+}

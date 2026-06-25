@@ -27,4 +27,24 @@ class TradeTest {
         assertThat(trade.getCreditPrice()).isEqualTo(5000);
         assertThat(trade.getTradeType()).isEqualTo(TradeType.SWAP);
     }
+
+    @Test
+    @DisplayName("거래 취소 시 상태가 CANCELLED로 변경된다")
+    void cancel_status() {
+        Trade trade = Trade.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
+
+        trade.cancel();
+
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("분쟁 신청 시 상태가 DISPUTED로 변경된다")
+    void dispute_status() {
+        Trade trade = Trade.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
+
+        trade.dispute();
+
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.DISPUTED);
+    }
 }

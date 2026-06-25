@@ -50,4 +50,20 @@ public class Trade extends BaseTimeEntity {
         trade.tradeType = tradeType;
         return trade;
     }
+
+    public void cancel() {
+        this.status = TradeStatus.CANCELLED;
+    }
+
+    public void submitResult() {
+        this.status = TradeStatus.UNDER_REVIEW;
+    }
+
+    public void complete() {
+        this.status = TradeStatus.COMPLETED;
+    }
+
+    public void dispute() {
+        this.status = TradeStatus.DISPUTED;
+    }
 }

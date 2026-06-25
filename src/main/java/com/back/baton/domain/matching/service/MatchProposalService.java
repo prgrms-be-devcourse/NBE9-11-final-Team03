@@ -1,13 +1,20 @@
 package com.back.baton.domain.matching.service;
 
+import com.back.baton.domain.credit.service.CreditService;
+import com.back.baton.domain.escrow.service.EscrowService;
 import com.back.baton.domain.matching.dto.request.MatchProposalCreateReq;
+import com.back.baton.domain.matching.dto.response.MatchProposalReceivedRes;
 import com.back.baton.domain.matching.dto.response.MatchProposalRes;
+import com.back.baton.domain.matching.dto.response.MatchProposalSentRes;
 import com.back.baton.domain.matching.entity.MatchProposal;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.trade.entity.Trade;
+import com.back.baton.domain.trade.entity.TradeType;
+import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
@@ -15,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -24,6 +32,9 @@ public class MatchProposalService {
 
     private final MatchProposalRepository matchProposalRepository;
     private final TalentRepository talentRepository;
+    private final TradeService tradeService;
+    private final CreditService creditService;
+    private final EscrowService escrowService;
 
     @Transactional
     public MatchProposalRes createMatchProposal(Long requesterId, MatchProposalCreateReq req) {
@@ -55,23 +66,62 @@ public class MatchProposalService {
     }
 
     @Transactional
-    public MatchProposalRes acceptMatchProposal(Long proposalId, Long providerId) {
+    public MatchProposalRes acceptMatchProposal(
+            Long proposalId,
+            Long providerId,
+            String idempotencyKey
+    ) {
         MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
-        // MatchProposal 상태 및 수락 권한 검증
-        validateRequestedStatus(matchProposal);
         validateProviderAuthority(providerId, matchProposal);
 
-        // TODO: Credit/Trade/Escrow 기능 구현 완료 후 연동 필요
-        //  - 구매자 크레딧 잔액 확인
-        //  - 구매자 크레딧 에스크로 예치
-        //  - 거래(Trade) 생성
-        //  - 크레딧 거래 내역(CreditTransaction) 기록
-        //  - 처리가 모두 성공한 뒤 매칭 제안을 ACCEPTED로 변경
-        matchProposal.accept();
+        if (matchProposal.getStatus() == MatchProposalStatus.ACCEPTED) {
+            return MatchProposalRes.from(matchProposal);
+        }
 
-        return MatchProposalRes.from(matchProposal);
+        validateRequestedStatus(matchProposal);
+
+        Talent providerTalent = getTalent(matchProposal.getProviderTalentId());
+        validateProviderOwnsTalent(providerId, providerTalent);
+        validateTalentAvailable(providerTalent);
+
+        TradeType tradeType = matchProposal.getRequesterTalentId() == null ? TradeType.PURCHASE : TradeType.SWAP;
+
+        // TODO: SWAP의 양방향 거래 그룹 구조는 회의 후 정책 확정 시 별도 확장
+        // 현재는 providerTalent 기준 단방향 거래 1건만 생성
+        Trade trade = tradeService.create(
+                matchProposal.getId(),
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId(),
+                providerTalent.getCreditPrice(),
+                tradeType
+        );
+
+        String escrowHoldIdempotencyKey = "MATCH-PROPOSAL-ACCEPT-"
+                + matchProposal.getId()
+                + ":"
+                + idempotencyKey;
+
+        creditService.holdForEscrow(
+                matchProposal.getRequesterId(),
+                providerTalent.getCreditPrice(),
+                trade.getId(),
+                escrowHoldIdempotencyKey
+        );
+
+        escrowService.create(
+                trade.getId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId(),
+                providerTalent.getCreditPrice()
+        );
+
+        matchProposal.accept();
+        MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
+
+        return MatchProposalRes.from(savedMatchProposal);
     }
 
     @Transactional
@@ -79,13 +129,20 @@ public class MatchProposalService {
         MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
-        // MatchProposal 상태 및 거절 권한 검증
         validateRequestedStatus(matchProposal);
         validateProviderAuthority(providerId, matchProposal);
 
         matchProposal.reject();
 
         return MatchProposalRes.from(matchProposal);
+    }
+
+    public List<MatchProposalReceivedRes> getReceivedProposals(Long providerId, MatchProposalStatus status) {
+        return matchProposalRepository.findReceivedProposals(providerId, status);
+    }
+
+    public List<MatchProposalSentRes> getSentProposals(Long requesterId, MatchProposalStatus status) {
+        return matchProposalRepository.findSentProposals(requesterId, status);
     }
 
     private Talent getTalent(Long talentId) {
@@ -131,11 +188,14 @@ public class MatchProposalService {
 
     private void validateDuplicatedProposal(Long requesterId, MatchProposalCreateReq req) {
         boolean exists = matchProposalRepository
-                .existsByRequesterIdAndRequesterTalentIdAndProviderTalentIdAndStatus(
+                .existsActiveProposal(
                         requesterId,
                         req.requesterTalentId(),
                         req.providerTalentId(),
-                        MatchProposalStatus.REQUESTED
+                        List.of(
+                                MatchProposalStatus.REQUESTED,
+                                MatchProposalStatus.ACCEPTED
+                        )
                 );
 
         if (exists) {

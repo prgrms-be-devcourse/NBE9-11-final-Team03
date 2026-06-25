@@ -1,6 +1,9 @@
 package com.back.baton.domain.escrow.entity;
 
 import com.back.baton.global.entity.BaseTimeEntity;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.EscrowErrorCode;
+import com.back.baton.global.response.code.TradeErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -57,6 +60,35 @@ public class Escrow extends BaseTimeEntity {
 
     @Column(name = "settled_at")
     private LocalDateTime settledAt;
+
+    public void refund() {
+        if (this.status != EscrowStatus.HELD) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.status = EscrowStatus.REFUNDED;
+        this.settledAt = LocalDateTime.now();
+    }
+
+    public void release() {
+        if (this.status != EscrowStatus.HELD) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.status = EscrowStatus.RELEASED;
+        this.settledAt = LocalDateTime.now();
+    }
+
+    public void freeze(String reason) {
+        if (this.status != EscrowStatus.HELD) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        // 분쟁 사유 검증
+        if (reason == null || reason.isBlank() || reason.length() < 5 || reason.length() > 200) {
+            throw new CustomException(TradeErrorCode.INVALID_DISPUTE_REASON);
+        }
+        this.status = EscrowStatus.FROZEN;
+        this.rejectReason = reason;
+        this.expiresAt = null; // 분쟁 발생 시 자동 확정 타이머 정지
+    }
 
     public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, LocalDateTime expiresAt) {
         Escrow escrow = new Escrow();

@@ -1,72 +1,82 @@
 package com.back.baton.domain.user.service;
 
-import com.back.baton.domain.user.dto.response.UserSignupRes;
+import com.back.baton.domain.credit.repository.CreditAccountRepository;
+import com.back.baton.domain.escrow.entity.EscrowStatus;
+import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.matching.entity.MatchProposalStatus;
+import com.back.baton.domain.matching.repository.MatchProposalRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.entity.WithdrawnUser;
 import com.back.baton.domain.user.repository.UserRepository;
+import com.back.baton.domain.user.repository.WithdrawnUserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+
+import static java.time.LocalDateTime.now;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class UserService {
     private final UserRepository userRepository;
-    private final PasswordValidator passwordValidator;
-    private final PasswordEncoder passwordEncoder;
+    private final WithdrawnEncoder withdrawnEncoder;
+    private final WithdrawnUserRepository withdrawnUserRepository;
+    private final EscrowRepository escrowRepository;
+    private final MatchProposalRepository matchProposalRepository;
+    private final TalentRepository talentRepository;
+    private final CreditAccountRepository creditAccountRepository;
+    private final AuthService authService;
 
-    @Value("${user.initial-trust-score}")
-    private BigDecimal initialTrustScore; // 초기 신뢰 점수
+    public void withdraw(Long userId) {
+        // 1. 유저 상태 확인
+        User user = userRepository.findById(userId).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-    public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
-        // 1. 이메일 검증
-        if(userRepository.existsByEmail(email)){
-            throw new CustomException(UserErrorCode.DUPLICATED_USER);
+        // 2. 진행중인 거래가 있다면 탈퇴 거부
+        if(escrowRepository.existsByUserIdAndStatus(userId, userId, List.of(EscrowStatus.HELD, EscrowStatus.FROZEN))){
+            throw new CustomException(UserErrorCode.ESCROW_IN_PROGRESS);
         }
 
-        // TODO: 1-2. 이메일 인증 여부 확인
+        // [3. 탈퇴 유저 관련 데이터 처리]
+        // 3-1. 만일 이 사람에게 들어온 제안이 있다면 전부 거절 처리
+        matchProposalRepository.updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED); // 받은 제안 전부 거절 처리
 
-        // 2. 닉네임 검증
-        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
+        // 3-2. 보낸 제안이 있다면 전부 취소 처리
+        matchProposalRepository.updateStatusWhenRequesterWithdrawn(userId, MatchProposalStatus.CANCELLED);
 
-        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
-            throw new CustomException(UserErrorCode.DUPLICATED_USER);
-        }
-        //TODO: 2-2. 닉네임 중복 확인 별도 구현
+        // 3-3. 등록한 재능 삭제
+        talentRepository.deleteTalentByUserId(userId, now());
 
-        // 3. 비밀번호 형식 검증
-        password = password.strip(); // 앞뒤 공백 제거
-        int lastAtIndex = email.lastIndexOf('@');
-        String username = email.substring(0, lastAtIndex); // 이메일 앞자리 추출
-        if(!passwordValidator.validate(password, username)){ // 비밀번호 검증
-            throw new CustomException(UserErrorCode.INVALID_PASSWORD);
-        }
+        // 3-4. 크레딧 계좌 삭제
+        creditAccountRepository.deleteAccountByUserId(userId, now());
 
-        // 4. 비밀번호 암호화-> 솔트 + 암호화 + 연산 반복 -> BCrypt 적용
-        String encodedPwd = passwordEncoder.encode(password);
 
-        // 5. user 생성
-        User user = User.builder()
-                .email(email)
-                .password(encodedPwd)
-                .nickname(nickname)
-                .profileImageUrl(profileImgUrl)
-                .introduction(introduction)
-                .trustScore(initialTrustScore)
-                .build();
-        userRepository.save(user);
+        // 4. 탈퇴 회원 테이블에 추가 (이메일 암호화)
+        String encodedEmail = withdrawnEncoder.encode(user.getEmail());
+        WithdrawnUser withdrawnUser = new WithdrawnUser(encodedEmail, user.getStatus());
+        withdrawnUserRepository.save(withdrawnUser);
 
-        // TODO: 6. Account 생성
+        // 5. 기존 user 테이블에서는 유저 정보 삭제
+        user.softDelete();
 
-        return new UserSignupRes(user);
+        // 6. 로그아웃 처리 - refreshToken 테이블에서 삭제
+        authService.logout(userId);
     }
+    @Value("${user.withdrawn-retention-day:90}")
+    private int retentionDay;
 
-
+    // 오후 3시마다 탈퇴한 사용자 중 영구정지 아닌 사용자 정보 삭제
+    @Scheduled(cron = "0 0 15 * * *", zone = "Asia/Seoul")
+    public void deleteExpiredWithdrawalUsers() {
+        LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
+        withdrawnUserRepository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
+    }
 }

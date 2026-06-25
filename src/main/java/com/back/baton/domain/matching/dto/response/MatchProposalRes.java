@@ -16,7 +16,6 @@ public record MatchProposalRes(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-
     public static MatchProposalRes from(MatchProposal matchProposal) {
         return new MatchProposalRes(
                 matchProposal.getId(),
