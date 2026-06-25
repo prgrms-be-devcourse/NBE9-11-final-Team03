@@ -7,18 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
-
-    @Query("""
-            select cm
-            from ChatMessage cm
-            where cm.chatRoom.id = :roomId
-              and cm.deletedAt is null
-            order by cm.createdAt asc
-            """)
-    List<ChatMessage> findMessages(
-            @Param("roomId") Long roomId
-    );
+public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long>, ChatMessageRepositoryCustom {
 
     @Query("""
         select cm.id

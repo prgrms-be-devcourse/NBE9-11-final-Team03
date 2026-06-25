@@ -1,6 +1,8 @@
 package com.back.baton.domain.chat.service;
 
+import com.back.baton.domain.chat.dto.request.TradeChatRoomCreateReq;
 import com.back.baton.domain.chat.dto.response.ChatMessageRes;
+import com.back.baton.domain.chat.dto.response.ChatRoomListRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomRes;
 import com.back.baton.domain.chat.entity.ChatMessage;
 import com.back.baton.domain.chat.entity.ChatRoom;
@@ -9,7 +11,9 @@ import com.back.baton.domain.chat.repository.ChatMessageRepository;
 import com.back.baton.domain.chat.repository.ChatRoomRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.ChatErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
 
@@ -28,6 +32,8 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final TalentRepository talentRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private static final int MAX_CHAT_ROOM_PAGE_SIZE = 100;
+    private static final int MAX_CHAT_MESSAGE_PAGE_SIZE = 100;
 
     @Transactional
     public ChatRoomRes getOrCreateMatchRoom(
@@ -65,6 +71,38 @@ public class ChatService {
         return chatRoom;
     }
 
+    @Transactional
+    public ChatRoomRes getOrCreateTransactionRoom(TradeChatRoomCreateReq req) {
+        return getOrCreateTransactionRoom(
+                req.tradeId(),
+                req.talentId(),
+                req.buyerId(),
+                req.sellerId()
+        );
+    }
+
+    @Transactional
+    public ChatRoomRes getOrCreateTransactionRoom(
+            Long tradeId,
+            Long talentId,
+            Long buyerId,
+            Long sellerId
+    ) {
+        validateSelfChat(buyerId, sellerId);
+
+        ChatRoom chatRoom = chatRoomRepository.findByTradeId(tradeId)
+                .orElseGet(() -> chatRoomRepository.save(
+                        ChatRoom.createForTransaction(
+                                talentId,
+                                buyerId,
+                                sellerId,
+                                tradeId
+                        )
+                ));
+
+        return ChatRoomRes.from(chatRoom);
+    }
+
     public ChatRoomRes getChatRoomInfo(
             Long roomId,
             Long userId
@@ -91,13 +129,26 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChatMessageRes> getMessages(Long roomId, Long userId) {
+    public CursorPageRes<ChatMessageRes> getMessages(
+            Long roomId,
+            Long userId,
+            Long cursor,
+            int size
+    ) {
         getChatRoom(roomId, userId);
 
-        return chatMessageRepository.findMessages(roomId)
+        int pageSize = Math.min(Math.max(size, 1), MAX_CHAT_MESSAGE_PAGE_SIZE);
+
+        List<ChatMessageRes> messages = chatMessageRepository.findMessages(
+                        roomId,
+                        cursor,
+                        pageSize
+                )
                 .stream()
                 .map(ChatMessageRes::from)
                 .toList();
+
+        return CursorPageRes.from(messages, pageSize, ChatMessageRes::id);
     }
 
     @Transactional
@@ -115,6 +166,13 @@ public class ChatService {
         }
 
         return unreadMessageIds;
+    }
+
+    public CursorPageRes<ChatRoomListRes> getMyChatRooms(Long userId, Long cursor, int size) {
+        int pageSize = Math.min(Math.max(size, 1), MAX_CHAT_ROOM_PAGE_SIZE);
+        List<ChatRoomListRes> rows = chatRoomRepository.findMyChatRooms(userId, cursor, pageSize);
+
+        return CursorPageRes.from(rows, pageSize, ChatRoomListRes::roomId);
     }
 
     private Talent getTalent(Long talentId) {

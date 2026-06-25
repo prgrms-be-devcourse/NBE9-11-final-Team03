@@ -35,6 +35,7 @@ public enum SuccessCode {
     CHAT_MESSAGE_SENT(HttpStatus.OK, "200-11", "채팅 메시지 전송에 성공했습니다."),
     CHAT_MESSAGES_FOUND(HttpStatus.OK, "200-12", "채팅 메시지 목록 조회에 성공했습니다."),
     CHAT_ROOM_FOUND(HttpStatus.OK, "200-13", "채팅방 조회에 성공했습니다."),
+    CHAT_ROOMS_FOUND(HttpStatus.OK, "200-16", "채팅방 목록 조회에 성공했습니다."),
 
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-12", "토큰 재발행에 성공했습니다."),

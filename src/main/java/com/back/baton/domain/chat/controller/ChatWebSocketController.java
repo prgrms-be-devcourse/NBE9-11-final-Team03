@@ -1,10 +1,11 @@
 package com.back.baton.domain.chat.controller;
 
-import com.back.baton.domain.chat.dto.request.ChatMessageReadReq;
 import com.back.baton.domain.chat.dto.request.ChatMessageSendReq;
 import com.back.baton.domain.chat.dto.response.ChatMessageReadEvent;
 import com.back.baton.domain.chat.dto.response.ChatMessageRes;
 import com.back.baton.domain.chat.service.ChatService;
+import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.AuthErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +18,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 
+import java.security.Principal;
 import java.util.List;
 
 @Controller
@@ -42,12 +44,14 @@ public class ChatWebSocketController {
     public void sendMessage(
             @Parameter(description = "채팅방 ID", example = "1", required = true)
             @DestinationVariable Long chatRoomId,
-
+            Principal principal,
             @Valid @Payload ChatMessageSendReq req
     ) {
+        Long senderId = getCurrentUserId(principal);
+
         ChatMessageRes response = chatService.sendMessage(
                 chatRoomId,
-                req.senderId(),
+                senderId,
                 req.content()
         );
 
@@ -61,22 +65,23 @@ public class ChatWebSocketController {
     @Operation(
             summary = "WebSocket 채팅 메시지 읽음 처리",
             description = """
-                STOMP publish 경로로 전달된 읽음 이벤트를 처리하고,
-                해당 채팅방을 구독 중인 사용자들에게 읽음 처리 결과를 실시간으로 전송합니다.
-
-                publish: /app/chat-rooms/{chatRoomId}/read
-                subscribe: /topic/chat-rooms/{chatRoomId}/read
-                """
+                    STOMP publish 경로로 전달된 읽음 이벤트를 처리하고,
+                    해당 채팅방을 구독 중인 사용자들에게 읽음 처리 결과를 실시간으로 전송합니다.
+                    
+                    publish: /app/chat-rooms/{chatRoomId}/read
+                    subscribe: /topic/chat-rooms/{chatRoomId}/read
+                    """
     )
     public void markAsRead(
             @Parameter(description = "채팅방 ID", example = "7", required = true)
             @DestinationVariable Long chatRoomId,
-
-            @Valid @Payload ChatMessageReadReq req
+            Principal principal
     ) {
+        Long readerId = getCurrentUserId(principal);
+
         List<Long> readMessageIds = chatService.markMessagesAsRead(
                 chatRoomId,
-                req.readerId()
+                readerId
         );
 
         if (readMessageIds.isEmpty()) {
@@ -87,9 +92,21 @@ public class ChatWebSocketController {
                 "/topic/chat-rooms/" + chatRoomId + "/read",
                 new ChatMessageReadEvent(
                         chatRoomId,
-                        req.readerId(),
+                        readerId,
                         readMessageIds
                 )
         );
+    }
+
+    private Long getCurrentUserId(Principal principal) {
+        if (principal == null) {
+            throw new CustomException(AuthErrorCode.UNAUTHORIZED);
+        }
+
+        try {
+            return Long.valueOf(principal.getName());
+        } catch (NumberFormatException e) {
+            throw new CustomException(AuthErrorCode.UNAUTHORIZED);
+        }
     }
 }

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
+public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, ChatRoomRepositoryCustom {
 
     @Query("""
             select cr
@@ -16,12 +16,20 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
               and cr.buyerId = :buyerId
               and cr.sellerId = :sellerId
               and cr.status = :status
-              and cr.deletedAt is null
             """)
     Optional<ChatRoom> findActiveRoom(
             @Param("talentId") Long talentId,
             @Param("buyerId") Long buyerId,
             @Param("sellerId") Long sellerId,
             @Param("status") ChatRoomType status
+    );
+
+    @Query("""
+        select cr
+        from ChatRoom cr
+        where cr.tradeId = :tradeId
+        """)
+    Optional<ChatRoom> findByTradeId(
+            @Param("tradeId") Long tradeId
     );
 }
