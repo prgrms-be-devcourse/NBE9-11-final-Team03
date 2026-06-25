@@ -110,6 +110,26 @@ class TradeControllerTest {
     }
 
     @Test
+    @DisplayName("size가 1 미만이면 400을 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_invalidSize_tooSmall() throws Exception {
+        mockMvc.perform(get("/api/v1/trade").param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.size").value("페이지 크기는 1 이상이어야 합니다."));
+    }
+
+    @Test
+    @DisplayName("size가 50 초과이면 400을 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void getMyTrades_invalidSize_tooLarge() throws Exception {
+        mockMvc.perform(get("/api/v1/trade").param("size", "51"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data.size").value("페이지 크기는 50 이하이어야 합니다."));
+    }
+
+    @Test
     @DisplayName("get trade succeeds with current user")
     @WithMockSecurityUser(userId = 2)
     void getTrade_success() throws Exception {
