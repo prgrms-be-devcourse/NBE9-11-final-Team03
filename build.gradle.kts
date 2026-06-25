@@ -67,6 +67,9 @@ dependencies {
 
     //mail
     implementation("org.springframework.boot:spring-boot-starter-mail")
+
+    //caffeine
+    implementation("com.github.ben-manes.caffeine:caffeine")
 }
 
 tasks.withType<Test> {

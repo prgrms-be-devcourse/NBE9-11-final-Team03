@@ -3,17 +3,15 @@ package com.back.baton.domain.user.service;
 import com.back.baton.domain.user.dto.EmailVerification;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
+import com.github.benmanes.caffeine.cache.Cache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.mock;
@@ -30,6 +28,7 @@ class EmailVerificationServiceTest {
         emailVerificationService = new EmailVerificationService(emailSender);
         ReflectionTestUtils.setField(emailVerificationService, "expiryMinutes", 5L);
         ReflectionTestUtils.setField(emailVerificationService, "maxAttempt", 5);
+        ReflectionTestUtils.invokeMethod(emailVerificationService, "initCache");
     }
 
     @Test
@@ -170,11 +169,11 @@ class EmailVerificationServiceTest {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, EmailVerification> getVerifications() {
-        return (Map<String, EmailVerification>) ReflectionTestUtils.getField(emailVerificationService, "verifications");
+    private Cache<String, EmailVerification> getVerifications() {
+        return (Cache<String, EmailVerification>) ReflectionTestUtils.getField(emailVerificationService, "verifications");
     }
 
     private EmailVerification getVerification(String email) {
-        return getVerifications().get(email);
+        return getVerifications().getIfPresent(email);
     }
 }

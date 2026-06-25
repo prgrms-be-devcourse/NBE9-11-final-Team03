@@ -3,6 +3,9 @@ package com.back.baton.domain.user.service;
 import com.back.baton.domain.user.dto.EmailVerification;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -10,8 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,14 @@ public class EmailVerificationService {
     private final EmailSender emailSender;
 
     private final SecureRandom RANDOM = new SecureRandom();
-    private final Map<String, EmailVerification> verifications = new ConcurrentHashMap<>();
+    private Cache<String, EmailVerification> verifications;
+
+    @PostConstruct
+    void initCache() {
+        verifications = Caffeine.newBuilder()
+                .expireAfterWrite(expiryMinutes, TimeUnit.MINUTES)
+                .build();
+    }
 
     public void sendVerificationCode(String email) {
         email = normalize(email);
@@ -42,13 +51,13 @@ public class EmailVerificationService {
         EmailVerification verification = getExistingVerification(email);
 
         if (verification.expiredAt().isBefore(LocalDateTime.now())) {
-            verifications.remove(email);
+            verifications.invalidate(email);
             throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
         }
         if (!verification.code().equals(code)) {
             EmailVerification failedVerification = verification.increaseAttempts(); // 실패시 인증시도 횟수 반영
             if (failedVerification.attempts() >= maxAttempt) {
-                verifications.remove(email);
+                verifications.invalidate(email);
                 throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
             }
             verifications.put(email, failedVerification);
@@ -64,7 +73,7 @@ public class EmailVerificationService {
         if(!verification.verified()){
             throw new CustomException(UserErrorCode.EMAIL_NOT_VERIFIED);
         }
-        verifications.remove(email);
+        verifications.invalidate(email);
     }
 
     public void markVerifiedForTrustedEmail(String email) { // BaseInitData 생성 위한 함수, 이메일 인증 완료된 객체 생성
@@ -73,7 +82,7 @@ public class EmailVerificationService {
     }
 
     private EmailVerification getExistingVerification(String email){  // 유효한 verification인지 확인
-        EmailVerification verification = verifications.get(email);
+        EmailVerification verification = verifications.getIfPresent(email);
         if (verification == null) {
             throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_NOT_FOUND);
         }
