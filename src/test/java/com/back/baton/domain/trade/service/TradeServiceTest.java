@@ -499,7 +499,7 @@ class TradeServiceTest {
         assertThatThrownBy(() -> tradeService.resolveDispute(1L, DisputeVerdict.BUYER_WIN))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);}
 
     @DisplayName("status 필터 없이 조회하면 내 모든 거래 목록을 반환한다")
     void getMyTrades_noFilter() {
