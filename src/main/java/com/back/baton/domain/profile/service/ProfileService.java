@@ -68,9 +68,14 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public MyProfileDetailRes getMyProfile(Long userId){
-        Profile profile = profileRepository.findDetailByUserId(userId)
+        Profile profile = profileRepository.findWithUserByUserId(userId)
                 .orElseThrow(()->new CustomException(ProfileErrorCode.PROFILE_NOT_FOUND));
 
-        return new MyProfileDetailRes(profile);
+        return MyProfileDetailRes.of(
+                profile,
+                profileRepository.findPortfolioLinksByUserId(userId),
+                profileRepository.findMyTalentCategoriesByUserId(userId),
+                profileRepository.findWantTalentCategoriesByUserId(userId)
+        );
     }
 }

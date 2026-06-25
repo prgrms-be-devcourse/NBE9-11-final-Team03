@@ -125,7 +125,10 @@ public class ProfileServiceTest {
     void getMyProfile_Success() {
         // given
         Long userId = testUser.getId();
-        given(profileRepository.findDetailByUserId(userId)).willReturn(Optional.of(testProfile));
+        given(profileRepository.findWithUserByUserId(userId)).willReturn(Optional.of(testProfile));
+        given(profileRepository.findPortfolioLinksByUserId(userId)).willReturn(List.of());
+        given(profileRepository.findMyTalentCategoriesByUserId(userId)).willReturn(List.of());
+        given(profileRepository.findWantTalentCategoriesByUserId(userId)).willReturn(List.of());
 
         // when
         MyProfileDetailRes result = profileService.getMyProfile(userId);
@@ -136,7 +139,10 @@ public class ProfileServiceTest {
         assertThat(result.profileImageUrl()).isEqualTo("https://image.com");
 
         // repository가 정확히 해당 userId로 1번 호출되었는지 검증
-        verify(profileRepository, times(1)).findDetailByUserId(userId);
+        verify(profileRepository, times(1)).findWithUserByUserId(userId);
+        verify(profileRepository, times(1)).findPortfolioLinksByUserId(userId);
+        verify(profileRepository, times(1)).findMyTalentCategoriesByUserId(userId);
+        verify(profileRepository, times(1)).findWantTalentCategoriesByUserId(userId);
     }
 
     @Test
@@ -144,7 +150,7 @@ public class ProfileServiceTest {
     void getMyProfile_ThrowsException_WhenProfileNotFound() {
         // given
         Long notFoundUserId = 999L;
-        given(profileRepository.findDetailByUserId(notFoundUserId)).willReturn(Optional.empty());
+        given(profileRepository.findWithUserByUserId(notFoundUserId)).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> profileService.getMyProfile(notFoundUserId))
@@ -152,6 +158,6 @@ public class ProfileServiceTest {
                 // 프로젝트의 CustomException 에러코드 반환 형태나 메시지에 맞춰 검증 구문을 수정하세요
                 .hasMessageContaining(ProfileErrorCode.PROFILE_NOT_FOUND.getMessage());
 
-        verify(profileRepository, times(1)).findDetailByUserId(notFoundUserId);
+        verify(profileRepository, times(1)).findWithUserByUserId(notFoundUserId);
     }
 }
