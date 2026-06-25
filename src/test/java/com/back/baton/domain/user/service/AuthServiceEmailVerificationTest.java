@@ -48,7 +48,7 @@ class AuthServiceEmailVerificationTest {
     @Mock private EmailVerificationService emailVerificationService;
 
     @Test
-    @DisplayName("signup consumes verified email before saving user")
+    @DisplayName("회원가입 성공 시 사용자 저장 전에 인증 완료 이메일을 소비한다")
     void signup_success_consumesVerifiedEmail() {
         // given
         String email = "baton@domain.com";
@@ -66,7 +66,7 @@ class AuthServiceEmailVerificationTest {
     }
 
     @Test
-    @DisplayName("signup fails before saving user when email is not verified")
+    @DisplayName("이메일 인증이 완료되지 않았으면 사용자 저장 전에 회원가입을 실패시킨다")
     void signup_fail_whenEmailIsNotVerified() {
         // given
         String email = "baton@domain.com";
@@ -87,7 +87,7 @@ class AuthServiceEmailVerificationTest {
     }
 
     @Test
-    @DisplayName("send email verification code normalizes email and delegates")
+    @DisplayName("이메일 인증 코드 발송 시 이메일을 정규화한 뒤 인증 서비스에 위임한다")
     void sendEmailVerificationCode_success() {
         // when
         authService.sendEmailVerificationCode("Baton@Domain.com");
@@ -99,10 +99,10 @@ class AuthServiceEmailVerificationTest {
     }
 
     @Test
-    @DisplayName("verify email delegates to email verification service")
+    @DisplayName("이메일 인증 코드 확인 시 이메일을 정규화한 뒤 인증 서비스에 위임한다")
     void verifyEmail_success() {
         // when
-        authService.verifyEmail("baton@domain.com", "123456");
+        authService.verifyEmail("Baton@Domain.com", "123456");
 
         // then
         verify(emailVerificationService).verifyEmail("baton@domain.com", "123456");

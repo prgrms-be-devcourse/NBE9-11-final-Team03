@@ -62,7 +62,7 @@ class AuthEmailVerificationControllerTest {
     }
 
     @Test
-    @DisplayName("email-send returns success and delegates to auth service")
+    @DisplayName("이메일 인증 코드 발송 요청 시 성공 응답을 반환하고 인증 서비스에 위임한다")
     void emailSend_success() throws Exception {
         // given
         UserEmailVerificationSendReq request = new UserEmailVerificationSendReq("user@example.com");
@@ -79,7 +79,7 @@ class AuthEmailVerificationControllerTest {
     }
 
     @Test
-    @DisplayName("email-verification returns success and delegates to auth service")
+    @DisplayName("이메일 인증 코드 확인 요청 시 성공 응답을 반환하고 인증 서비스에 위임한다")
     void emailVerification_success() throws Exception {
         // given
         UserEmailVerificationReq request = new UserEmailVerificationReq("user@example.com", "123456");
@@ -96,7 +96,7 @@ class AuthEmailVerificationControllerTest {
     }
 
     @Test
-    @DisplayName("email-verification rejects invalid code format")
+    @DisplayName("이메일 인증 코드가 6자리 숫자 형식이 아니면 400 Bad Request를 반환한다")
     void emailVerification_fail_whenCodeFormatInvalid() throws Exception {
         // given
         String requestJson = """
