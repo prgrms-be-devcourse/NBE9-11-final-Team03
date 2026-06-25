@@ -21,7 +21,7 @@ public enum UserErrorCode implements ErrorCode {
     SUSPENDED_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-002", "정지 처리된 계정입니다."),
     WITHDRAWN_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-003", "탈퇴 처리된 계정입니다."),
     BANNED_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-004", "영구정지 처리된 계정입니다."),
-
+    EMAIL_SEND_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "USER-503-001", "이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요."),
     ;
     private final HttpStatus httpStatus;
     private final String code;
