@@ -1,4 +1,4 @@
-package com.back.baton.domain.profile.dto.requset;
+package com.back.baton.domain.profile.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

@@ -1,8 +1,10 @@
 package com.back.baton.domain.profile.controller;
 
-import com.back.baton.domain.profile.dto.requset.ProfileUpdateReq;
+import com.back.baton.domain.profile.dto.request.ProfileUpdateReq;
+import com.back.baton.domain.profile.dto.response.MyProfileDetailRes;
 import com.back.baton.domain.profile.service.ProfileService;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.SuccessCode;
 import com.back.baton.global.response.code.UserErrorCode;
 import com.back.baton.global.security.JwtTokenProvider;
 import com.back.baton.support.security.WithMockSecurityUser;
@@ -15,13 +17,15 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -70,5 +74,29 @@ class ProfileControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isNotFound());
+    }
+    @Test
+    @DisplayName("GET /api/profiles/me - 내 프로필 조회 성공")
+    // @WithMockUser 또는 커스텀 시큐리티 어노테이션을 사용하여 SecurityUser 환경을 모킹해야 합니다.
+    @WithMockSecurityUser(userId = 1L)
+    void getMyProfile_Success() throws Exception {
+        // given
+        Long userId = 1L;
+        MyProfileDetailRes responseDto = new MyProfileDetailRes(
+                1L, "테스터", "https://image.com", "안녕하세요",
+                BigDecimal.valueOf(99.9), List.of("https://github.com"),
+                List.of(), List.of(), true
+        );
+
+        given(profileService.getMyProfile(userId)).willReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/profiles/me") // 실제 매핑된 URL 구조에 맞게 변경 필요
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(SuccessCode.PROFILE_FOUND_SUCCESS.getCode()))
+                .andExpect(jsonPath("$.data.nickname").value("테스터"))
+                .andExpect(jsonPath("$.data.visible").value(true))
+                .andDo(print());
     }
 }

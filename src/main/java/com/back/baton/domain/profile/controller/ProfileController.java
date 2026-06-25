@@ -1,6 +1,7 @@
 package com.back.baton.domain.profile.controller;
 
-import com.back.baton.domain.profile.dto.requset.ProfileUpdateReq;
+import com.back.baton.domain.profile.dto.request.ProfileUpdateReq;
+import com.back.baton.domain.profile.dto.response.MyProfileDetailRes;
 import com.back.baton.domain.profile.dto.response.ProfileUpdateRes;
 import com.back.baton.domain.profile.service.ProfileService;
 import com.back.baton.global.response.ApiResponse;
@@ -36,5 +37,17 @@ public class ProfileController {
                 req
         );
         return ApiResponses.success(SuccessCode.PROFILE_UPDATE_SUCCESS, res);
+    }
+
+    @GetMapping("/me")
+    @Operation(
+            summary = "내 프로필 조회",
+            description = "현재 로그인한 작성자가 자신의 프로필의 한줄소개, 프로필이미지, 가진/원하는 재능 카테고리, 포트폴리오 링크를 조회합니다."
+    )
+    public ResponseEntity<ApiResponse<MyProfileDetailRes>> getMyProfile(
+            @CurrentUser SecurityUser currentUser
+    ){
+        MyProfileDetailRes res = profileService.getMyProfile(currentUser.getUserId());
+        return ApiResponses.success(SuccessCode.PROFILE_FOUND_SUCCESS, res);
     }
 }

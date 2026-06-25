@@ -43,7 +43,9 @@ public enum SuccessCode {
 
     CATEGORY_OK(HttpStatus.OK, "200-13", "카테고리 조회에 성공했습니다."),
 
-    PROFILE_UPDATE_SUCCESS(HttpStatus.OK, "200-13","프로필 수정에 성공했습니다.");
+    PROFILE_UPDATE_SUCCESS(HttpStatus.OK, "200-13","프로필 수정에 성공했습니다."),
+    PROFILE_FOUND_SUCCESS(HttpStatus.OK, "200-17","프로필 조회에 성공했습니다.");
+
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
