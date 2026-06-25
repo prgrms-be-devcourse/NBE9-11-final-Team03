@@ -19,9 +19,14 @@ public class EscrowService {
     @Value("${escrow.confirmation-expiry-days}")
     private int confirmationExpiryDays;
 
+    @Value("${escrow.fee-rate}")
+    private double feeRate;
+
     public Escrow create(Long tradeId, Long payerId, Long payeeId, Integer amount) {
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(confirmationExpiryDays);
-        Escrow escrow = Escrow.createHeld(tradeId, payerId, payeeId, amount, expiresAt);
+        int fee = (int) Math.floor(amount * feeRate); // 수수료
+        int settlementAmount = amount - fee; // 정산 금액
+        Escrow escrow = Escrow.createHeld(tradeId, payerId, payeeId, amount, fee, settlementAmount, expiresAt);
         return escrowRepository.save(escrow);
     }
 }

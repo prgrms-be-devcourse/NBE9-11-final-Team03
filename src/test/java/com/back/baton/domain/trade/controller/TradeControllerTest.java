@@ -388,4 +388,5 @@ class TradeControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("TRADE-409-002"));
     }
+
 }

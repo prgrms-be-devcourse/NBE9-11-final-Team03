@@ -3,8 +3,10 @@ package com.back.baton.domain.trade.service;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
+import com.back.baton.domain.trade.entity.DisputeVerdict;
 import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
@@ -18,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -86,6 +90,64 @@ public class TradeService {
         escrow.freeze(reason); // 에스크로 상태 변경 (HELD -> FROZEN)
 
         return TradeRes.of(trade, escrow);
+    }
+
+    @Transactional
+    public TradeRes resolveDispute(Long tradeId, DisputeVerdict verdict) {
+        Objects.requireNonNull(verdict, "verdict값은 null이 될 수 없습니다.");
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+
+        if (trade.getStatus() != com.back.baton.domain.trade.entity.TradeStatus.DISPUTED) {
+            throw new CustomException(TradeErrorCode.TRADE_NOT_DISPUTED);
+        }
+
+        Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+        // 구매자 승소 -> 거래 취소 + 에스크로 환불
+        if (verdict == DisputeVerdict.BUYER_WIN) {
+            trade.cancel(); // 거래 상태 변경 (UNDER_REVIEW -> CANCELLED)
+            escrow.refundFrozen(); // 에스크로 상태 변경 (FROZEN -> REFUNDED)
+            creditService.refundFromEscrow(
+                    escrow.getPayerId(),
+                    escrow.getAmount(),
+                    tradeId,
+                    "DISPUTE-REFUND-" + tradeId
+            );
+        }
+        // 판매자 승소 -> 거래 완료 + 에스크로 정산
+        else {
+            trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
+            escrow.releaseFrozen(); // 에스크로 상태 변경 (FROZEN -> RELEASED)
+            creditService.settleEscrow(
+                    escrow.getPayerId(),
+                    escrow.getPayeeId(),
+                    escrow.getAmount(),
+                    escrow.getSettlementAmount(),
+                    tradeId,
+                    "DISPUTE-SETTLE-" + tradeId
+            );
+        }
+
+        return TradeRes.of(trade, escrow);
+    }
+
+    public List<DisputeRes> getDisputedTrades() {
+        List<Trade> trades = tradeRepository.findAllByStatus(TradeStatus.DISPUTED);
+
+        if (trades.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> tradeIds = trades.stream().map(Trade::getId).toList();
+        Map<Long, Escrow> escrowByTradeId = escrowRepository.findAllByTradeIdIn(tradeIds).stream()
+                .collect(Collectors.toMap(Escrow::getTradeId, e -> e));
+
+        return trades.stream()
+                .filter(t -> escrowByTradeId.containsKey(t.getId()))
+                .map(t -> DisputeRes.of(t, escrowByTradeId.get(t.getId())))
+                .toList();
     }
 
     private void validateTradeParticipant(Trade trade, Long userId) {

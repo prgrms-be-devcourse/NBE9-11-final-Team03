@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface EscrowRepository extends JpaRepository<Escrow, Long> {
 
     Optional<Escrow> findByTradeId(Long tradeId);
+
+    List<Escrow> findAllByTradeIdIn(List<Long> tradeIds);
     @Query("""
     SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
             FROM Escrow e

@@ -18,4 +18,6 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, TradeReposi
     Optional<Trade> findByIdWithLock(@Param("id") Long id);
 
     boolean existsByTalentIdAndStatusIn(Long talentId, List<TradeStatus> statuses);
+
+    List<Trade> findAllByStatus(TradeStatus status);
 }
