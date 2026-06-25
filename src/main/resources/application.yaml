@@ -12,6 +12,7 @@ credit:
 
 escrow:
   confirmation-expiry-days: 7 # 구매 확정 만료 일수
+  fee-rate: 0.10 # 플랫폼 수수료율 (amount * fee-rate)
 
 user:
   initial-trust-score: 50.00 # 초기 신뢰 점수

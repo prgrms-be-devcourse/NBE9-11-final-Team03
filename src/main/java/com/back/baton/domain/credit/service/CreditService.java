@@ -188,7 +188,7 @@ public class CreditService {
         }
 
         // 판매자 balance 적립
-        int sellerUpdatedRows = creditAccountRepository.addBalance(sellerId, settlementAmount);
+        int sellerUpdatedRows = creditAccountRepository.addBalance(sellerId, settlementAmount); // 수수료 반영된 금액 적립
         if (sellerUpdatedRows == 0) {
             throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
         }
