@@ -30,7 +30,8 @@ public class TalentAttachmentService {
 
     // presigned URL 발급 (본인 재능만)
     public PresignedUrlRes createPresignedUrl(Long talentId, Long authorId, PresignedUrlReq req) {
-        Talent talent = getActiveTalent(talentId);
+        Talent talent = talentRepository.getActiveTalentOrThrow(talentId);
+
         validateOwner(talent, authorId);
 
         // 경로 탐색 방지: 원본 파일명에서 경로 구분자 이후 순수 파일명만 추출
@@ -48,7 +49,8 @@ public class TalentAttachmentService {
     // 첨부 저장 (본인 재능만)
     @Transactional
     public AttachmentRes saveAttachment(Long talentId, Long authorId, AttachmentSaveReq req) {
-        Talent talent = getActiveTalent(talentId);
+        Talent talent = talentRepository.getActiveTalentOrThrow(talentId);
+
         validateOwner(talent, authorId);
 
         String url = req.url();
@@ -68,7 +70,7 @@ public class TalentAttachmentService {
 
     // 첨부 목록 조회 (공개 - 소유권 검사 없음)
     public List<AttachmentRes> getAttachments(Long talentId) {
-        getActiveTalent(talentId); // 존재/삭제 검증만
+        talentRepository.getActiveTalentOrThrow(talentId);
         return talentAttachmentRepository.findByTalentIdOrderByIdAsc(talentId).stream()
                 .map(attachment -> AttachmentRes.of(attachment, toDisplayUrl(attachment.getUrl())))
                 .toList();
@@ -77,7 +79,7 @@ public class TalentAttachmentService {
     // 첨부 삭제 (본인 재능만)
     @Transactional
     public void deleteAttachment(Long talentId, Long attachmentId, Long authorId) {
-        Talent talent = getActiveTalent(talentId);
+        Talent talent = talentRepository.getActiveTalentOrThrow(talentId);
         validateOwner(talent, authorId);
 
         TalentAttachment attachment = talentAttachmentRepository.findById(attachmentId)
@@ -124,17 +126,6 @@ public class TalentAttachmentService {
             return s3Service.generatePresignedGetUrl(url);
         }
         return url;
-    }
-
-    // 공통 검증 (존재 -> 삭제 -> 소유권)
-
-    private Talent getActiveTalent(Long talentId) {
-        Talent talent = talentRepository.findById(talentId)
-                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
-        if (talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
-        return talent;
     }
 
     private void validateOwner(Talent talent, Long authorId) {
