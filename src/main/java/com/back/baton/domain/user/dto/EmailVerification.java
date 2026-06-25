@@ -6,4 +6,8 @@ public record EmailVerification(
         String code,
         LocalDateTime expiredAt,
         boolean verified
-) { }
+) {
+    public EmailVerification markVerified(){
+        return new EmailVerification(code, expiredAt, true);
+    }
+}

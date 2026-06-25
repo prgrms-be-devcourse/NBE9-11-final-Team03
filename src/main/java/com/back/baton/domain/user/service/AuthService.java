@@ -45,14 +45,8 @@ public class AuthService {
 
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
         // 1. 이메일 검증
-        email = normalizeEmail(email);
-        if(userRepository.existsByEmail(email)){
-            throw new CustomException(UserErrorCode.DUPLICATED_USER);
-        }
-        // 1-2. 탈퇴한 유저 중에서도 확인
-        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
-            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
-        }
+        email = consumeEmailNotDuplicated(email); // 이메일 중복 여부 확인
+        consumeVerifiedEmail(email);  // 이메일 인증 여부 확인
 
         // 2. 닉네임 검증
         checkNicknameDuplicated(nickname);
@@ -99,14 +93,16 @@ public class AuthService {
     }
 
     public void sendEmailVerificationCode(String email) {
-        email = normalizeEmail(email);
-        if(userRepository.existsByEmail(email)){
-            throw new CustomException(UserErrorCode.DUPLICATED_USER);
-        }
-        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
-            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
-        }
+        email = consumeEmailNotDuplicated(email); // 이메일 중복 여부 확인
         emailVerificationService.sendVerificationCode(email);
+    }
+
+    public void verifyEmail( String email, String code) {
+        emailVerificationService.verifyEmail(email, code);
+    }
+
+    public void consumeVerifiedEmail(String email){
+        emailVerificationService.consumeVerifiedEmail(email);
     }
 
     public UserTokenDto login(String email, String password) {
@@ -205,5 +201,18 @@ public class AuthService {
 
     private String normalizeEmail(String email) {
         return email.strip().toLowerCase();
+    }
+
+    private String consumeEmailNotDuplicated(String email){
+        email = normalizeEmail(email);
+
+        if(userRepository.existsByEmail(email)){
+            throw new CustomException(UserErrorCode.DUPLICATED_USER);
+        }
+        // 1-2. 탈퇴한 유저 중에서도 확인
+        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
+            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
+        }
+        return email;
     }
 }
