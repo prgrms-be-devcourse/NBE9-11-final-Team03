@@ -66,10 +66,11 @@ class AuthServiceEmailVerificationTest {
     }
 
     @Test
-    @DisplayName("이메일 인증이 완료되지 않았으면 사용자 저장 전에 회원가입을 실패시킨다")
+    @DisplayName("이메일 인증이 완료되지 않으면 사용자 저장 전에 회원가입을 실패한다")
     void signup_fail_whenEmailIsNotVerified() {
         // given
         String email = "baton@domain.com";
+        given(passwordValidator.validate(eq("securePassword123!"), eq("baton"))).willReturn(true);
         doThrow(new CustomException(UserErrorCode.EMAIL_NOT_VERIFIED))
                 .when(emailVerificationService).consumeVerifiedEmail(email);
 
@@ -79,7 +80,7 @@ class AuthServiceEmailVerificationTest {
                 .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.EMAIL_NOT_VERIFIED);
 
         verify(emailVerificationService).consumeVerifiedEmail(email);
-        verify(passwordValidator, never()).validate(anyString(), anyString());
+        verify(passwordValidator).validate("securePassword123!", "baton");
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
         verifyNoInteractions(creditService);

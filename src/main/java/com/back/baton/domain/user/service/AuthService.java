@@ -44,10 +44,10 @@ public class AuthService {
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
+
         // 1. 이메일 검증
         email = normalizeEmail(email); // 이메일 형식 변환
         validateNotDuplicatedEmail(email); // 이메일 중복 여부 확인
-        consumeVerifiedEmail(email);  // 이메일 인증 여부 확인
 
         // 2. 닉네임 검증
         checkNicknameDuplicated(nickname);
@@ -61,6 +61,9 @@ public class AuthService {
         if(!passwordValidator.validate(password, username)){ // 비밀번호 검증
             throw new CustomException(UserErrorCode.INVALID_PASSWORD_FORMAT);
         }
+
+        // 이메일 인증 여부 확인
+        consumeVerifiedEmail(email);
 
         // 4. 비밀번호 암호화-> 솔트 + 암호화 + 연산 반복 -> BCrypt 적용
         String encodedPwd = passwordEncoder.encode(password);

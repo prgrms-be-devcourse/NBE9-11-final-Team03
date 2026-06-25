@@ -29,6 +29,7 @@ class EmailVerificationServiceTest {
         emailSender = mock(EmailSender.class);
         emailVerificationService = new EmailVerificationService(emailSender);
         ReflectionTestUtils.setField(emailVerificationService, "expiryMinutes", 5L);
+        ReflectionTestUtils.setField(emailVerificationService, "maxAttempt", 5);
     }
 
     @Test
@@ -101,6 +102,28 @@ class EmailVerificationServiceTest {
         assertThatThrownBy(() -> emailVerificationService.verifyEmail(email, "000000"))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE);
+        assertThat(getVerification(email).attempts()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("인증 코드 검증 실패가 최대 횟수에 도달하면 인증 요청을 제거하고 EXPIRED 예외가 발생한다")
+    void verifyEmail_failWhenMaxAttemptReached() {
+        // given
+        String email = "user@example.com";
+        emailVerificationService.sendVerificationCode(email);
+
+        // when
+        for (int i = 0; i < 4; i++) {
+            assertThatThrownBy(() -> emailVerificationService.verifyEmail(email, "000000"))
+                    .isInstanceOf(CustomException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE);
+        }
+
+        // then
+        assertThatThrownBy(() -> emailVerificationService.verifyEmail(email, "000000"))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
+        assertThat(getVerification(email)).isNull();
     }
 
     @Test
@@ -108,7 +131,7 @@ class EmailVerificationServiceTest {
     void verifyEmail_failWhenCodeExpired() {
         // given
         String email = "user@example.com";
-        getVerifications().put(email, new EmailVerification("123456", LocalDateTime.now().minusSeconds(1), false));
+        getVerifications().put(email, new EmailVerification("123456", LocalDateTime.now().minusSeconds(1), false, 0));
 
         // when & then
         assertThatThrownBy(() -> emailVerificationService.verifyEmail(email, "123456"))

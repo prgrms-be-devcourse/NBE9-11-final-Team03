@@ -20,6 +20,7 @@ user:
 auth:
   email-verification:
     expiry-minutes: 5
+    max-attempt: 5
 
 s3:
   presigned-put-expiry-minutes: 5 # 클라이언트 S3업로드 유효 시간 (분)

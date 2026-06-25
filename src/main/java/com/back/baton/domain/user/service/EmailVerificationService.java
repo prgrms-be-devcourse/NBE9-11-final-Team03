@@ -21,6 +21,9 @@ public class EmailVerificationService {
     @Value("${auth.email-verification.expiry-minutes:5}")
     private long expiryMinutes;
 
+    @Value("${auth.email-verification.max-attempt}")
+    private int maxAttempt;
+
     private final EmailSender emailSender;
 
     private final SecureRandom RANDOM = new SecureRandom();
@@ -43,6 +46,12 @@ public class EmailVerificationService {
             throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
         }
         if (!verification.code().equals(code)) {
+            EmailVerification failedVerification = verification.increaseAttempts(); // 실패시 인증시도 횟수 반영
+            if (failedVerification.attempts() >= maxAttempt) {
+                verifications.remove(email);
+                throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
+            }
+            verifications.put(email, failedVerification);
             throw new CustomException(UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE);
         }
         verifications.put(email, verification.markVerified());
@@ -74,7 +83,7 @@ public class EmailVerificationService {
     private EmailVerification createVerification(boolean verified){ // 인증 객체 생성
         String code = generateCode();
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(expiryMinutes);
-        return new EmailVerification(code, expiredAt, verified);
+        return new EmailVerification(code, expiredAt, verified, 0);
     }
 
     private String generateCode() {
