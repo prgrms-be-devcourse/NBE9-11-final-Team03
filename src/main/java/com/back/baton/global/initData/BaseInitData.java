@@ -62,7 +62,7 @@ public class BaseInitData {
 
         // 테스트용 유저 10명
         for(int i=1; i<=10; i++){
-            emailVerificationService.markVerifiedForInitData("user"+i+"@test.com");
+            emailVerificationService.markVerifiedForTrustedEmail("user"+i+"@test.com");
             authService.signup("user"+i+"@test.com", "password1234!", "user"+i, "간단한 설명",null);
         }
     }

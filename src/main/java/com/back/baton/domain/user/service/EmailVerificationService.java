@@ -6,7 +6,6 @@ import com.back.baton.global.response.code.UserErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -14,7 +13,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@Transactional
 @Slf4j
 public class EmailVerificationService {
 
@@ -24,55 +22,61 @@ public class EmailVerificationService {
     private final SecureRandom RANDOM = new SecureRandom();
     private final Map<String, EmailVerification> verifications = new ConcurrentHashMap<>();
 
-    // 이메일 인증 코드 발송
     public void sendVerificationCode(String email) {
-        String code = generateCode();
-        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(expiryMinutes);
-        verifications.put(email, new EmailVerification(code, expiredAt, false));
-        log.info("code"+code);
-        // TODO: JavaMailSender로 실제 메일 발송 연결
+        email = normalize(email);
+        verifications.put(email, createVerification(false));
+        // TODO: SMTP 이메일 인증 연결
     }
 
-    // 인증 처리
-    public void verifyEmail(String email, String code){
-        EmailVerification verification = verifications.get(email);
-        // 이메일에 대한 인증 코드가 저장되지 않은 경우
-        if(verification == null){
-            throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_NOT_FOUND);
-        }
-        // 만료된 인증 코드인 경우
-        if(verification.expiredAt().isBefore(LocalDateTime.now())) {
+    public void verifyEmail(String email, String code) { // 이메일 인증 처리(verified로 저장)
+        email = normalize(email);
+        EmailVerification verification = getExistingVerification(email);
+
+        if (verification.expiredAt().isBefore(LocalDateTime.now())) {
             verifications.remove(email);
             throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
         }
-        // 인증 코드가 다른 경우
-        if(!verification.code().equals(code)){
+        if (!verification.code().equals(code)) {
             throw new CustomException(UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE);
         }
-        verifications.put(email, verification.markVerified()); // 인증 완료 표기
+        verifications.put(email, verification.markVerified());
     }
 
-    // baseInitData 세팅용 함수 - 코드 생성 & 인증됨으로 저장
-    public void markVerifiedForInitData(String email) {
-        String code = generateCode();
-        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(expiryMinutes);
-        verifications.put(email, new EmailVerification(code, expiredAt, true));
-    }
+    public void consumeVerifiedEmail(String email){ // 인증 여부 확인 및 Verification 삭제
+        email = normalize(email);
+        EmailVerification verification = getExistingVerification(email);
 
-    // 회원가입할 때 이메일 인증 여부 검증, 지우기
-    public void consumeVerifiedEmail(String email){
-        EmailVerification verification = verifications.get(email);
-        if(verification == null){
-            throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_NOT_FOUND);
-        }
         if(!verification.verified()){
             throw new CustomException(UserErrorCode.EMAIL_NOT_VERIFIED);
         }
         verifications.remove(email);
     }
 
-    // 인증코드 6자리 생성
+    public void markVerifiedForTrustedEmail(String email) { // BaseInitData 생성 위한 함수, 이메일 인증 완료된 객체 생성
+        email = normalize(email);
+        verifications.put(email, createVerification(true));
+    }
+
+    private EmailVerification getExistingVerification(String email){  // 유효한 verification인지 확인
+        EmailVerification verification = verifications.get(email);
+        if (verification == null) {
+            throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_NOT_FOUND);
+        }
+        return verification;
+    }
+
+    private EmailVerification createVerification(boolean verified){ // 인증 객체 생성
+        String code = generateCode();
+        LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(expiryMinutes);
+        log.info(code);
+        return new EmailVerification(code, expiredAt, verified);
+    }
+
     private String generateCode() {
         return String.format("%06d", RANDOM.nextInt(1_000_000));
+    }
+
+    private String normalize(String email){
+        return email.strip().toLowerCase();
     }
 }

@@ -61,6 +61,20 @@ class EmailVerificationServiceTest {
     }
 
     @Test
+    @DisplayName("이메일 인증은 대소문자가 달라도 같은 이메일로 처리한다")
+    void verifyEmail_normalizesEmail() {
+        // given
+        emailVerificationService.sendVerificationCode("User@Example.com");
+        String code = getVerification("user@example.com").code();
+
+        // when
+        emailVerificationService.verifyEmail("USER@example.com", code);
+
+        // then
+        assertThat(getVerification("user@example.com").verified()).isTrue();
+    }
+
+    @Test
     @DisplayName("인증 요청이 없는 이메일을 검증하면 NOT_FOUND 예외가 발생한다")
     void verifyEmail_failWhenRequestNotFound() {
         assertThatThrownBy(() -> emailVerificationService.verifyEmail("missing@example.com", "123456"))
@@ -110,12 +124,12 @@ class EmailVerificationServiceTest {
 
     @Test
     @DisplayName("초기 데이터용 인증 완료 처리는 회원가입 소비 검증을 통과한다")
-    void markVerifiedForInitData_success() {
+    void markVerifiedForTrustedEmail_success() {
         // given
         String email = "seed@example.com";
 
         // when
-        emailVerificationService.markVerifiedForInitData(email);
+        emailVerificationService.markVerifiedForTrustedEmail(email);
 
         // then
         assertThat(getVerification(email).verified()).isTrue();
