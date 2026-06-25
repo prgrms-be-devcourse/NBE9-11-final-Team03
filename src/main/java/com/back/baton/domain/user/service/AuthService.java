@@ -46,7 +46,7 @@ public class AuthService {
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
         // 1. 이메일 검증
         email = normalizeEmail(email); // 이메일 형식 변환
-        consumeNotDuplicatedEmail(email); // 이메일 중복 여부 확인
+        validateNotDuplicatedEmail(email); // 이메일 중복 여부 확인
         consumeVerifiedEmail(email);  // 이메일 인증 여부 확인
 
         // 2. 닉네임 검증
@@ -95,7 +95,7 @@ public class AuthService {
 
     public void sendEmailVerificationCode(String email) { // 이메일 인증번호 보내기
         email = normalizeEmail(email);
-        consumeNotDuplicatedEmail(email); // 이메일 중복 여부 확인
+        validateNotDuplicatedEmail(email); // 이메일 중복 여부 확인
         emailVerificationService.sendVerificationCode(email);
     }
 
@@ -206,7 +206,7 @@ public class AuthService {
     private String normalizeEmail(String email) { // 이메일 형식 변환
         return email.strip().toLowerCase();
     }
-    private void consumeNotDuplicatedEmail(String email){ // 이메일 중복 확인
+    private void validateNotDuplicatedEmail(String email){ // 이메일 중복 확인
         if(userRepository.existsByEmail(email)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }

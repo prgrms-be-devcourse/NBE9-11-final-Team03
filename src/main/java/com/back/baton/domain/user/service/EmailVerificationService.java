@@ -3,9 +3,10 @@ package com.back.baton.domain.user.service;
 import com.back.baton.domain.user.dto.EmailVerification;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
-import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -13,19 +14,24 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-@Slf4j
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class EmailVerificationService {
 
     @Value("${auth.email-verification.expiry-minutes:5}")
     private long expiryMinutes;
+
+    private final EmailSender emailSender;
 
     private final SecureRandom RANDOM = new SecureRandom();
     private final Map<String, EmailVerification> verifications = new ConcurrentHashMap<>();
 
     public void sendVerificationCode(String email) {
         email = normalize(email);
-        verifications.put(email, createVerification(false));
-        // TODO: SMTP 이메일 인증 연결
+        EmailVerification verification = createVerification(false);
+        // SMTP 이메일 인증 연결
+        emailSender.sendVerificationCode(email, verification.code(), expiryMinutes);
+        verifications.put(email,verification);
     }
 
     public void verifyEmail(String email, String code) { // 이메일 인증 처리(verified로 저장)
@@ -68,7 +74,6 @@ public class EmailVerificationService {
     private EmailVerification createVerification(boolean verified){ // 인증 객체 생성
         String code = generateCode();
         LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(expiryMinutes);
-        log.info(code);
         return new EmailVerification(code, expiredAt, verified);
     }
 

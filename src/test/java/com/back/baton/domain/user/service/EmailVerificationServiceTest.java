@@ -14,19 +14,25 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 class EmailVerificationServiceTest {
 
+    private EmailSender emailSender;
     private EmailVerificationService emailVerificationService;
 
     @BeforeEach
     void setUp() {
-        emailVerificationService = new EmailVerificationService();
+        emailSender = mock(EmailSender.class);
+        emailVerificationService = new EmailVerificationService(emailSender);
         ReflectionTestUtils.setField(emailVerificationService, "expiryMinutes", 5L);
     }
 
     @Test
-    @DisplayName("인증 코드 발송 시 이메일별 인증 요청을 미인증 상태로 저장한다")
+    @DisplayName("인증 코드 발송 시 메일을 발송하고 미인증 상태의 인증 요청을 저장한다")
     void sendVerificationCode_storesUnverifiedCode() {
         // given
         String email = "user@example.com";
@@ -40,6 +46,7 @@ class EmailVerificationServiceTest {
         assertThat(verification.code()).matches("\\d{6}");
         assertThat(verification.expiredAt()).isAfter(LocalDateTime.now());
         assertThat(verification.verified()).isFalse();
+        verify(emailSender).sendVerificationCode(eq(email), matches("\\d{6}"), eq(5L));
     }
 
     @Test
@@ -72,6 +79,7 @@ class EmailVerificationServiceTest {
 
         // then
         assertThat(getVerification("user@example.com").verified()).isTrue();
+        verify(emailSender).sendVerificationCode(eq("user@example.com"), matches("\\d{6}"), eq(5L));
     }
 
     @Test
