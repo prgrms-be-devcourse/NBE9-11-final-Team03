@@ -152,7 +152,7 @@ class ChatServiceTest {
         );
         ReflectionTestUtils.setField(savedChatRoom, "id", 200L);
 
-        given(chatRoomRepository.findActiveTransactionRoomByTradeId(tradeId))
+        given(chatRoomRepository.findByTradeId(tradeId))
                 .willReturn(Optional.empty());
         given(chatRoomRepository.save(org.mockito.ArgumentMatchers.any(ChatRoom.class)))
                 .willReturn(savedChatRoom);
@@ -171,7 +171,7 @@ class ChatServiceTest {
         assertThat(result.sellerId()).isEqualTo(sellerId);
         assertThat(result.status()).isEqualTo(ChatRoomType.TRANSACTION);
 
-        then(chatRoomRepository).should().findActiveTransactionRoomByTradeId(tradeId);
+        then(chatRoomRepository).should().findByTradeId(tradeId);
         then(chatRoomRepository).should().save(org.mockito.ArgumentMatchers.any(ChatRoom.class));
     }
 
@@ -191,7 +191,7 @@ class ChatServiceTest {
         );
         ReflectionTestUtils.setField(existingChatRoom, "id", 200L);
 
-        given(chatRoomRepository.findActiveTransactionRoomByTradeId(tradeId))
+        given(chatRoomRepository.findByTradeId(tradeId))
                 .willReturn(Optional.of(existingChatRoom));
 
         ChatRoomRes result = chatService.getOrCreateTransactionRoom(
@@ -205,7 +205,7 @@ class ChatServiceTest {
         assertThat(result.tradeId()).isEqualTo(tradeId);
         assertThat(result.status()).isEqualTo(ChatRoomType.TRANSACTION);
 
-        then(chatRoomRepository).should().findActiveTransactionRoomByTradeId(tradeId);
+        then(chatRoomRepository).should().findByTradeId(tradeId);
         then(chatRoomRepository).shouldHaveNoMoreInteractions();
     }
 

@@ -286,12 +286,7 @@ class MatchProposalServiceTest {
                 creditPrice
         );
 
-        verify(chatService).getOrCreateTransactionRoom(
-                tradeId,
-                providerTalentId,
-                requesterId,
-                providerId
-        );
+        verify(chatService).getOrCreateTransactionRoom(trade);
 
         verify(matchProposalRepository).save(matchProposal);
     }

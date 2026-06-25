@@ -76,7 +76,6 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                 .join(seller).on(seller.id.eq(chatRoom.sellerId))
                 .leftJoin(talent).on(talent.id.eq(chatRoom.talentId))
                 .where(
-                        chatRoom.deletedAt.isNull(),
                         chatRoom.buyerId.eq(userId).or(chatRoom.sellerId.eq(userId)),
                         cursorLt(sortAt, chatRoom, cursor, cursorSortAt)
                 )
@@ -97,7 +96,6 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                 .from(cursorRoom)
                 .where(
                         cursorRoom.id.eq(cursor),
-                        cursorRoom.deletedAt.isNull(),
                         cursorRoom.buyerId.eq(userId).or(cursorRoom.sellerId.eq(userId))
                 )
                 .fetchOne();

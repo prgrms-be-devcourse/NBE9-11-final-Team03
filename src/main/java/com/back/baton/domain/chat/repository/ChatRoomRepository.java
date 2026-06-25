@@ -16,7 +16,6 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, ChatR
               and cr.buyerId = :buyerId
               and cr.sellerId = :sellerId
               and cr.status = :status
-              and cr.deletedAt is null
             """)
     Optional<ChatRoom> findActiveRoom(
             @Param("talentId") Long talentId,
@@ -29,9 +28,8 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, ChatR
         select cr
         from ChatRoom cr
         where cr.tradeId = :tradeId
-          and cr.deletedAt is null
         """)
-    Optional<ChatRoom> findActiveTransactionRoomByTradeId(
+    Optional<ChatRoom> findByTradeId(
             @Param("tradeId") Long tradeId
     );
 }

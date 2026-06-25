@@ -29,11 +29,11 @@ import lombok.NoArgsConstructor;
         indexes = {
                 @Index(
                         name = "idx_chat_room_match_lookup",
-                        columnList = "talent_id, buyer_id, seller_id, status, deleted_at"
+                        columnList = "talent_id, buyer_id, seller_id, status"
                 ),
                 @Index(
                         name = "idx_chat_room_trade_lookup",
-                        columnList = "trade_id, deleted_at"
+                        columnList = "trade_id"
                 )
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -61,9 +61,6 @@ public class ChatRoom extends BaseTimeEntity {
 
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
 
     private ChatRoom(
             Long talentId,
@@ -114,9 +111,5 @@ public class ChatRoom extends BaseTimeEntity {
 
     public boolean isParticipant(Long userId) {
         return buyerId.equals(userId) || sellerId.equals(userId);
-    }
-
-    public void delete() {
-        this.deletedAt = LocalDateTime.now();
     }
 }

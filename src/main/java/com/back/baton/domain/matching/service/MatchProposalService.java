@@ -122,12 +122,7 @@ public class MatchProposalService {
 
         matchProposal.accept();
 
-        chatService.getOrCreateTransactionRoom(
-                trade.getId(),
-                trade.getTalentId(),
-                trade.getBuyerId(),
-                trade.getSellerId()
-        );
+        chatService.getOrCreateTransactionRoom(trade);
 
         MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
 

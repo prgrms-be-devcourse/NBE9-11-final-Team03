@@ -10,6 +10,7 @@ import com.back.baton.domain.chat.repository.ChatMessageRepository;
 import com.back.baton.domain.chat.repository.ChatRoomRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
+import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.ChatErrorCode;
@@ -70,6 +71,16 @@ public class ChatService {
     }
 
     @Transactional
+    public ChatRoomRes getOrCreateTransactionRoom(Trade trade) {
+        return getOrCreateTransactionRoom(
+                trade.getId(),
+                trade.getTalentId(),
+                trade.getBuyerId(),
+                trade.getSellerId()
+        );
+    }
+
+    @Transactional
     public ChatRoomRes getOrCreateTransactionRoom(
             Long tradeId,
             Long talentId,
@@ -78,7 +89,7 @@ public class ChatService {
     ) {
         validateSelfChat(buyerId, sellerId);
 
-        ChatRoom chatRoom = chatRoomRepository.findActiveTransactionRoomByTradeId(tradeId)
+        ChatRoom chatRoom = chatRoomRepository.findByTradeId(tradeId)
                 .orElseGet(() -> chatRoomRepository.save(
                         ChatRoom.createForTransaction(
                                 talentId,

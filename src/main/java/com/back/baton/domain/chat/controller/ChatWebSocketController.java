@@ -65,12 +65,12 @@ public class ChatWebSocketController {
     @Operation(
             summary = "WebSocket 채팅 메시지 읽음 처리",
             description = """
-                STOMP publish 경로로 전달된 읽음 이벤트를 처리하고,
-                해당 채팅방을 구독 중인 사용자들에게 읽음 처리 결과를 실시간으로 전송합니다.
-
-                publish: /app/chat-rooms/{chatRoomId}/read
-                subscribe: /topic/chat-rooms/{chatRoomId}/read
-                """
+                    STOMP publish 경로로 전달된 읽음 이벤트를 처리하고,
+                    해당 채팅방을 구독 중인 사용자들에게 읽음 처리 결과를 실시간으로 전송합니다.
+                    
+                    publish: /app/chat-rooms/{chatRoomId}/read
+                    subscribe: /topic/chat-rooms/{chatRoomId}/read
+                    """
     )
     public void markAsRead(
             @Parameter(description = "채팅방 ID", example = "7", required = true)
@@ -103,6 +103,10 @@ public class ChatWebSocketController {
             throw new CustomException(AuthErrorCode.UNAUTHORIZED);
         }
 
-        return Long.valueOf(principal.getName());
+        try {
+            return Long.valueOf(principal.getName());
+        } catch (NumberFormatException e) {
+            throw new CustomException(AuthErrorCode.UNAUTHORIZED);
+        }
     }
 }
