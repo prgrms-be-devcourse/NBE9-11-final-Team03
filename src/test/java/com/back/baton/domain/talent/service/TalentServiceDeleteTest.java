@@ -15,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,7 +37,7 @@ class TalentServiceDeleteTest {
         Long authorId = 1L;
         Long talentId = 10L;
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(tradeRepository.existsByTalentIdAndStatusIn(eq(talentId), anyList())).willReturn(false);
 
         // when
@@ -52,7 +51,8 @@ class TalentServiceDeleteTest {
     @DisplayName("재능이 없으면 TALENT_NOT_FOUND")
     void deleteTalent_notFound() {
         // given
-        given(talentRepository.findById(99L)).willReturn(Optional.empty());
+        given(talentRepository.getActiveTalentOrThrow(99L))
+                .willThrow(new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(99L, 1L), TalentErrorCode.TALENT_NOT_FOUND);
@@ -65,7 +65,7 @@ class TalentServiceDeleteTest {
         Long authorId = 1L;
         Long talentId = 10L;
         Talent talent = Talent.create(authorId, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(talentId)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(talentId)).willReturn(talent);
         given(tradeRepository.existsByTalentIdAndStatusIn(eq(talentId), anyList())).willReturn(true);
 
         // when & then
@@ -76,23 +76,11 @@ class TalentServiceDeleteTest {
     }
 
     @Test
-    @DisplayName("이미 삭제된 글이면 소유권 검사 전에 막힌다")
-    void deleteTalent_alreadyDeleted() {
-        // given
-        Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        talent.softDelete();
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
-
-        // when & then
-        assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_NOT_FOUND);
-    }
-
-    @Test
     @DisplayName("본인 글이 아니면 TALENT_FORBIDDEN")
     void deleteTalent_forbidden() {
         // given
         Talent talent = Talent.create(1L, mock(Category.class), "t", "c", 1, 0);
-        given(talentRepository.findById(10L)).willReturn(Optional.of(talent));
+        given(talentRepository.getActiveTalentOrThrow(10L)).willReturn(talent);
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_FORBIDDEN);

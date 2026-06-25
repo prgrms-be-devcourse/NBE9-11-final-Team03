@@ -7,12 +7,14 @@ import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
+import com.back.baton.global.exception.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.util.ReflectionTestUtils;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
@@ -81,6 +83,29 @@ class TalentRepositoryTest {
         talentRepository.save(Talent.create(2L, category, "남의재능", "내용", 2, 100)); // 다른 author
 
         assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("soft delete된 talent는 findByIdAndDeletedAtIsNull로 조회되지 않는다")
+    void findByIdAndDeletedAtIsNull_excludesSoftDeleted() {
+        // given
+        Category category = saveCategory();
+        Talent talent = save(category, "재능1");
+        talent.softDelete();
+        talentRepository.save(talent);
+
+        // when
+        var found = talentRepository.findByIdAndDeletedAtIsNull(talent.getId());
+
+        // then
+        assertThat(found).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getActiveTalentOrThrow - 없으면 TALENT_NOT_FOUND")
+    void getActiveTalentOrThrow_notFound() {
+        assertThatThrownBy(() -> talentRepository.getActiveTalentOrThrow(999L))
+                .isInstanceOf(CustomException.class);
     }
 
     private Category saveCategory() {

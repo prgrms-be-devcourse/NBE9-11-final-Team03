@@ -67,13 +67,7 @@ public class TalentService {
     public TalentUpdateRes updateTalent(Long talentId, Long authorId, TalentUpdateReq request) {
 
         // 대상 재능 확인
-        Talent talent = talentRepository.findById(talentId)
-                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
-
-        // 삭제 된 글은 없는 것으로 취급
-        if(talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
+        Talent talent = talentRepository.getActiveTalentOrThrow(talentId);
 
         // 소유권 확인, 다른 사람 글이면 차단
         if(!talent.getAuthorId().equals(authorId)) {
@@ -94,13 +88,7 @@ public class TalentService {
 
     @Transactional
     public void deleteTalent(Long talentId, Long authorId) {
-        Talent talent = talentRepository.findById(talentId)
-                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
-
-        // 이미 삭제된 글은 없는 것 (소유권보다 먼저)
-        if(talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
+        Talent talent = talentRepository.getActiveTalentOrThrow(talentId);
 
         //소유권 확인
         if(!talent.getAuthorId().equals(authorId)) {
@@ -152,4 +140,5 @@ public class TalentService {
         List<TalentListRes> rows = talentRepository.searchTalents(req, cursor, pageSize, sortType);
         return CursorPageRes.from(rows, pageSize, TalentListRes::talentId);
     }
+
 }
