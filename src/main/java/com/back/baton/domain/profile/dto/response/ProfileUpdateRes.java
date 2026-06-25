@@ -24,7 +24,7 @@ public record ProfileUpdateRes(
                 profile.getUser().getNickname(),
                 profile.getUser().getProfileImageUrl(),
                 profile.getUser().getIntroduction(),
-                profile.getPortfolioLinkList(),
+                List.copyOf(profile.getPortfolioLinkList()),
                 getCategoryResList(profile.getMyTalentCategories()),
                 getCategoryResList(profile.getWantTalentCategories()),
                 profile.isVisible(),

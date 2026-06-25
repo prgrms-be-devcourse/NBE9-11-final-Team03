@@ -25,7 +25,7 @@ public record MyProfileDetailRes(
                 profile.getUser().getProfileImageUrl(),
                 profile.getUser().getIntroduction(),
                 profile.getUser().getTrustScore(),
-                profile.getPortfolioLinkList(),
+                List.copyOf(profile.getPortfolioLinkList()),
                 getCategoryResList(profile.getMyTalentCategories()),
                 getCategoryResList(profile.getWantTalentCategories()),
                 profile.isVisible()
