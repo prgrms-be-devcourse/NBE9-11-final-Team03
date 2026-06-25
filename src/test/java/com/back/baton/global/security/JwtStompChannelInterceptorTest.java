@@ -57,6 +57,28 @@ class JwtStompChannelInterceptorTest {
     }
 
     @Test
+    @DisplayName("STOMP CONNECT 요청에 소문자 authorization 헤더가 있어도 Principal을 설정한다")
+    void connectWithLowerCaseAuthorizationHeaderSetsPrincipal() {
+        String accessToken = jwtTokenProvider.createAccessToken(12L, "USER", new Date());
+
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
+        accessor.setNativeHeader("authorization", "Bearer " + accessToken);
+        accessor.setLeaveMutable(true);
+
+        Message<byte[]> message = MessageBuilder.createMessage(
+                new byte[0],
+                accessor.getMessageHeaders()
+        );
+
+        interceptor.preSend(message, messageChannel);
+
+        Principal principal = accessor.getUser();
+
+        assertThat(principal).isNotNull();
+        assertThat(principal.getName()).isEqualTo("12");
+    }
+
+    @Test
     @DisplayName("STOMP CONNECT 요청에 Authorization 헤더가 없으면 인증 실패 예외를 던진다")
     void connectWithoutAuthorizationThrowsUnauthorized() {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
