@@ -1,5 +1,6 @@
 package com.back.baton.domain.chat.service;
 
+import com.back.baton.domain.chat.dto.request.TradeChatRoomCreateReq;
 import com.back.baton.domain.chat.dto.response.ChatMessageRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomListRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomRes;
@@ -71,12 +72,12 @@ public class ChatService {
     }
 
     @Transactional
-    public ChatRoomRes getOrCreateTransactionRoom(Trade trade) {
+    public ChatRoomRes getOrCreateTransactionRoom(TradeChatRoomCreateReq req) {
         return getOrCreateTransactionRoom(
-                trade.getId(),
-                trade.getTalentId(),
-                trade.getBuyerId(),
-                trade.getSellerId()
+                req.tradeId(),
+                req.talentId(),
+                req.buyerId(),
+                req.sellerId()
         );
     }
 
