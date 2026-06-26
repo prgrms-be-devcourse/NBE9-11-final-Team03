@@ -50,4 +50,33 @@ class AdminActionLogServiceIntegrationTest {
         assertThat(response.content()).hasSize(1);
         assertThat(response.content().get(0).reason()).isEqualTo("테스트 상태 변경");
     }
+
+    @Test
+    @DisplayName("필터 없이 관리자 조치 이력 전체를 조회한다")
+    void getActionLogsWithoutFilters() {
+        adminActionLogService.record(
+                1L,
+                AdminActionTargetType.USER,
+                2L,
+                AdminActionType.USER_STATUS_CHANGED,
+                "유저 상태 변경"
+        );
+        adminActionLogService.record(
+                1L,
+                AdminActionTargetType.REPORT,
+                3L,
+                AdminActionType.REPORT_RESOLVED,
+                "신고 처리"
+        );
+
+        AdminActionLogSearchReq req = new AdminActionLogSearchReq(null, null, null, null);
+
+        AdminPageRes<AdminActionLogRes> response = adminActionLogService.getActionLogs(
+                req,
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.totalElements()).isEqualTo(2);
+    }
 }
