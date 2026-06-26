@@ -52,6 +52,7 @@ public class AuthServiceTest {
     @Mock private WithdrawnUserRepository withdrawnUserRepository;
     @Mock private CreditService creditService;
     @Mock private ProfileService profileService;
+    @Mock private EmailVerificationService emailVerificationService;
     private User validUser;
     @BeforeEach
     void setUp() {
@@ -93,6 +94,7 @@ public class AuthServiceTest {
 
         // 내부 로직이 정확한 인자로 호출되었는지 대조 검증
         verify(withdrawnUserRepository).existsByEncodedEmail(withdrawnEncoder.encode(email));
+        verify(emailVerificationService).consumeVerifiedEmail(email);
         verify(passwordValidator).validate("securePassword123!", "baton");
         verify(passwordEncoder).encode("securePassword123!");
         verify(userRepository).save(any(User.class));

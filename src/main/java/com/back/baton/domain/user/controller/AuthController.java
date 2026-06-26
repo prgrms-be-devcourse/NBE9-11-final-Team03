@@ -1,5 +1,7 @@
 package com.back.baton.domain.user.controller;
 
+import com.back.baton.domain.user.dto.request.UserEmailVerificationReq;
+import com.back.baton.domain.user.dto.request.UserEmailVerificationSendReq;
 import com.back.baton.domain.user.dto.request.UserLoginReq;
 import com.back.baton.domain.user.dto.request.UserSignupReq;
 import com.back.baton.domain.user.dto.response.UserLoginRes;
@@ -96,5 +98,27 @@ public class AuthController {
         return ApiResponses.success(SuccessCode.USER_LOGOUT_SUCCESS,null);
     }
 
+    @PostMapping("/email-send")
+    @Operation(
+            summary = "이메일 인증 번호 발송",
+            description = "이메일 인증 번호를 발송합니다."
+    )
+    public ResponseEntity<ApiResponse<Void>> sendEmail(
+            @Valid @RequestBody UserEmailVerificationSendReq req
+    ){
+        authService.sendEmailVerificationCode(req.email());
+        return ApiResponses.success(SuccessCode.USER_EMAIL_SEND_SUCCESS, null);
+    }
 
+    @PostMapping("/email-verification")
+    @Operation(
+            summary = "이메일 인증 번호 확인",
+            description = "이메일 인증 번호를 받아서 검증하고, 결과를 반환합니다."
+    )
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(
+            @Valid @RequestBody UserEmailVerificationReq req
+    ){
+        authService.verifyEmail(req.email(), req.verificationCode());
+        return ApiResponses.success(SuccessCode.USER_EMAIL_VERIFICATION_SUCCESS, null);
+    }
 }
