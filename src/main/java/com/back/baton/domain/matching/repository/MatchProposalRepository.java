@@ -213,4 +213,6 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
             @Param("requesterId") Long requesterId,
             @Param("status") MatchProposalStatus status
     );
+
+    boolean existsByActiveSwapPairKey(String activeSwapPairKey);
 }
