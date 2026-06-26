@@ -14,6 +14,8 @@ import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
 import java.math.BigDecimal;
 import java.util.List;
+
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,9 @@ class MatchProposalRepositoryTest {
 
     @Autowired
     private TalentRepository talentRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     @DisplayName("지정한 상태에 해당하는 providerTalentId만 조회한다")
@@ -416,6 +421,58 @@ class MatchProposalRepositoryTest {
         assertThat(result)
                 .extracting(MatchProposalSentRes::proposalId)
                 .containsExactly(visibleProposal.getId());
+    }
+
+    @Test
+    @DisplayName("제공자 탈퇴로 제안 상태를 변경하면 activeSwapPairKey를 해제한다")
+    void updateStatusWhenProviderWithdrawn_clearActiveSwapPairKey() {
+        MatchProposal matchProposal = createProposal(
+                20L,
+                10L,
+                1L,
+                2L,
+                "재능 교환 제안드립니다."
+        );
+
+        matchProposal = matchProposalRepository.saveAndFlush(matchProposal);
+
+        matchProposalRepository.updateStatusWhenProviderWithdrawn(
+                2L,
+                MatchProposalStatus.REJECTED
+        );
+
+        entityManager.clear();
+
+        MatchProposal found = matchProposalRepository.findById(matchProposal.getId()).orElseThrow();
+
+        assertThat(found.getStatus()).isEqualTo(MatchProposalStatus.REJECTED);
+        assertThat(found.getActiveSwapPairKey()).isNull();
+    }
+
+    @Test
+    @DisplayName("요청자 탈퇴로 제안 상태를 변경하면 activeSwapPairKey를 해제한다")
+    void updateStatusWhenRequesterWithdrawn_clearActiveSwapPairKey() {
+        MatchProposal matchProposal = createProposal(
+                20L,
+                10L,
+                1L,
+                2L,
+                "재능 교환 제안드립니다."
+        );
+
+        matchProposal = matchProposalRepository.saveAndFlush(matchProposal);
+
+        matchProposalRepository.updateStatusWhenRequesterWithdrawn(
+                1L,
+                MatchProposalStatus.CANCELLED
+        );
+
+        entityManager.clear();
+
+        MatchProposal found = matchProposalRepository.findById(matchProposal.getId()).orElseThrow();
+
+        assertThat(found.getStatus()).isEqualTo(MatchProposalStatus.CANCELLED);
+        assertThat(found.getActiveSwapPairKey()).isNull();
     }
 
     private MatchProposal createProposal(

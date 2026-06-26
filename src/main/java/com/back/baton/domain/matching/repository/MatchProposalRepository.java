@@ -45,7 +45,8 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Modifying(clearAutomatically = true)
     @Query("""
     update MatchProposal mp
-    SET mp.status = :status
+    SET mp.status = :status,
+        mp.activeSwapPairKey = null
     WHERE mp.providerId = :providerId AND mp.status != "ACCEPTED"
     """)
     void updateStatusWhenProviderWithdrawn(
@@ -56,7 +57,8 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Modifying(clearAutomatically = true)
     @Query("""
     update MatchProposal mp
-    SET mp.status = :status
+    SET mp.status = :status,
+        mp.activeSwapPairKey = null
     WHERE mp.requesterId = :requesterId AND mp.status != "ACCEPTED"
     """)
     void updateStatusWhenRequesterWithdrawn(

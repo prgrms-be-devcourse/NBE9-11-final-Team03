@@ -21,6 +21,7 @@ import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +54,7 @@ public class MatchProposalService {
         validateProviderOwnsTalent(req.providerId(), providerTalent);
         validateTalentAvailable(providerTalent);
         validateSelfMatching(requesterId, req.providerId());
-        validateDuplicatedProposal(requesterId, req); // 역방향 검증
+        validateDuplicatedProposal(requesterId, req); // 정방향/역방향 검증
 
         MatchProposal matchProposal = MatchProposal.createFromTalents(
                 providerTalent,
@@ -63,9 +64,14 @@ public class MatchProposalService {
                 req.requestMessage()
         );
 
-        MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
+        try {
+            MatchProposal savedMatchProposal =
+                    matchProposalRepository.saveAndFlush(matchProposal);
 
-        return MatchProposalRes.from(savedMatchProposal);
+            return MatchProposalRes.from(savedMatchProposal);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
+        }
     }
 
     @Transactional
@@ -77,6 +83,10 @@ public class MatchProposalService {
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
         validateProviderAuthority(providerId, matchProposal);
+
+        if (matchProposal.getStatus() == MatchProposalStatus.ACCEPTED) {
+            return MatchProposalRes.from(matchProposal);
+        }
 
         validateRequestedStatus(matchProposal);
 

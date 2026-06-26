@@ -152,7 +152,7 @@ public class MatchProposal extends BaseTimeEntity {
     }
 
     public static String createActiveSwapPairKey(Long requesterTalentId, Long providerTalentId) {
-        if (requesterTalentId == null) {
+        if (requesterTalentId == null || providerTalentId == null) {
             return null;
         }
 

@@ -88,7 +88,7 @@ class MatchProposalServiceTest {
                 )
         )).thenReturn(false);
 
-        when(matchProposalRepository.save(any(MatchProposal.class)))
+        when(matchProposalRepository.saveAndFlush(any(MatchProposal.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         MatchProposalRes res = matchProposalService.createMatchProposal(requesterId, req);
@@ -111,7 +111,7 @@ class MatchProposalServiceTest {
                         MatchProposalStatus.ACCEPTED
                 )
         );
-        verify(matchProposalRepository).save(any(MatchProposal.class));
+        verify(matchProposalRepository).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -140,7 +140,7 @@ class MatchProposalServiceTest {
                         providerTalent.getId()
                 )
         )).thenReturn(false);
-        when(matchProposalRepository.save(any(MatchProposal.class)))
+        when(matchProposalRepository.saveAndFlush(any(MatchProposal.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         MatchProposalRes res = matchProposalService.createMatchProposal(requesterId, req);
@@ -159,7 +159,7 @@ class MatchProposalServiceTest {
                         providerTalent.getId()
                 )
         );
-        verify(matchProposalRepository).save(any(MatchProposal.class));
+        verify(matchProposalRepository).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -441,7 +441,7 @@ class MatchProposalServiceTest {
     }
 
     @Test
-    @DisplayName("이미 수락된 매칭 제안은 다시 수락할 수 없다")
+    @DisplayName("이미 수락된 매칭 제안은 기존 수락 결과를 반환한다")
     void acceptMatchProposal_alreadyAccepted() {
         Long proposalId = 1L;
         Long requesterId = 1L;
@@ -462,17 +462,20 @@ class MatchProposalServiceTest {
         when(matchProposalRepository.findById(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
-        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
+        MatchProposalRes res = matchProposalService.acceptMatchProposal(
                 proposalId,
                 providerId
-        ))
-                .isInstanceOf(CustomException.class);
+        );
+
+        assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
+        assertThat(res.respondedAt()).isNotNull();
 
         verify(matchProposalRepository).findById(proposalId);
         verify(talentRepository, never()).findById(any());
         verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
         verify(creditService, never()).holdForEscrow(any(), anyInt(), any(), any());
         verify(escrowService, never()).create(any(), any(), any(), anyInt());
+        verify(chatService, never()).getOrCreateTransactionRoom(any());
         verify(matchProposalRepository, never()).save(any());
     }
 

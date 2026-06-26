@@ -85,6 +85,13 @@ class MatchProposalTest {
         assertThat(reverseKey).isEqualTo("10:20");
     }
 
+    @Test
+    @DisplayName("activeSwapPairKey 생성 시 재능 ID 중 하나가 null이면 null을 반환한다")
+    void createActiveSwapPairKey_withNullTalentId() {
+        assertThat(MatchProposal.createActiveSwapPairKey(null, 20L)).isNull();
+        assertThat(MatchProposal.createActiveSwapPairKey(10L, null)).isNull();
+    }
+
     private MatchProposal createSwapProposal() {
         return MatchProposal.create(
                 20L,
