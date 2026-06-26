@@ -16,6 +16,7 @@ public enum UserErrorCode implements ErrorCode {
     EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "USER-400-005", "이메일 인증 코드가 만료되었습니다."),
     INVALID_EMAIL_VERIFICATION_CODE(HttpStatus.BAD_REQUEST, "USER-400-006", "이메일 인증 코드가 일치하지 않습니다."),
     EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "USER-400-007", "이메일 인증이 완료되지 않았습니다."),
+    EMAIL_VERIFICATION_TO_MUCH_ATTEMPT(HttpStatus.BAD_REQUEST, "USER-400-008", "최대 인증 시도 횟수를 초과했습니다."),
 
     DORMANT_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-001", "휴면 처리된 계정입니다."),
     SUSPENDED_STATUS(HttpStatus.UNAUTHORIZED,"USER-401-002", "정지 처리된 계정입니다."),

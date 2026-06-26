@@ -10,8 +10,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.mock;
@@ -50,7 +57,7 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("정상 인증 코드로 이메일 인증을 완료하고 회원가입 시 인증 정보를 소비한다")
+    @DisplayName("정상 인증 코드로 이메일 인증을 완료하고 회원가입 전에 인증 정보를 소비한다")
     void verifyEmail_andConsumeVerifiedEmail_success() {
         // given
         String email = "user@example.com";
@@ -91,7 +98,7 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("인증 코드가 다르면 INVALID_EMAIL_VERIFICATION_CODE 예외가 발생한다")
+    @DisplayName("인증 코드가 다르면 INVALID_EMAIL_VERIFICATION_CODE 예외가 발생하고 시도 횟수가 증가한다")
     void verifyEmail_failWhenCodeDoesNotMatch() {
         // given
         String email = "user@example.com";
@@ -105,7 +112,55 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    @DisplayName("인증 코드 검증 실패가 최대 횟수에 도달하면 인증 요청을 제거하고 EXPIRED 예외가 발생한다")
+    @DisplayName("같은 이메일로 인증 코드 검증 실패 요청이 동시에 들어와도 시도 횟수가 누락되지 않는다")
+    void verifyEmail_increasesAttemptsAtomicallyWhenConcurrentRequestsFail() throws InterruptedException {
+        // given
+        String email = "user@example.com";
+        int requestCount = 30;
+        ReflectionTestUtils.setField(emailVerificationService, "maxAttempt", 100);
+        emailVerificationService.sendVerificationCode(email);
+
+        ExecutorService executorService = Executors.newFixedThreadPool(requestCount);
+        CountDownLatch readyLatch = new CountDownLatch(requestCount);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(requestCount);
+        AtomicInteger invalidCodeCount = new AtomicInteger();
+        AtomicInteger unexpectedExceptionCount = new AtomicInteger();
+
+        // when
+        for (int i = 0; i < requestCount; i++) {
+            executorService.submit(() -> {
+                readyLatch.countDown();
+                try {
+                    startLatch.await();
+                    emailVerificationService.verifyEmail(email, "000000");
+                } catch (CustomException e) {
+                    if (e.getErrorCode() == UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE) {
+                        invalidCodeCount.incrementAndGet();
+                    } else {
+                        unexpectedExceptionCount.incrementAndGet();
+                    }
+                } catch (Exception e) {
+                    unexpectedExceptionCount.incrementAndGet();
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        assertThat(readyLatch.await(5, TimeUnit.SECONDS)).isTrue();
+        startLatch.countDown();
+        assertThat(doneLatch.await(5, TimeUnit.SECONDS)).isTrue();
+        executorService.shutdownNow();
+
+        // then
+        assertThat(invalidCodeCount.get()).isEqualTo(requestCount);
+        assertThat(unexpectedExceptionCount.get()).isZero();
+        assertThat(getVerification(email).attempts()).isEqualTo(requestCount);
+    }
+
+    @Test
+    @DisplayName("인증 코드 검증 실패가 최대 횟수에 도달하면 인증 요청을 제거하고 최대 시도 횟수 예외가 발생한다")
     void verifyEmail_failWhenMaxAttemptReached() {
         // given
         String email = "user@example.com";
@@ -121,12 +176,12 @@ class EmailVerificationServiceTest {
         // then
         assertThatThrownBy(() -> emailVerificationService.verifyEmail(email, "000000"))
                 .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
+                .hasFieldOrPropertyWithValue("errorCode", UserErrorCode.EMAIL_VERIFICATION_TO_MUCH_ATTEMPT);
         assertThat(getVerification(email)).isNull();
     }
 
     @Test
-    @DisplayName("만료된 인증 코드는 EXPIRED 예외를 발생시키고 저장소에서 제거된다")
+    @DisplayName("만료된 인증 코드는 EXPIRED 예외를 발생시키고 저장소에서 제거한다")
     void verifyEmail_failWhenCodeExpired() {
         // given
         String email = "user@example.com";

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +36,7 @@ public class EmailVerificationService {
     void initCache() {
         verifications = Caffeine.newBuilder()
                 .expireAfterWrite(expiryMinutes, TimeUnit.MINUTES)
+                .maximumSize(50_000)
                 .build();
     }
 
@@ -48,22 +50,34 @@ public class EmailVerificationService {
 
     public void verifyEmail(String email, String code) { // 이메일 인증 처리(verified로 저장)
         email = normalize(email);
-        EmailVerification verification = getExistingVerification(email);
+        AtomicReference<CustomException> exceptionRef = new AtomicReference<>();
 
-        if (verification.expiredAt().isBefore(LocalDateTime.now())) {
-            verifications.invalidate(email);
-            throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
-        }
-        if (!verification.code().equals(code)) {
-            EmailVerification failedVerification = verification.increaseAttempts(); // 실패시 인증시도 횟수 반영
-            if (failedVerification.attempts() >= maxAttempt) {
-                verifications.invalidate(email);
-                throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED);
+        verifications.asMap().compute(email, (k, verification)-> {
+
+            if (verification == null) {
+                exceptionRef.set(new CustomException(UserErrorCode.EMAIL_VERIFICATION_NOT_FOUND));
+                return null;
             }
-            verifications.put(email, failedVerification);
-            throw new CustomException(UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE);
+            if (verification.expiredAt().isBefore(LocalDateTime.now())){
+                exceptionRef.set(new CustomException(UserErrorCode.EMAIL_VERIFICATION_EXPIRED));
+                return invalidateVerification(k);
+            }
+            // 3. 인증 코드가 일치하지 않는 경우
+            if (!verification.code().equals(code)) {
+                EmailVerification failedVerification = verification.increaseAttempts();
+                if (failedVerification.attempts() >= maxAttempt) {
+                    exceptionRef.set(new CustomException(UserErrorCode.EMAIL_VERIFICATION_TO_MUCH_ATTEMPT));
+                    return invalidateVerification(k);
+                }
+                exceptionRef.set(new CustomException(UserErrorCode.INVALID_EMAIL_VERIFICATION_CODE));
+                return failedVerification;
+            }
+            return verification.markVerified(); // verified 상태로 갱신
+        });
+
+        if (exceptionRef.get() != null) {
+            throw exceptionRef.get();
         }
-        verifications.put(email, verification.markVerified());
     }
 
     public void consumeVerifiedEmail(String email){ // 인증 여부 확인 및 Verification 삭제
@@ -87,6 +101,11 @@ public class EmailVerificationService {
             throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_NOT_FOUND);
         }
         return verification;
+    }
+
+    private EmailVerification invalidateVerification(String email){
+        verifications.invalidate(email);
+        return null;
     }
 
     private EmailVerification createVerification(boolean verified){ // 인증 객체 생성
