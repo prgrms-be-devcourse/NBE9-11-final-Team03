@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.DisputeVerdict;
@@ -12,6 +13,7 @@ import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.domain.matching.entity.MatchProposal;
 import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.EscrowErrorCode;
 import com.back.baton.global.response.code.TradeErrorCode;
@@ -36,6 +38,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -59,7 +62,14 @@ class TradeServiceTest {
         ArgumentCaptor<Trade> captor = ArgumentCaptor.forClass(Trade.class);
         given(tradeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        tradeService.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
+        MatchProposal matchProposal = mock(MatchProposal.class);
+        given(matchProposal.getId()).willReturn(1L);
+        given(matchProposal.getProviderTalentId()).willReturn(10L);
+        given(matchProposal.getRequesterId()).willReturn(20L);
+        given(matchProposal.getProviderId()).willReturn(30L);
+        given(matchProposal.getRequesterTalentId()).willReturn(null);
+
+        tradeService.create(matchProposal, 5000);
 
         then(tradeRepository).should().save(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(TradeStatus.IN_PROGRESS);
@@ -71,16 +81,42 @@ class TradeServiceTest {
         ArgumentCaptor<Trade> captor = ArgumentCaptor.forClass(Trade.class);
         given(tradeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
-        tradeService.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
+        MatchProposal matchProposal = mock(MatchProposal.class);
+        given(matchProposal.getId()).willReturn(1L);
+        given(matchProposal.getProviderTalentId()).willReturn(10L);
+        given(matchProposal.getRequesterId()).willReturn(20L);
+        given(matchProposal.getProviderId()).willReturn(30L);
+        given(matchProposal.getRequesterTalentId()).willReturn(null);
+
+        tradeService.create(matchProposal, 5000);
 
         then(tradeRepository).should().save(captor.capture());
         Trade saved = captor.getValue();
-        assertThat(saved.getMatchId()).isEqualTo(1L);
+        assertThat(saved.getTradeGroupId()).isEqualTo(1L);
         assertThat(saved.getTalentId()).isEqualTo(10L);
         assertThat(saved.getBuyerId()).isEqualTo(20L);
         assertThat(saved.getSellerId()).isEqualTo(30L);
         assertThat(saved.getCreditPrice()).isEqualTo(5000);
         assertThat(saved.getTradeType()).isEqualTo(TradeType.PURCHASE);
+    }
+
+    @Test
+    @DisplayName("requesterTalentId가 있으면 SWAP 타입 거래가 생성된다")
+    void create_swapType() {
+        ArgumentCaptor<Trade> captor = ArgumentCaptor.forClass(Trade.class);
+        given(tradeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+        MatchProposal matchProposal = mock(MatchProposal.class);
+        given(matchProposal.getId()).willReturn(1L);
+        given(matchProposal.getProviderTalentId()).willReturn(10L);
+        given(matchProposal.getRequesterId()).willReturn(20L);
+        given(matchProposal.getProviderId()).willReturn(30L);
+        given(matchProposal.getRequesterTalentId()).willReturn(99L);
+
+        tradeService.create(matchProposal, 5000);
+
+        then(tradeRepository).should().save(captor.capture());
+        assertThat(captor.getValue().getTradeType()).isEqualTo(TradeType.SWAP);
     }
 
     @Test
@@ -499,8 +535,59 @@ class TradeServiceTest {
         assertThatThrownBy(() -> tradeService.resolveDispute(1L, DisputeVerdict.BUYER_WIN))
                 .isInstanceOf(CustomException.class)
                 .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);}
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
+    }
 
+    @Test
+    @DisplayName("분쟁 거래 목록을 정상 반환한다")
+    void getDisputedTrades_success() {
+        Trade trade = createTrade(2L, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.DISPUTED);
+        Escrow escrow = createEscrow(2L, 3L);
+
+        given(tradeRepository.findAllByStatus(TradeStatus.DISPUTED)).willReturn(List.of(trade));
+        given(escrowRepository.findAllByTradeIdIn(any())).willReturn(List.of(escrow));
+
+        List<DisputeRes> result = tradeService.getDisputedTrades();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).tradeId()).isEqualTo(1L);
+        assertThat(result.get(0).tradeStatus()).isEqualTo(TradeStatus.DISPUTED);
+    }
+
+    @Test
+    @DisplayName("분쟁 거래가 없으면 빈 리스트를 반환하고 에스크로를 조회하지 않는다")
+    void getDisputedTrades_empty() {
+        given(tradeRepository.findAllByStatus(TradeStatus.DISPUTED)).willReturn(List.of());
+
+        List<DisputeRes> result = tradeService.getDisputedTrades();
+
+        assertThat(result).isEmpty();
+        verify(escrowRepository, never()).findAllByTradeIdIn(any());
+    }
+
+    @Test
+    @DisplayName("에스크로가 없는 분쟁 거래는 결과에서 제외된다")
+    void getDisputedTrades_tradeWithoutEscrowFiltered() {
+        Trade tradeWithEscrow = createTrade(2L, 3L); // id=1L
+        ReflectionTestUtils.setField(tradeWithEscrow, "status", TradeStatus.DISPUTED);
+
+        Trade tradeWithoutEscrow = Trade.create(1L, 10L, 2L, 3L, 5000, TradeType.PURCHASE);
+        ReflectionTestUtils.setField(tradeWithoutEscrow, "id", 2L);
+        ReflectionTestUtils.setField(tradeWithoutEscrow, "status", TradeStatus.DISPUTED);
+
+        Escrow escrow = createEscrow(2L, 3L); // tradeId=1L
+
+        given(tradeRepository.findAllByStatus(TradeStatus.DISPUTED)).willReturn(List.of(tradeWithEscrow, tradeWithoutEscrow));
+        given(escrowRepository.findAllByTradeIdIn(any())).willReturn(List.of(escrow));
+
+        List<DisputeRes> result = tradeService.getDisputedTrades();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).tradeId()).isEqualTo(1L);
+    }
+
+    @Test
     @DisplayName("status 필터 없이 조회하면 내 모든 거래 목록을 반환한다")
     void getMyTrades_noFilter() {
         Long userId = 2L;

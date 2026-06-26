@@ -20,7 +20,7 @@ class TradeTest {
     void create_fields() {
         Trade trade = Trade.create(1L, 10L, 20L, 30L, 5000, TradeType.SWAP);
 
-        assertThat(trade.getMatchId()).isEqualTo(1L);
+        assertThat(trade.getTradeGroupId()).isEqualTo(1L);
         assertThat(trade.getTalentId()).isEqualTo(10L);
         assertThat(trade.getBuyerId()).isEqualTo(20L);
         assertThat(trade.getSellerId()).isEqualTo(30L);
@@ -46,5 +46,25 @@ class TradeTest {
         trade.dispute();
 
         assertThat(trade.getStatus()).isEqualTo(TradeStatus.DISPUTED);
+    }
+
+    @Test
+    @DisplayName("결과물 제출 시 상태가 UNDER_REVIEW로 변경된다")
+    void submitResult_status() {
+        Trade trade = Trade.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
+
+        trade.submitResult();
+
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.UNDER_REVIEW);
+    }
+
+    @Test
+    @DisplayName("거래 완료 시 상태가 COMPLETED로 변경된다")
+    void complete_status() {
+        Trade trade = Trade.create(1L, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
+
+        trade.complete();
+
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
     }
 }

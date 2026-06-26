@@ -11,6 +11,7 @@ import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeStatus;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.repository.TradeRepository;
+import com.back.baton.domain.matching.entity.MatchProposal;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.EscrowErrorCode;
@@ -34,8 +35,16 @@ public class TradeService {
     private final CreditService creditService;
 
     @Transactional
-    public Trade create(Long matchId, Long talentId, Long buyerId, Long sellerId, Integer creditPrice, TradeType tradeType) {
-        Trade trade = Trade.create(matchId, talentId, buyerId, sellerId, creditPrice, tradeType);
+    public Trade create(MatchProposal matchProposal, Integer price) {
+        TradeType tradeType = matchProposal.getRequesterTalentId() == null ? TradeType.PURCHASE : TradeType.SWAP;
+        Trade trade = Trade.create(
+                matchProposal.getId(),
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId(),
+                price,
+                tradeType
+        );
         return tradeRepository.save(trade);
     }
 

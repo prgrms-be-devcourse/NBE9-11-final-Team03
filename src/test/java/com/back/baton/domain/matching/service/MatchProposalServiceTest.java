@@ -326,14 +326,7 @@ class MatchProposalServiceTest {
         when(talentRepository.findById(providerTalentId))
                 .thenReturn(Optional.of(providerTalent));
 
-        when(tradeService.create(
-                proposalId,
-                providerTalentId,
-                requesterId,
-                providerId,
-                creditPrice,
-                TradeType.PURCHASE
-        )).thenReturn(trade);
+        when(tradeService.create(matchProposal, creditPrice)).thenReturn(trade);
 
         when(matchProposalRepository.save(matchProposal))
                 .thenReturn(matchProposal);
@@ -349,12 +342,8 @@ class MatchProposalServiceTest {
         verify(matchProposalRepository).findById(proposalId);
         verify(talentRepository).findById(providerTalentId);
         verify(tradeService).create(
-                proposalId,
-                providerTalentId,
-                requesterId,
-                providerId,
-                creditPrice,
-                TradeType.PURCHASE
+                matchProposal,
+                creditPrice
         );
         verify(creditService).holdForEscrow(
                 requesterId,
@@ -402,7 +391,7 @@ class MatchProposalServiceTest {
                 .isEqualTo(MatchingErrorCode.SWAP_ACCEPT_NOT_IMPLEMENTED);
 
         verify(talentRepository, never()).findById(any());
-        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
+        verify(tradeService, never()).create(any(), any());
         verify(creditService, never()).holdForEscrow(any(), anyInt(), any());
         verify(escrowService, never()).create(any(), any(), any(), anyInt());
         verify(chatService, never()).getOrCreateTransactionRoom(any());
@@ -436,7 +425,7 @@ class MatchProposalServiceTest {
 
         verify(matchProposalRepository).findById(proposalId);
         verify(talentRepository, never()).findById(any());
-        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
+        verify(tradeService, never()).create(any(), any());
     }
 
     @Test
@@ -471,7 +460,7 @@ class MatchProposalServiceTest {
 
         verify(matchProposalRepository).findById(proposalId);
         verify(talentRepository, never()).findById(any());
-        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
+        verify(tradeService, never()).create(any(), any());
         verify(creditService, never()).holdForEscrow(any(), anyInt(), any());
         verify(escrowService, never()).create(any(), any(), any(), anyInt());
         verify(chatService, never()).getOrCreateTransactionRoom(any());
@@ -505,7 +494,7 @@ class MatchProposalServiceTest {
 
         verify(matchProposalRepository).findById(proposalId);
         verify(talentRepository, never()).findById(any());
-        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
+        verify(tradeService, never()).create(any(), any());
     }
 
     @Test
