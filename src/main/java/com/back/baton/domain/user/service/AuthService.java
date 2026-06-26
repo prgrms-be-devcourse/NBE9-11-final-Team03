@@ -27,7 +27,7 @@ import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordValidator passwordValidator;
@@ -43,6 +43,7 @@ public class AuthService {
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
+    @Transactional
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
 
         // 1. 이메일 검증
@@ -111,6 +112,7 @@ public class AuthService {
         emailVerificationService.consumeVerifiedEmail(email);
     }
 
+    @Transactional
     public UserTokenDto login(String email, String password) {
         // 1. User 검증
         email = normalizeEmail(email);
@@ -134,6 +136,7 @@ public class AuthService {
         return new UserTokenDto(accessTokenValue, refreshTokenValue);
     }
 
+    @Transactional
     public UserTokenDto reissue(String savedRefreshTokenValue) {
         // 1. 가져온 refreshToken 검증
         if(savedRefreshTokenValue==null){
@@ -170,6 +173,7 @@ public class AuthService {
 
     }
 
+    @Transactional
     public void logout(Long userId){
         refreshTokenRepository.deleteByUserIdCustom(userId); // refreshToken 삭제
     }

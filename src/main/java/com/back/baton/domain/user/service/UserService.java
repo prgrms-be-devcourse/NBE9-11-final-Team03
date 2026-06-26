@@ -12,11 +12,11 @@ import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.domain.user.repository.WithdrawnUserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,7 +25,7 @@ import static java.time.LocalDateTime.now;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class UserService {
     private final UserRepository userRepository;
     private final WithdrawnEncoder withdrawnEncoder;
@@ -36,6 +36,7 @@ public class UserService {
     private final CreditAccountRepository creditAccountRepository;
     private final AuthService authService;
 
+    @Transactional
     public void withdraw(Long userId) {
         // 1. 유저 상태 확인
         User user = userRepository.findById(userId).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
@@ -47,10 +48,10 @@ public class UserService {
 
         // [3. 탈퇴 유저 관련 데이터 처리]
         // 3-1. 만일 이 사람에게 들어온 제안이 있다면 전부 거절 처리
-        matchProposalRepository.updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED); // 받은 제안 전부 거절 처리
+        matchProposalRepository.updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED, MatchProposalStatus.REQUESTED); // 받은 제안 전부 거절 처리
 
         // 3-2. 보낸 제안이 있다면 전부 취소 처리
-        matchProposalRepository.updateStatusWhenRequesterWithdrawn(userId, MatchProposalStatus.CANCELLED);
+        matchProposalRepository.updateStatusWhenRequesterWithdrawn(userId, MatchProposalStatus.CANCELLED, MatchProposalStatus.REQUESTED);
 
         // 3-3. 등록한 재능 삭제
         talentRepository.deleteTalentByUserId(userId, now());
@@ -74,6 +75,7 @@ public class UserService {
     private int retentionDay;
 
     // 오후 3시마다 탈퇴한 사용자 중 영구정지 아닌 사용자 정보 삭제
+    @Transactional
     @Scheduled(cron = "0 0 15 * * *", zone = "Asia/Seoul")
     public void deleteExpiredWithdrawalUsers() {
         LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
