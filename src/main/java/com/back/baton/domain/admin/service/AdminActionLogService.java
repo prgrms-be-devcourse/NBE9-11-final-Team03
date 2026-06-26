@@ -1,5 +1,6 @@
 package com.back.baton.domain.admin.service;
 
+import com.back.baton.domain.admin.dto.request.AdminActionLogSearchReq;
 import com.back.baton.domain.admin.dto.response.AdminActionLogRes;
 import com.back.baton.domain.admin.dto.response.AdminPageRes;
 import com.back.baton.domain.admin.entity.AdminActionLog;
@@ -29,15 +30,9 @@ public class AdminActionLogService {
         adminActionLogRepository.save(AdminActionLog.create(adminId, targetType, targetId, actionType, reason));
     }
 
-    public AdminPageRes<AdminActionLogRes> getActionLogs(
-            Long adminId,
-            AdminActionTargetType targetType,
-            Long targetId,
-            AdminActionType actionType,
-            Pageable pageable
-    ) {
+    public AdminPageRes<AdminActionLogRes> getActionLogs(AdminActionLogSearchReq req, Pageable pageable) {
         return AdminPageRes.from(adminActionLogRepository
-                .searchAdminActionLogs(adminId, targetType, targetId, actionType, pageable)
+                .searchAdminActionLogs(req.adminId(), req.targetType(), req.targetId(), req.actionType(), pageable)
                 .map(AdminActionLogRes::from));
     }
 }

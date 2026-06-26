@@ -1,5 +1,6 @@
 package com.back.baton.domain.admin.service;
 
+import com.back.baton.domain.admin.dto.request.AdminActionLogSearchReq;
 import com.back.baton.domain.admin.dto.response.AdminActionLogRes;
 import com.back.baton.domain.admin.dto.response.AdminPageRes;
 import com.back.baton.domain.admin.entity.AdminActionTargetType;
@@ -34,11 +35,15 @@ class AdminActionLogServiceIntegrationTest {
                 "테스트 상태 변경"
         );
 
-        AdminPageRes<AdminActionLogRes> response = adminActionLogService.getActionLogs(
+        AdminActionLogSearchReq req = new AdminActionLogSearchReq(
                 1L,
                 AdminActionTargetType.USER,
                 2L,
-                AdminActionType.USER_STATUS_CHANGED,
+                AdminActionType.USER_STATUS_CHANGED
+        );
+
+        AdminPageRes<AdminActionLogRes> response = adminActionLogService.getActionLogs(
+                req,
                 PageRequest.of(0, 10)
         );
 
