@@ -12,17 +12,16 @@ import com.back.baton.domain.user.entity.User;
 import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -440,7 +439,8 @@ class MatchProposalRepositoryTest {
 
         matchProposalRepository.updateStatusWhenProviderWithdrawn(
                 2L,
-                MatchProposalStatus.REJECTED
+                MatchProposalStatus.REJECTED,
+                MatchProposalStatus.REQUESTED
         );
 
         entityManager.clear();
@@ -466,7 +466,8 @@ class MatchProposalRepositoryTest {
 
         matchProposalRepository.updateStatusWhenRequesterWithdrawn(
                 1L,
-                MatchProposalStatus.CANCELLED
+                MatchProposalStatus.CANCELLED,
+                MatchProposalStatus.REQUESTED
         );
 
         entityManager.clear();

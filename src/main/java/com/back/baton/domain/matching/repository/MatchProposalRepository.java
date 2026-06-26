@@ -47,11 +47,12 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     update MatchProposal mp
     SET mp.status = :status,
         mp.activeSwapPairKey = null
-    WHERE mp.providerId = :providerId AND mp.status != "ACCEPTED"
+    WHERE mp.providerId = :providerId AND mp.status = :pendingStatus
     """)
     void updateStatusWhenProviderWithdrawn(
             @Param("providerId") Long providerId,
-            @Param("status") MatchProposalStatus status
+            @Param("status") MatchProposalStatus status,
+            @Param("pendingStatus") MatchProposalStatus pendingStatus
     );
 
     @Modifying(clearAutomatically = true)
@@ -59,11 +60,12 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     update MatchProposal mp
     SET mp.status = :status,
         mp.activeSwapPairKey = null
-    WHERE mp.requesterId = :requesterId AND mp.status != "ACCEPTED"
+    WHERE mp.requesterId = :requesterId AND mp.status = :pendingStatus
     """)
     void updateStatusWhenRequesterWithdrawn(
             @Param("requesterId") Long requesterId,
-            @Param("status") MatchProposalStatus status
+            @Param("status") MatchProposalStatus status,
+            @Param("pendingStatus") MatchProposalStatus pendingStatus
     );
 
     default List<MatchProposalReceivedRes> findReceivedProposals(

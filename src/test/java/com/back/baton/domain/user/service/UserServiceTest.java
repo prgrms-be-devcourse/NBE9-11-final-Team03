@@ -54,7 +54,7 @@ class UserServiceTest {
         userService.withdraw(userId);
 
         // then
-        verify(matchProposalRepository).updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED);
+        verify(matchProposalRepository).updateStatusWhenProviderWithdrawn(userId, MatchProposalStatus.REJECTED, MatchProposalStatus.REQUESTED);
         verify(withdrawnUserRepository).save(any(WithdrawnUser.class));
         verify(talentRepository).deleteTalentByUserId(eq(userId), any(LocalDateTime.class));
         verify(creditAccountRepository).deleteAccountByUserId(eq(userId), any(LocalDateTime.class));
