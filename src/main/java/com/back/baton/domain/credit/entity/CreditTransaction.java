@@ -45,10 +45,6 @@ public class CreditTransaction extends BaseTimeEntity {
     @Column(name = "balance_after", nullable = false, updatable = false)
     private Integer balanceAfter;
 
-    @Schema(description = "멱등성 키. 중복 요청 방지를 위한 unique 제약", example = "550e8400-e29b-41d4-a716-446655440000")
-    @Column(name = "idempotency_key", nullable = false, unique = true, length = 100, updatable = false)
-    private String idempotencyKey;
-
     @Schema(description = "거래 유형별 고정 기본 사유 (type.defaultReason 스냅샷)", example = "거래 완료까지 크레딧 에스크로 예치")
     @Column(name = "default_reason", length = 200, nullable = false, updatable = false)
     private String defaultReason;
@@ -63,7 +59,6 @@ public class CreditTransaction extends BaseTimeEntity {
             CreditTransactionType type,
             Integer amount,
             Integer balanceAfter,
-            String idempotencyKey,
             String detailReason
     ) {
         CreditTransaction ct = new CreditTransaction();
@@ -72,7 +67,6 @@ public class CreditTransaction extends BaseTimeEntity {
         ct.type = type;
         ct.amount = amount;
         ct.balanceAfter = balanceAfter;
-        ct.idempotencyKey = idempotencyKey;
         ct.defaultReason = type.getDefaultReason();
         ct.detailReason = detailReason;
         return ct;

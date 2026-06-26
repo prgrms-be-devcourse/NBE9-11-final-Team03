@@ -114,16 +114,10 @@ public class MatchProposalService {
                 tradeType
         );
 
-        String escrowHoldIdempotencyKey = "MATCH-PROPOSAL-ACCEPT-"
-                + matchProposal.getId()
-                + ":TRADE-"
-                + trade.getId();
-
         creditService.holdForEscrow(
                 matchProposal.getRequesterId(),
                 matchProposal.getProviderTalentPriceSnapshot(),
-                trade.getId(),
-                escrowHoldIdempotencyKey
+                trade.getId()
         );
 
         escrowService.create(

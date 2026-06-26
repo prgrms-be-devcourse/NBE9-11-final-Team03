@@ -359,8 +359,7 @@ class MatchProposalServiceTest {
         verify(creditService).holdForEscrow(
                 requesterId,
                 creditPrice,
-                tradeId,
-                "MATCH-PROPOSAL-ACCEPT-" + proposalId + ":TRADE-" + tradeId
+                tradeId
         );
         verify(escrowService).create(
                 tradeId,
@@ -404,7 +403,7 @@ class MatchProposalServiceTest {
 
         verify(talentRepository, never()).findById(any());
         verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
-        verify(creditService, never()).holdForEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).holdForEscrow(any(), anyInt(), any());
         verify(escrowService, never()).create(any(), any(), any(), anyInt());
         verify(chatService, never()).getOrCreateTransactionRoom(any());
         verify(matchProposalRepository, never()).save(any());
@@ -473,7 +472,7 @@ class MatchProposalServiceTest {
         verify(matchProposalRepository).findById(proposalId);
         verify(talentRepository, never()).findById(any());
         verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
-        verify(creditService, never()).holdForEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).holdForEscrow(any(), anyInt(), any());
         verify(escrowService, never()).create(any(), any(), any(), anyInt());
         verify(chatService, never()).getOrCreateTransactionRoom(any());
         verify(matchProposalRepository, never()).save(any());
