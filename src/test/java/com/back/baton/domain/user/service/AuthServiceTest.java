@@ -189,7 +189,7 @@ public class AuthServiceTest {
     @DisplayName("로그인 실패 - 유저 상태가 휴면(SUSPENDED)인 경우 예외가 발생한다")
     void login_Fail_1() {
         // given
-        validUser.setStatus(UserStatus.SUSPENDED);
+        validUser.changeStatus(UserStatus.SUSPENDED);
         given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(validUser));
 
         // when & then
@@ -283,7 +283,7 @@ public class AuthServiceTest {
         // 테스트 메서드 안에서 @BeforeEach로 생성된 mockUser의 상태를 파라미터 값으로 변경합니다.
         String savedToken = "valid-refresh-token";
         Long userId = validUser.getId();
-        validUser.setStatus(status);
+        validUser.changeStatus(status);
 
         given(jwtTokenProvider.getUserIdFromToken(savedToken)).willReturn(userId);
         given(userRepository.findById(userId)).willReturn(Optional.of(validUser));
