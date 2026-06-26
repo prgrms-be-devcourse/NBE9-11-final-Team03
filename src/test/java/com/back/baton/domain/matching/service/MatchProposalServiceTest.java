@@ -16,6 +16,7 @@ import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeType;
 import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
+import com.back.baton.global.response.code.MatchingErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -87,7 +88,7 @@ class MatchProposalServiceTest {
                 )
         )).thenReturn(false);
 
-        when(matchProposalRepository.save(any(MatchProposal.class)))
+        when(matchProposalRepository.saveAndFlush(any(MatchProposal.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         MatchProposalRes res = matchProposalService.createMatchProposal(requesterId, req);
@@ -110,7 +111,55 @@ class MatchProposalServiceTest {
                         MatchProposalStatus.ACCEPTED
                 )
         );
-        verify(matchProposalRepository).save(any(MatchProposal.class));
+        verify(matchProposalRepository).saveAndFlush(any(MatchProposal.class));
+    }
+
+    @Test
+    @DisplayName("교환 매칭 제안을 생성할 수 있다")
+    void createMatchProposal_swap() {
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        Talent requesterTalent = createTalent(10L, requesterId);
+        Talent providerTalent = createTalent(20L, providerId);
+
+        MatchProposalCreateReq req = new MatchProposalCreateReq(
+                requesterTalent.getId(),
+                providerId,
+                providerTalent.getId(),
+                "재능 교환 제안드립니다."
+        );
+
+        when(talentRepository.findById(providerTalent.getId()))
+                .thenReturn(Optional.of(providerTalent));
+        when(talentRepository.findById(requesterTalent.getId()))
+                .thenReturn(Optional.of(requesterTalent));
+        when(matchProposalRepository.existsByActiveSwapPairKey(
+                MatchProposal.createActiveSwapPairKey(
+                        requesterTalent.getId(),
+                        providerTalent.getId()
+                )
+        )).thenReturn(false);
+        when(matchProposalRepository.saveAndFlush(any(MatchProposal.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        MatchProposalRes res = matchProposalService.createMatchProposal(requesterId, req);
+
+        assertThat(res.providerId()).isEqualTo(providerId);
+        assertThat(res.requesterId()).isEqualTo(requesterId);
+        assertThat(res.providerTalentId()).isEqualTo(providerTalent.getId());
+        assertThat(res.requesterTalentId()).isEqualTo(requesterTalent.getId());
+        assertThat(res.requestMessage()).isEqualTo(req.requestMessage());
+        assertThat(res.status()).isEqualTo(MatchProposalStatus.REQUESTED);
+        assertThat(res.respondedAt()).isNull();
+
+        verify(matchProposalRepository).existsByActiveSwapPairKey(
+                MatchProposal.createActiveSwapPairKey(
+                        requesterTalent.getId(),
+                        providerTalent.getId()
+                )
+        );
+        verify(matchProposalRepository).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -205,6 +254,41 @@ class MatchProposalServiceTest {
     }
 
     @Test
+    @DisplayName("상대방이 이미 보낸 교환 요청이 있으면 역방향 교환 요청을 생성할 수 없다")
+    void createMatchProposal_rejectReverseSwapProposal() {
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        Talent requesterTalent = createTalent(10L, requesterId);
+        Talent providerTalent = createTalent(20L, providerId);
+
+        MatchProposalCreateReq reverseReq = new MatchProposalCreateReq(
+                providerTalent.getId(),
+                requesterId,
+                requesterTalent.getId(),
+                "역방향 교환 요청입니다."
+        );
+
+        when(talentRepository.findById(requesterTalent.getId()))
+                .thenReturn(Optional.of(requesterTalent));
+        when(talentRepository.findById(providerTalent.getId()))
+                .thenReturn(Optional.of(providerTalent));
+        when(matchProposalRepository.existsByActiveSwapPairKey(
+                MatchProposal.createActiveSwapPairKey(
+                        reverseReq.requesterTalentId(),
+                        reverseReq.providerTalentId()
+                )
+        )).thenReturn(true);
+
+        assertThatThrownBy(() -> matchProposalService.createMatchProposal(providerId, reverseReq))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
+
+        verify(matchProposalRepository, never()).save(any(MatchProposal.class));
+    }
+
+    @Test
     @DisplayName("판매자는 요청받은 매칭 제안을 수락할 수 있다")
     void acceptMatchProposal() {
         Long proposalId = 1L;
@@ -213,14 +297,13 @@ class MatchProposalServiceTest {
         Long providerTalentId = 20L;
         Long tradeId = 100L;
         int creditPrice = 100;
-        String idempotencyKey = "accept-proposal-1";
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 providerTalentId,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                creditPrice
         );
 
         ReflectionTestUtils.setField(matchProposal, "id", proposalId);
@@ -257,8 +340,7 @@ class MatchProposalServiceTest {
 
         MatchProposalRes res = matchProposalService.acceptMatchProposal(
                 proposalId,
-                providerId,
-                idempotencyKey
+                providerId
         );
 
         assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
@@ -278,7 +360,7 @@ class MatchProposalServiceTest {
                 requesterId,
                 creditPrice,
                 tradeId,
-                "MATCH-PROPOSAL-ACCEPT-" + proposalId + ":" + idempotencyKey
+                "MATCH-PROPOSAL-ACCEPT-" + proposalId + ":TRADE-" + tradeId
         );
         verify(escrowService).create(
                 tradeId,
@@ -293,20 +375,55 @@ class MatchProposalServiceTest {
     }
 
     @Test
+    @DisplayName("양방향 교환 제안 수락은 Trade/Credit/Escrow 구현 전까지 지원하지 않는다")
+    void acceptMatchProposal_swapNotImplemented() {
+        Long proposalId = 1L;
+        Long requesterId = 1L;
+        Long providerId = 2L;
+
+        MatchProposal matchProposal = MatchProposal.create(
+                20L,
+                10L,
+                requesterId,
+                providerId,
+                "재능 교환 제안드립니다.",
+                150,
+                100,
+                MatchProposal.createActiveSwapPairKey(10L, 20L)
+        );
+
+        ReflectionTestUtils.setField(matchProposal, "id", proposalId);
+
+        when(matchProposalRepository.findById(proposalId))
+                .thenReturn(Optional.of(matchProposal));
+
+        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, providerId))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(MatchingErrorCode.SWAP_ACCEPT_NOT_IMPLEMENTED);
+
+        verify(talentRepository, never()).findById(any());
+        verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
+        verify(creditService, never()).holdForEscrow(any(), anyInt(), any(), any());
+        verify(escrowService, never()).create(any(), any(), any(), anyInt());
+        verify(chatService, never()).getOrCreateTransactionRoom(any());
+        verify(matchProposalRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("제안을 받은 판매자가 아니면 매칭 제안을 수락할 수 없다")
     void acceptMatchProposal_accessDenied() {
         Long proposalId = 1L;
         Long requesterId = 1L;
         Long providerId = 2L;
         Long invalidProviderId = 999L;
-        String idempotencyKey = "accept-proposal-1";
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 20L,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                100
         );
 
         when(matchProposalRepository.findById(proposalId))
@@ -314,8 +431,7 @@ class MatchProposalServiceTest {
 
         assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
                 proposalId,
-                invalidProviderId,
-                idempotencyKey
+                invalidProviderId
         ))
                 .isInstanceOf(CustomException.class);
 
@@ -325,20 +441,19 @@ class MatchProposalServiceTest {
     }
 
     @Test
-    @DisplayName("이미 수락된 매칭 제안을 다시 수락하면 기존 수락 결과를 반환한다")
+    @DisplayName("이미 수락된 매칭 제안은 기존 수락 결과를 반환한다")
     void acceptMatchProposal_alreadyAccepted() {
         Long proposalId = 1L;
         Long requesterId = 1L;
         Long providerId = 2L;
         Long providerTalentId = 20L;
-        String idempotencyKey = "accept-proposal-1";
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 providerTalentId,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                100
         );
 
         ReflectionTestUtils.setField(matchProposal, "id", proposalId);
@@ -349,8 +464,7 @@ class MatchProposalServiceTest {
 
         MatchProposalRes res = matchProposalService.acceptMatchProposal(
                 proposalId,
-                providerId,
-                idempotencyKey
+                providerId
         );
 
         assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
@@ -361,23 +475,23 @@ class MatchProposalServiceTest {
         verify(tradeService, never()).create(any(), any(), any(), any(), any(), any());
         verify(creditService, never()).holdForEscrow(any(), anyInt(), any(), any());
         verify(escrowService, never()).create(any(), any(), any(), anyInt());
+        verify(chatService, never()).getOrCreateTransactionRoom(any());
         verify(matchProposalRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("REQUESTED 또는 ACCEPTED 상태가 아닌 매칭 제안은 수락할 수 없다")
+    @DisplayName("REQUESTED 상태가 아닌 매칭 제안은 수락할 수 없다")
     void acceptMatchProposal_invalidStatus() {
         Long proposalId = 1L;
         Long requesterId = 1L;
         Long providerId = 2L;
-        String idempotencyKey = "accept-proposal-1";
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 20L,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                100
         );
         matchProposal.reject();
 
@@ -386,8 +500,7 @@ class MatchProposalServiceTest {
 
         assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
                 proposalId,
-                providerId,
-                idempotencyKey
+                providerId
         ))
                 .isInstanceOf(CustomException.class);
 
@@ -403,12 +516,12 @@ class MatchProposalServiceTest {
         Long requesterId = 1L;
         Long providerId = 2L;
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 20L,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                100
         );
 
         when(matchProposalRepository.findById(proposalId))
@@ -430,12 +543,12 @@ class MatchProposalServiceTest {
         Long providerId = 2L;
         Long invalidProviderId = 999L;
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 20L,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                100
         );
 
         when(matchProposalRepository.findById(proposalId))
@@ -454,12 +567,12 @@ class MatchProposalServiceTest {
         Long requesterId = 1L;
         Long providerId = 2L;
 
-        MatchProposal matchProposal = MatchProposal.create(
+        MatchProposal matchProposal = createPurchaseProposal(
                 20L,
-                null,
                 requesterId,
                 providerId,
-                "재능 구매 제안드립니다."
+                "재능 구매 제안드립니다.",
+                100
         );
         matchProposal.accept();
 
@@ -470,6 +583,25 @@ class MatchProposalServiceTest {
                 .isInstanceOf(CustomException.class);
 
         verify(matchProposalRepository).findById(proposalId);
+    }
+
+    private MatchProposal createPurchaseProposal(
+            Long providerTalentId,
+            Long requesterId,
+            Long providerId,
+            String requestMessage,
+            Integer providerTalentPriceSnapshot
+    ) {
+        return MatchProposal.create(
+                providerTalentId,
+                null,
+                requesterId,
+                providerId,
+                requestMessage,
+                providerTalentPriceSnapshot,
+                null,
+                null
+        );
     }
 
     private Talent createTalent(Long id, Long authorId) {

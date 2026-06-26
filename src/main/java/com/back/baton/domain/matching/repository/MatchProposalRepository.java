@@ -45,7 +45,8 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Modifying(clearAutomatically = true)
     @Query("""
     update MatchProposal mp
-    SET mp.status = :status
+    SET mp.status = :status,
+        mp.activeSwapPairKey = null
     WHERE mp.providerId = :providerId AND mp.status = :pendingStatus
     """)
     void updateStatusWhenProviderWithdrawn(
@@ -57,7 +58,8 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
     @Modifying(clearAutomatically = true)
     @Query("""
     update MatchProposal mp
-    SET mp.status = :status
+    SET mp.status = :status,
+        mp.activeSwapPairKey = null
     WHERE mp.requesterId = :requesterId AND mp.status = :pendingStatus
     """)
     void updateStatusWhenRequesterWithdrawn(
@@ -216,13 +218,16 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
             @Param("status") MatchProposalStatus status
     );
 
+    boolean existsByActiveSwapPairKey(String activeSwapPairKey);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
-    update MatchProposal mp
-    set mp.status = com.back.baton.domain.matching.entity.MatchProposalStatus.CANCELLED,
-        mp.updatedAt = CURRENT_TIMESTAMP
-    where (mp.providerTalentId = :talentId or mp.requesterTalentId = :talentId)
-    and mp.status = com.back.baton.domain.matching.entity.MatchProposalStatus.REQUESTED
-    """)
+            update MatchProposal mp
+            set mp.status = com.back.baton.domain.matching.entity.MatchProposalStatus.CANCELLED,
+                mp.activeSwapPairKey = null,
+                mp.updatedAt = CURRENT_TIMESTAMP
+            where (mp.providerTalentId = :talentId or mp.requesterTalentId = :talentId)
+            and mp.status = com.back.baton.domain.matching.entity.MatchProposalStatus.REQUESTED
+            """)
     void cancelRequestedByTalentId(@Param("talentId") Long talentId);
 }
