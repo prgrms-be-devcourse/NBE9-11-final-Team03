@@ -19,6 +19,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -417,6 +418,58 @@ class MatchProposalRepositoryTest {
         assertThat(result)
                 .extracting(MatchProposalSentRes::proposalId)
                 .containsExactly(visibleProposal.getId());
+    }
+
+    @Test
+    @DisplayName("재능 삭제 시 해당 talentId의 REQUESTED 제안만 CANCELLED로 전이되고 updatedAt이 갱신된다")
+    void cancelRequestedByTalentId_onlyRequestedOfTargetTalent() {
+        User requester = saveUser("cancel-req@example.com", "취소요청자");
+        User provider = saveUser("cancel-prov@example.com", "취소제공자");
+        Category category = saveCategory("취소카테고리", 99);
+
+        Talent targetTalent = saveTalent(provider.getId(), category, "삭제 대상 재능");
+        Talent otherTalent = saveTalent(provider.getId(), category, "무관한 재능");
+        Talent reqTalent = saveTalent(requester.getId(), category, "요청자 재능");
+        Long targetId = targetTalent.getId();
+
+        //target이 provider측, REQUESTED → CANCELLED
+        MatchProposal p1 = matchProposalRepository.save(MatchProposal.create(
+                targetId, reqTalent.getId(), requester.getId(), provider.getId(), "provider측 제안"));
+        //target이 requester측, REQUESTED → CANCELLED
+        MatchProposal p2 = matchProposalRepository.save(MatchProposal.create(
+                otherTalent.getId(), targetId, requester.getId(), provider.getId(), "requester측 제안"));
+        //target과 무관, REQUESTED → 유지
+        MatchProposal p3 = matchProposalRepository.save(MatchProposal.create(
+                otherTalent.getId(), reqTalent.getId(), requester.getId(), provider.getId(), "무관 제안"));
+        //target이 provider측, ACCEPTED → 유지
+        MatchProposal p4 = MatchProposal.create(
+                targetId, reqTalent.getId(), requester.getId(), provider.getId(), "이미 수락됨");
+        p4.accept();
+        p4 = matchProposalRepository.save(p4);
+        //target이 requester측, REJECTED → 유지
+        MatchProposal p5 = MatchProposal.create(
+                otherTalent.getId(), targetId, requester.getId(), provider.getId(), "이미 반려됨");
+        p5.reject();
+        p5 = matchProposalRepository.save(p5);
+
+        LocalDateTime beforeUpdate = LocalDateTime.now();
+
+        // when
+        matchProposalRepository.cancelRequestedByTalentId(targetId);
+
+        // then
+        MatchProposal updated1 = matchProposalRepository.findById(p1.getId()).orElseThrow();
+        assertThat(updated1.getStatus()).isEqualTo(MatchProposalStatus.CANCELLED);
+        assertThat(updated1.getUpdatedAt()).isAfterOrEqualTo(beforeUpdate);
+
+        assertThat(matchProposalRepository.findById(p2.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchProposalStatus.CANCELLED);
+        assertThat(matchProposalRepository.findById(p3.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchProposalStatus.REQUESTED);
+        assertThat(matchProposalRepository.findById(p4.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchProposalStatus.ACCEPTED);
+        assertThat(matchProposalRepository.findById(p5.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchProposalStatus.REJECTED);
     }
 
     private TestFixture createProposalFixture() {

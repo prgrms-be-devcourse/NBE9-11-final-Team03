@@ -2,6 +2,7 @@ package com.back.baton.domain.talent.service;
 
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
+import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.dto.request.TalentCreateReq;
 import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.request.TalentUpdateReq;
@@ -33,6 +34,7 @@ public class TalentService {
     private final TalentRepository talentRepository;
     private final CategoryRepository categoryRepository;
     private final TradeRepository tradeRepository;
+    private final MatchProposalRepository matchProposalRepository;
     private static final int MAX_PAGE_SIZE = 100;
 
     @Value("${talent.max-count-per-user:3}")
@@ -95,7 +97,7 @@ public class TalentService {
             throw new CustomException(TalentErrorCode.TALENT_FORBIDDEN);
         }
 
-        List<TradeStatus> blockStatuses = List.of(TradeStatus.IN_PROGRESS, TradeStatus.UNDER_REVIEW);
+        List<TradeStatus> blockStatuses = List.of(TradeStatus.IN_PROGRESS, TradeStatus.UNDER_REVIEW, TradeStatus.DISPUTED);
         boolean hasUnfinishedTrade = tradeRepository.existsByTalentIdAndStatusIn(talentId, blockStatuses);
 
         if (hasUnfinishedTrade) {
@@ -103,6 +105,8 @@ public class TalentService {
         }
         // Dirty Checking: save() 없이 커밋 시 UPDATE
         talent.softDelete();
+        // Requested 일 때 재능 삭제/비활성화시 CANCELLED처리
+        matchProposalRepository.cancelRequestedByTalentId(talentId);
         // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
     }
 
