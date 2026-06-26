@@ -213,4 +213,14 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
             @Param("requesterId") Long requesterId,
             @Param("status") MatchProposalStatus status
     );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+    update MatchProposal mp
+    set mp.status = com.back.baton.domain.matching.entity.MatchProposalStatus.CANCELLED,
+        mp.updatedAt = CURRENT_TIMESTAMP
+    where (mp.providerTalentId = :talentId or mp.requesterTalentId = :talentId)
+    and mp.status = com.back.baton.domain.matching.entity.MatchProposalStatus.REQUESTED
+    """)
+    void cancelRequestedByTalentId(@Param("talentId") Long talentId);
 }
