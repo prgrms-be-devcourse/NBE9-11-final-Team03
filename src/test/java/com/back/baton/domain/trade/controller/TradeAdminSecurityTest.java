@@ -30,7 +30,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "jwt.secret=trade-admin-security-test-secret-key")
+@SpringBootTest(properties = {
+        "jwt.secret=trade-admin-security-test-secret-key",
+        "hash.salt=trade-admin-security-test-salt"
+})
 @AutoConfigureMockMvc
 class TradeAdminSecurityTest {
 
@@ -78,10 +81,10 @@ class TradeAdminSecurityTest {
     }
 
     @Test
-    @DisplayName("분쟁 목록 조회 - 비인증 요청은 403이 반환된다")
-    void getDisputedTrades_unauthenticated_forbidden() throws Exception {
+    @DisplayName("분쟁 목록 조회 - 비인증 요청은 401이 반환된다")
+    void getDisputedTrades_unauthenticated_unauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/admin/trade/disputes"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -116,13 +119,13 @@ class TradeAdminSecurityTest {
     }
 
     @Test
-    @DisplayName("분쟁 처리 - 비인증 요청은 403이 반환된다")
-    void resolveDispute_unauthenticated_forbidden() throws Exception {
+    @DisplayName("분쟁 처리 - 비인증 요청은 401이 반환된다")
+    void resolveDispute_unauthenticated_unauthorized() throws Exception {
         Long tradeId = 1L;
 
         mockMvc.perform(patch("/api/v1/admin/trade/{tradeId}/dispute/resolve", tradeId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"verdict\":\"BUYER_WIN\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }
