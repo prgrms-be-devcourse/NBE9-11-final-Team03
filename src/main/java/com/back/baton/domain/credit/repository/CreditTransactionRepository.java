@@ -5,5 +5,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CreditTransactionRepository extends JpaRepository<CreditTransaction, Long>, CreditTransactionRepositoryCustom {
 
-    boolean existsByIdempotencyKey(String idempotencyKey);
 }

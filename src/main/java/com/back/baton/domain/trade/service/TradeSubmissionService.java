@@ -1,11 +1,9 @@
 package com.back.baton.domain.trade.service;
 
-import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.request.TradeSubmissionReq;
 import com.back.baton.domain.trade.dto.response.PresignedUrlRes;
-import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.dto.response.TradeSubmissionRes;
 import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeSubmission;
@@ -32,7 +30,6 @@ public class TradeSubmissionService {
     private final EscrowRepository escrowRepository;
     private final TradeSubmissionRepository tradeSubmissionRepository;
     private final S3Service s3Service;
-    private final CreditService creditService;
 
     public TradeSubmissionRes getSubmission(Long tradeId, Long buyerId) {
         Trade trade = getTrade(tradeId);
@@ -45,32 +42,6 @@ public class TradeSubmissionService {
 
         String fileUrl = s3Service.generatePresignedGetUrl(submission.getFileKey());
         return TradeSubmissionRes.of(submission, fileUrl);
-    }
-
-    @Transactional
-    public TradeRes confirmPurchase(Long tradeId, Long buyerId) {
-        Trade trade = tradeRepository.findByIdWithLock(tradeId)
-                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
-
-        validateBuyer(trade, buyerId);
-        validateUnderReview(trade);
-
-        Escrow escrow = getEscrow(tradeId);
-
-        escrow.release(); // 에스크로 상태 변경 (HELD -> RELEASED)
-        trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
-
-        // 크레딧 정산
-        creditService.settleEscrow(
-                escrow.getPayerId(),
-                escrow.getPayeeId(),
-                escrow.getAmount(), // 구매자 escrow 차감액
-                escrow.getAmount(), // 판매자 지급액 (구매 확정 시 수수료 없이 전액 정산되므로, 구매자 차감액과 값이 동일)
-                tradeId,
-                "TRADE-SETTLE-" + tradeId
-        );
-
-        return TradeRes.of(trade, escrow);
     }
 
     public PresignedUrlRes getPresignedUrl(Long tradeId, Long sellerId, String fileName) {
@@ -86,7 +57,8 @@ public class TradeSubmissionService {
 
     @Transactional
     public TradeSubmissionRes submitResult(Long tradeId, Long sellerId, TradeSubmissionReq req) {
-        Trade trade = getTrade(tradeId);
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
 
         validateSeller(trade, sellerId);
         validateInProgress(trade);

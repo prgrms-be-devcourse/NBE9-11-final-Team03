@@ -68,8 +68,32 @@ public class TradeService {
         creditService.refundFromEscrow(
                 escrow.getPayerId(),
                 escrow.getAmount(),
-                tradeId,
-                "TRADE-CANCEL-" + tradeId
+                tradeId
+        );
+
+        return TradeRes.of(trade, escrow);
+    }
+
+    @Transactional
+    public TradeRes confirmPurchase(Long tradeId, Long buyerId) {
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+
+        validateBuyer(trade, buyerId);
+        validateUnderReview(trade);
+
+        Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+        escrow.release();
+        trade.complete();
+
+        creditService.settleEscrow(
+                escrow.getPayerId(),
+                escrow.getPayeeId(),
+                escrow.getAmount(),
+                escrow.getAmount(),
+                tradeId
         );
 
         return TradeRes.of(trade, escrow);
@@ -112,8 +136,7 @@ public class TradeService {
             creditService.refundFromEscrow(
                     escrow.getPayerId(),
                     escrow.getAmount(),
-                    tradeId,
-                    "DISPUTE-REFUND-" + tradeId
+                    tradeId
             );
         }
         // 판매자 승소 -> 거래 완료 + 에스크로 정산
@@ -125,8 +148,7 @@ public class TradeService {
                     escrow.getPayeeId(),
                     escrow.getAmount(),
                     escrow.getSettlementAmount(),
-                    tradeId,
-                    "DISPUTE-SETTLE-" + tradeId
+                    tradeId
             );
         }
 
@@ -169,6 +191,12 @@ public class TradeService {
     private void validateBuyer(Trade trade, Long buyerId) {
         if (!Objects.equals(trade.getBuyerId(), buyerId)) {
             throw new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED);
+        }
+    }
+
+    private void validateUnderReview(Trade trade) {
+        if (trade.getStatus() != TradeStatus.UNDER_REVIEW) {
+            throw new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
         }
     }
 

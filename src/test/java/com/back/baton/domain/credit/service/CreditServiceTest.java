@@ -173,153 +173,17 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("적립 금액이 양수이고 계좌가 존재하면 잔액이 증가하고 원장이 기록된다")
-    void earnCredit_success() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "balance", 15000);
-        given(creditAccountRepository.addBalance(1L, 5000)).willReturn(1);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-
-        creditService.earnCredit(1L, 5000, CreditTransactionType.CHARGE);
-
-        then(creditAccountRepository).should().addBalance(1L, 5000);
-        then(creditTransactionRepository).should().save(any(CreditTransaction.class));
-    }
-
-    @Test
-    @DisplayName("원장에 저장되는 사유와 금액이 올바르다")
-    void earnCredit_savedTransactionFields() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "balance", 15000);
-        given(creditAccountRepository.addBalance(1L, 5000)).willReturn(1);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-        ArgumentCaptor<CreditTransaction> captor = ArgumentCaptor.forClass(CreditTransaction.class);
-
-        creditService.earnCredit(1L, 5000, CreditTransactionType.CHARGE);
-
-        then(creditTransactionRepository).should().save(captor.capture());
-        CreditTransaction saved = captor.getValue();
-        assertThat(saved.getAmount()).isEqualTo(5000);
-        assertThat(saved.getDefaultReason()).isEqualTo(CreditTransactionType.CHARGE.getDefaultReason());
-        assertThat(saved.getDetailReason()).isNull();
-        assertThat(saved.getBalanceAfter()).isEqualTo(15000);
-    }
-
-    @Test
-    @DisplayName("적립 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
-    void earnCredit_invalidAmount() {
-        assertThatThrownBy(() -> creditService.earnCredit(1L, 0, CreditTransactionType.CHARGE))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
-
-        then(creditAccountRepository).should(never()).addBalance(any(), anyInt());
-        then(creditTransactionRepository).should(never()).save(any());
-    }
-
-    @Test
-    @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
-    void earnCredit_accountNotFound() {
-        given(creditAccountRepository.addBalance(999L, 5000)).willReturn(0);
-
-        assertThatThrownBy(() -> creditService.earnCredit(999L, 5000, CreditTransactionType.CHARGE))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
-
-        then(creditTransactionRepository).should(never()).save(any());
-    }
-
-    @Test
-    @DisplayName("차감 금액이 양수이고 잔액이 충분하면 잔액이 감소하고 원장이 기록된다")
-    void deductCredit_success() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "balance", 7000);
-        given(creditAccountRepository.deductBalance(1L, 3000)).willReturn(1);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-
-        creditService.deductCredit(1L, 3000);
-
-        then(creditAccountRepository).should().deductBalance(1L, 3000);
-        then(creditTransactionRepository).should().save(any(CreditTransaction.class));
-    }
-
-    @Test
-    @DisplayName("원장에 저장되는 사유와 금액 부호가 올바르다")
-    void deductCredit_savedTransactionFields() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "balance", 7000);
-        given(creditAccountRepository.deductBalance(1L, 3000)).willReturn(1);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-        ArgumentCaptor<CreditTransaction> captor = ArgumentCaptor.forClass(CreditTransaction.class);
-
-        creditService.deductCredit(1L, 3000);
-
-        then(creditTransactionRepository).should().save(captor.capture());
-        CreditTransaction saved = captor.getValue();
-        assertThat(saved.getAmount()).isEqualTo(-3000);
-        assertThat(saved.getDefaultReason()).isEqualTo(CreditTransactionType.PURCHASE_DEBIT.getDefaultReason());
-        assertThat(saved.getDetailReason()).isNull();
-        assertThat(saved.getBalanceAfter()).isEqualTo(7000);
-    }
-
-    @Test
-    @DisplayName("차감 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
-    void deductCredit_invalidAmount() {
-        assertThatThrownBy(() -> creditService.deductCredit(1L, 0))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
-
-        then(creditAccountRepository).should(never()).deductBalance(any(), anyInt());
-        then(creditTransactionRepository).should(never()).save(any());
-    }
-
-    @Test
-    @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
-    void deductCredit_accountNotFound() {
-        given(creditAccountRepository.deductBalance(999L, 3000)).willReturn(0);
-        given(creditAccountRepository.findByUserId(999L)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> creditService.deductCredit(999L, 3000))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
-
-        then(creditTransactionRepository).should(never()).save(any());
-    }
-
-    @Test
-    @DisplayName("잔액이 부족하면 INSUFFICIENT_CREDIT_BALANCE 예외가 발생한다")
-    void deductCredit_insufficientBalance() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "userId", 1L);
-        ReflectionTestUtils.setField(account, "balance", 1000);
-
-        given(creditAccountRepository.deductBalance(1L, 5000)).willReturn(0);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-
-        assertThatThrownBy(() -> creditService.deductCredit(1L, 5000))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE));
-
-        then(creditTransactionRepository).should(never()).save(any());
-    }
-
-    @Test
     @DisplayName("잔액이 충분하면 에스크로 예치가 성공하고 원장이 기록된다")
     void holdForEscrow_success() {
         CreditAccount account = new CreditAccount();
         ReflectionTestUtils.setField(account, "balance", 7000);
-        given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(false);
         given(creditAccountRepository.holdForEscrow(1L, 3000)).willReturn(1);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
 
-        creditService.holdForEscrow(1L, 3000, 10L, "key-001");
+        creditService.holdForEscrow(1L, 3000, 10L);
 
         then(creditAccountRepository).should().holdForEscrow(1L, 3000);
-        then(creditTransactionRepository).should().saveAndFlush(any(CreditTransaction.class));
+        then(creditTransactionRepository).should().save(any(CreditTransaction.class));
     }
 
     @Test
@@ -327,14 +191,13 @@ class CreditServiceTest {
     void holdForEscrow_savedTransactionFields() {
         CreditAccount account = new CreditAccount();
         ReflectionTestUtils.setField(account, "balance", 7000);
-        given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(false);
         given(creditAccountRepository.holdForEscrow(1L, 3000)).willReturn(1);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
         ArgumentCaptor<CreditTransaction> captor = ArgumentCaptor.forClass(CreditTransaction.class);
 
-        creditService.holdForEscrow(1L, 3000, 10L, "key-001");
+        creditService.holdForEscrow(1L, 3000, 10L);
 
-        then(creditTransactionRepository).should().saveAndFlush(captor.capture());
+        then(creditTransactionRepository).should().save(captor.capture());
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(-3000);
         assertThat(saved.getRelatedTradeId()).isEqualTo(10L);
@@ -344,36 +207,9 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("이미 처리된 멱등성 키이면 중복 예치 없이 바로 반환된다")
-    void holdForEscrow_duplicateIdempotencyKey() {
-        given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(true);
-
-        creditService.holdForEscrow(1L, 3000, 10L, "key-001");
-
-        then(creditAccountRepository).should(never()).holdForEscrow(any(), anyInt());
-        then(creditTransactionRepository).should(never()).save(any());
-    }
-
-    @Test
-    @DisplayName("동시 요청으로 idempotencyKey unique 제약 위반 시 DUPLICATE_ESCROW_HOLD_REQUEST 예외가 발생한다")
-    void holdForEscrow_duplicateKeyOnSave() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "balance", 7000);
-        given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(false);
-        given(creditAccountRepository.holdForEscrow(1L, 3000)).willReturn(1);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-        given(creditTransactionRepository.saveAndFlush(any())).willThrow(DataIntegrityViolationException.class);
-
-        assertThatThrownBy(() -> creditService.holdForEscrow(1L, 3000, 10L, "key-001"))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.DUPLICATE_ESCROW_HOLD_REQUEST));
-    }
-
-    @Test
     @DisplayName("예치 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
     void holdForEscrow_invalidAmount() {
-        assertThatThrownBy(() -> creditService.holdForEscrow(1L, 0, 10L, "key-001"))
+        assertThatThrownBy(() -> creditService.holdForEscrow(1L, 0, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
@@ -385,11 +221,10 @@ class CreditServiceTest {
     @Test
     @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
     void holdForEscrow_accountNotFound() {
-        given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(false);
         given(creditAccountRepository.holdForEscrow(999L, 3000)).willReturn(0);
         given(creditAccountRepository.findByUserId(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> creditService.holdForEscrow(999L, 3000, 10L, "key-001"))
+        assertThatThrownBy(() -> creditService.holdForEscrow(999L, 3000, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
@@ -404,11 +239,10 @@ class CreditServiceTest {
         ReflectionTestUtils.setField(account, "userId", 1L);
         ReflectionTestUtils.setField(account, "balance", 1000);
 
-        given(creditTransactionRepository.existsByIdempotencyKey("key-001")).willReturn(false);
         given(creditAccountRepository.holdForEscrow(1L, 5000)).willReturn(0);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
 
-        assertThatThrownBy(() -> creditService.holdForEscrow(1L, 5000, 10L, "key-001"))
+        assertThatThrownBy(() -> creditService.holdForEscrow(1L, 5000, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE));
@@ -421,14 +255,13 @@ class CreditServiceTest {
     void refundFromEscrow_success() {
         CreditAccount account = new CreditAccount();
         ReflectionTestUtils.setField(account, "balance", 8000);
-        given(creditTransactionRepository.existsByIdempotencyKey("refund-key-001")).willReturn(false);
         given(creditAccountRepository.releaseEscrow(1L, 3000)).willReturn(1);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
 
-        creditService.refundFromEscrow(1L, 3000, 10L, "refund-key-001");
+        creditService.refundFromEscrow(1L, 3000, 10L);
 
         then(creditAccountRepository).should().releaseEscrow(1L, 3000);
-        then(creditTransactionRepository).should().saveAndFlush(any(CreditTransaction.class));
+        then(creditTransactionRepository).should().save(any(CreditTransaction.class));
     }
 
     @Test
@@ -436,14 +269,13 @@ class CreditServiceTest {
     void refundFromEscrow_savedTransactionFields() {
         CreditAccount account = new CreditAccount();
         ReflectionTestUtils.setField(account, "balance", 8000);
-        given(creditTransactionRepository.existsByIdempotencyKey("refund-key-001")).willReturn(false);
         given(creditAccountRepository.releaseEscrow(1L, 3000)).willReturn(1);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
         ArgumentCaptor<CreditTransaction> captor = ArgumentCaptor.forClass(CreditTransaction.class);
 
-        creditService.refundFromEscrow(1L, 3000, 10L, "refund-key-001");
+        creditService.refundFromEscrow(1L, 3000, 10L);
 
-        then(creditTransactionRepository).should().saveAndFlush(captor.capture());
+        then(creditTransactionRepository).should().save(captor.capture());
         CreditTransaction saved = captor.getValue();
         assertThat(saved.getAmount()).isEqualTo(3000);
         assertThat(saved.getRelatedTradeId()).isEqualTo(10L);
@@ -453,69 +285,29 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("이미 처리된 멱등성 키이면 중복 환불 없이 바로 반환된다")
-    void refundFromEscrow_duplicateIdempotencyKey() {
-        given(creditTransactionRepository.existsByIdempotencyKey("refund-key-001")).willReturn(true);
-
-        creditService.refundFromEscrow(1L, 3000, 10L, "refund-key-001");
-
-        then(creditAccountRepository).should(never()).releaseEscrow(any(), anyInt());
-        then(creditTransactionRepository).should(never()).saveAndFlush(any());
-    }
-
-    @Test
-    @DisplayName("동시 요청으로 idempotencyKey unique 제약 위반 시 DUPLICATE_ESCROW_REFUND_REQUEST 예외가 발생한다")
-    void refundFromEscrow_duplicateKeyOnSave() {
-        CreditAccount account = new CreditAccount();
-        ReflectionTestUtils.setField(account, "balance", 8000);
-        given(creditTransactionRepository.existsByIdempotencyKey("refund-key-001")).willReturn(false);
-        given(creditAccountRepository.releaseEscrow(1L, 3000)).willReturn(1);
-        given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
-        given(creditTransactionRepository.saveAndFlush(any())).willThrow(DataIntegrityViolationException.class);
-
-        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 3000, 10L, "refund-key-001"))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.DUPLICATE_ESCROW_REFUND_REQUEST));
-    }
-
-    @Test
     @DisplayName("환불 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
     void refundFromEscrow_invalidAmount() {
-        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 0, 10L, "refund-key-001"))
+        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 0, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
 
         then(creditAccountRepository).should(never()).releaseEscrow(any(), anyInt());
-        then(creditTransactionRepository).should(never()).saveAndFlush(any());
-    }
-
-    @Test
-    @DisplayName("멱등성 키가 null이면 INVALID_IDEMPOTENCY_KEY 예외가 발생한다")
-    void refundFromEscrow_nullIdempotencyKey() {
-        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 3000, 10L, null))
-                .isInstanceOf(CustomException.class)
-                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
-                        .isEqualTo(CreditErrorCode.INVALID_IDEMPOTENCY_KEY));
-
-        then(creditAccountRepository).should(never()).releaseEscrow(any(), anyInt());
-        then(creditTransactionRepository).should(never()).saveAndFlush(any());
+        then(creditTransactionRepository).should(never()).save(any());
     }
 
     @Test
     @DisplayName("크레딧 계좌가 없으면 CREDIT_ACCOUNT_NOT_FOUND 예외가 발생한다")
     void refundFromEscrow_accountNotFound() {
-        given(creditTransactionRepository.existsByIdempotencyKey("refund-key-001")).willReturn(false);
         given(creditAccountRepository.releaseEscrow(999L, 3000)).willReturn(0);
         given(creditAccountRepository.findByUserId(999L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> creditService.refundFromEscrow(999L, 3000, 10L, "refund-key-001"))
+        assertThatThrownBy(() -> creditService.refundFromEscrow(999L, 3000, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
 
-        then(creditTransactionRepository).should(never()).saveAndFlush(any());
+        then(creditTransactionRepository).should(never()).save(any());
     }
 
     @Test
@@ -525,16 +317,15 @@ class CreditServiceTest {
         ReflectionTestUtils.setField(account, "userId", 1L);
         ReflectionTestUtils.setField(account, "escrowBalance", 1000);
 
-        given(creditTransactionRepository.existsByIdempotencyKey("refund-key-001")).willReturn(false);
         given(creditAccountRepository.releaseEscrow(1L, 5000)).willReturn(0);
         given(creditAccountRepository.findByUserId(1L)).willReturn(Optional.of(account));
 
-        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 5000, 10L, "refund-key-001"))
+        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 5000, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.INSUFFICIENT_ESCROW_BALANCE));
 
-        then(creditTransactionRepository).should(never()).saveAndFlush(any());
+        then(creditTransactionRepository).should(never()).save(any());
     }
 
     private CreditTransactionRes historyRow(Long id, CreditTransactionType type, int amount, int balanceAfter) {

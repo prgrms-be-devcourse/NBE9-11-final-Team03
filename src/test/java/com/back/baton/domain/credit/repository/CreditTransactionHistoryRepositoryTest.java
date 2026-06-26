@@ -121,8 +121,7 @@ class CreditTransactionHistoryRepositoryTest {
 
     private CreditTransaction save(Long userId, CreditTransactionType type, int amount, int balanceAfter) {
         CreditTransaction tx = CreditTransaction.create(
-                userId, null, type, amount, balanceAfter,
-                "key-" + SEQ.incrementAndGet() + "-" + UUID.randomUUID(), null
+                userId, null, type, amount, balanceAfter, null
         );
         return creditTransactionRepository.saveAndFlush(tx);
     }

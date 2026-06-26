@@ -110,7 +110,7 @@ public class TradeController {
             @CurrentUser SecurityUser currentUser
     ) {
         Long buyerId = currentUser.getUserId();
-        TradeRes response = tradeSubmissionService.confirmPurchase(tradeId, buyerId);
+        TradeRes response = tradeService.confirmPurchase(tradeId, buyerId);
         return ApiResponses.success(SuccessCode.TRADE_COMPLETED, response);
     }
 

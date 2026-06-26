@@ -178,7 +178,7 @@ class TradeServiceTest {
 
         assertThat(result.tradeStatus()).isEqualTo(TradeStatus.CANCELLED);
         assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.REFUNDED);
-        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L, "TRADE-CANCEL-1");
+        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L);
     }
 
     @Test
@@ -212,7 +212,7 @@ class TradeServiceTest {
                 .isEqualTo(TradeErrorCode.TRADE_UNDER_REVIEW);
 
         verify(escrowRepository, never()).findByTradeId(any());
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -226,7 +226,7 @@ class TradeServiceTest {
                 .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
 
         verify(escrowRepository, never()).findByTradeId(any());
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -243,7 +243,7 @@ class TradeServiceTest {
                 .isEqualTo(TradeErrorCode.TRADE_ACCESS_DENIED);
 
         verify(escrowRepository, never()).findByTradeId(any());
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -261,7 +261,7 @@ class TradeServiceTest {
                 .isEqualTo(TradeErrorCode.TRADE_ALREADY_COMPLETED);
 
         verify(escrowRepository, never()).findByTradeId(any());
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -278,7 +278,7 @@ class TradeServiceTest {
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(TradeErrorCode.TRADE_ALREADY_CANCELLED);
 
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -296,7 +296,7 @@ class TradeServiceTest {
                 .isEqualTo(TradeErrorCode.TRADE_IN_DISPUTE);
 
         verify(escrowRepository, never()).findByTradeId(any());
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -313,7 +313,7 @@ class TradeServiceTest {
                 .extracting(e -> ((CustomException) e).getErrorCode())
                 .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
 
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -333,7 +333,7 @@ class TradeServiceTest {
         assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.FROZEN);
         assertThat(escrow.getRejectReason()).isEqualTo("결과물이 약속한 조건과 다릅니다.");
         assertThat(escrow.getExpiresAt()).isNull(); // 자동 확정 타이머 정지
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -432,8 +432,8 @@ class TradeServiceTest {
 
         assertThat(result.tradeStatus()).isEqualTo(TradeStatus.CANCELLED);
         assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.REFUNDED);
-        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L, "DISPUTE-REFUND-1");
-        then(creditService).should(never()).settleEscrow(any(), any(), anyInt(), anyInt(), any(), any());
+        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L);
+        then(creditService).should(never()).settleEscrow(any(), any(), anyInt(), anyInt(), any());
     }
 
     @Test
@@ -453,8 +453,8 @@ class TradeServiceTest {
 
         assertThat(result.tradeStatus()).isEqualTo(TradeStatus.COMPLETED);
         assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.RELEASED);
-        verify(creditService).settleEscrow(escrow.getPayerId(), escrow.getPayeeId(), escrow.getAmount(), escrow.getSettlementAmount(), 1L, "DISPUTE-SETTLE-1");
-        then(creditService).should(never()).refundFromEscrow(any(), anyInt(), any(), any());
+        verify(creditService).settleEscrow(escrow.getPayerId(), escrow.getPayeeId(), escrow.getAmount(), escrow.getSettlementAmount(), 1L);
+        then(creditService).should(never()).refundFromEscrow(any(), anyInt(), any());
     }
 
     @Test
@@ -580,6 +580,86 @@ class TradeServiceTest {
         assertThat(result.content()).hasSize(2);
         assertThat(result.content().get(0).tradeId()).isEqualTo(4L);
         assertThat(result.nextCursor()).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("구매 확정 성공 - Trade가 COMPLETED, Escrow가 RELEASED로 변경된다")
+    void confirmPurchase_success() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+        Escrow escrow = createEscrow(buyerId, 3L);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.of(escrow));
+
+        TradeRes result = tradeService.confirmPurchase(tradeId, buyerId);
+
+        assertThat(trade.getStatus()).isEqualTo(TradeStatus.COMPLETED);
+        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("구매 확정 - 존재하지 않는 거래이면 TRADE_NOT_FOUND 예외가 발생한다")
+    void confirmPurchase_tradeNotFound() {
+        given(tradeRepository.findByIdWithLock(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeService.confirmPurchase(999L, 2L))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("구매 확정 - 구매자가 아니면 TRADE_ACCESS_DENIED 예외가 발생한다")
+    void confirmPurchase_accessDenied() {
+        Long tradeId = 1L;
+        Trade trade = createTrade(2L, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeService.confirmPurchase(tradeId, 999L))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_ACCESS_DENIED);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("구매 확정 - UNDER_REVIEW가 아닌 거래이면 TRADE_NOT_UNDER_REVIEW 예외가 발생한다")
+    void confirmPurchase_notUnderReview() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+
+        assertThatThrownBy(() -> tradeService.confirmPurchase(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
+
+        then(escrowRepository).should(never()).findByTradeId(any());
+    }
+
+    @Test
+    @DisplayName("구매 확정 - 에스크로가 없으면 ESCROW_NOT_FOUND 예외가 발생한다")
+    void confirmPurchase_escrowNotFound() {
+        Long tradeId = 1L;
+        Long buyerId = 2L;
+        Trade trade = createTrade(buyerId, 3L);
+        ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
+
+        given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
+        given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> tradeService.confirmPurchase(tradeId, buyerId))
+                .isInstanceOf(CustomException.class)
+                .extracting(e -> ((CustomException) e).getErrorCode())
+                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
     }
 
     private TradeListRes createTradeListRes(Long tradeId, TradeStatus status, Long buyerId, Long sellerId) {
