@@ -17,8 +17,7 @@ import java.util.Optional;
 
 public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRepositoryCustom {
 
-    // category는 fetch join으로 같이 적재
-    // @ManyToOne 전환 시 join fetch t.author로 교체
+    // category를 fetch join으로 함께 조회한다.
     @Query("""
             select t, u
             from Talent t
@@ -28,11 +27,10 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
             """)
     List<Object[]> findDetailById(@Param("talentId") Long talentId);
 
-    // 조회수 +1 삭제글 무시
+    // 조회수를 1 증가시킨다.
     @Modifying(clearAutomatically = true)
     @Query("update Talent t set t.viewCount = t.viewCount + 1 where t.id = :talentId and t.deletedAt is null")
     int increaseViewCount(@Param("talentId") Long talentId);
-
 
     @Modifying(clearAutomatically = true)
     @Query("""
@@ -42,7 +40,7 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
             """)
     void deleteTalentByUserId(@Param("authorId") Long authorId, @Param("now") LocalDateTime now);
 
-    // 삭제되지 않은 본인 재능 개수 (등록 제한 검사용)
+    // 삭제되지 않은 본인 재능 개수 집계.
     int countByAuthorIdAndDeletedAtIsNull(Long authorId);
 
     Optional<Talent> findByIdAndDeletedAtIsNull(Long id);
@@ -73,6 +71,12 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    // 관리자 대시보드 재능 전체 수 집계. 삭제된 재능은 제외한다.
+    long countByDeletedAtIsNull();
+
+    // 관리자 대시보드 재능 상태별 수 집계. 삭제된 재능은 제외한다.
+    long countByStatusAndDeletedAtIsNull(TalentStatus status);
 
     default Talent getActiveTalentOrThrow(Long id) {
         return findByIdAndDeletedAtIsNull(id)

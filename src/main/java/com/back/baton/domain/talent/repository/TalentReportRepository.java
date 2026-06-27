@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface TalentReportRepository extends JpaRepository<TalentReport, Long> {
 
-    // 중복 신고 방지 (같은 reporter가 같은 talent 재신고 차단)
+    // 중복 신고 방지.
     boolean existsByTalentIdAndReporterId(Long talentId, Long reporterId);
 
     // 관리자 신고 목록 조회 필터 검색.
@@ -33,4 +33,7 @@ public interface TalentReportRepository extends JpaRepository<TalentReport, Long
             @Param("reason") ReportReason reason,
             Pageable pageable
     );
+
+    // 관리자 대시보드 신고 상태별 수 집계.
+    long countByStatus(ReportStatus status);
 }
