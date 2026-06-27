@@ -60,10 +60,19 @@ class TradeAdminSecurityTest {
     @DisplayName("분쟁 목록 조회 - 관리자는 접근 가능하다")
     void getDisputedTrades_admin_allowed() throws Exception {
         DisputeRes dispute = new DisputeRes(
-                1L, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.DISPUTED,
-                EscrowStatus.FROZEN, "결과물이 약속한 조건과 다릅니다.",
-                LocalDateTime.now(), LocalDateTime.now()
+                1L,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.DISPUTED,
+                EscrowStatus.FROZEN,
+                "결과물이 약속한 조건과 다릅니다.",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
         when(tradeService.getDisputedTrades()).thenReturn(List.of(dispute));
 
@@ -92,10 +101,19 @@ class TradeAdminSecurityTest {
     void resolveDispute_admin_allowed() throws Exception {
         Long tradeId = 1L;
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.CANCELLED,
-                EscrowStatus.REFUNDED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.CANCELLED,
+                EscrowStatus.REFUNDED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
         when(tradeService.resolveDispute(eq(tradeId), eq(DisputeVerdict.BUYER_WIN))).thenReturn(res);
 

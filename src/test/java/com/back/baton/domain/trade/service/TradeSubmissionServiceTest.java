@@ -348,7 +348,7 @@ class TradeSubmissionServiceTest {
     }
 
     private Trade createTrade(Long buyerId, Long sellerId) {
-        Trade trade = Trade.create(1L, 10L, buyerId, sellerId, 5000, TradeType.PURCHASE);
+        Trade trade = Trade.create(1L, null, 10L, buyerId, sellerId, 5000, TradeType.PURCHASE);
         ReflectionTestUtils.setField(trade, "id", 1L);
         return trade;
     }

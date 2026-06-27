@@ -130,7 +130,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("get trade succeeds with current user")
+    @DisplayName("현재 사용자로 거래 상세 조회 시 성공한다")
     @WithMockSecurityUser(userId = 2)
     void getTrade_success() throws Exception {
         Long tradeId = 1L;
@@ -138,10 +138,19 @@ class TradeControllerTest {
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
 
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.IN_PROGRESS,
-                EscrowStatus.HELD, expiresAt,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.IN_PROGRESS,
+                EscrowStatus.HELD,
+                expiresAt,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.getMyTrade(tradeId, userId)).thenReturn(res);
@@ -160,7 +169,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("get trade returns 404 when trade does not exist")
+    @DisplayName("존재하지 않는 거래를 조회하면 404를 반환한다")
     @WithMockSecurityUser(userId = 2)
     void getTrade_notFound() throws Exception {
         Long tradeId = 999L;
@@ -176,7 +185,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("get trade returns 403 when current user is not a participant")
+    @DisplayName("거래 참여자가 아닌 사용자가 조회하면 403을 반환한다")
     @WithMockSecurityUser(userId = 999)
     void getTrade_accessDenied() throws Exception {
         Long tradeId = 1L;
@@ -192,17 +201,26 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade succeeds with current user")
+    @DisplayName("현재 사용자로 거래 취소 시 성공한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_success() throws Exception {
         Long tradeId = 1L;
         Long userId = 2L;
 
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.CANCELLED,
-                EscrowStatus.REFUNDED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.CANCELLED,
+                EscrowStatus.REFUNDED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.cancelTrade(tradeId, userId)).thenReturn(res);
@@ -216,7 +234,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade returns 404 when trade does not exist")
+    @DisplayName("존재하지 않는 거래를 취소하면 404를 반환한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_notFound() throws Exception {
         Long tradeId = 999L;
@@ -232,7 +250,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade returns 403 when current user is not a participant")
+    @DisplayName("거래 참여자가 아닌 사용자가 취소하면 403을 반환한다")
     @WithMockSecurityUser(userId = 999)
     void cancelTrade_accessDenied() throws Exception {
         Long tradeId = 1L;
@@ -248,7 +266,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade returns 400 when trade is under review")
+    @DisplayName("검토 중인 거래를 취소하면 400을 반환한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_underReview() throws Exception {
         Long tradeId = 1L;
@@ -264,7 +282,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade returns 400 when trade is already completed")
+    @DisplayName("이미 완료된 거래를 취소하면 400을 반환한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_alreadyCompleted() throws Exception {
         Long tradeId = 1L;
@@ -280,7 +298,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade returns 409 when trade is already cancelled")
+    @DisplayName("이미 취소된 거래를 취소하면 409를 반환한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_alreadyCancelled() throws Exception {
         Long tradeId = 1L;
@@ -296,7 +314,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("cancel trade returns 400 when trade is in dispute")
+    @DisplayName("분쟁 중인 거래를 취소하면 400을 반환한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_inDispute() throws Exception {
         Long tradeId = 1L;
@@ -312,7 +330,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("dispute trade succeeds with current user")
+    @DisplayName("현재 사용자로 분쟁 신청 시 성공한다")
     @WithMockSecurityUser(userId = 2)
     void disputeTrade_success() throws Exception {
         Long tradeId = 1L;
@@ -320,10 +338,19 @@ class TradeControllerTest {
         String reason = "결과물이 약속한 조건과 다릅니다.";
 
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.DISPUTED,
-                EscrowStatus.FROZEN, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.DISPUTED,
+                EscrowStatus.FROZEN,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.disputeTrade(tradeId, userId, reason)).thenReturn(res);
@@ -339,7 +366,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("dispute trade returns 400 when reason is blank")
+    @DisplayName("분쟁 사유가 공백이면 400을 반환한다")
     @WithMockSecurityUser(userId = 2)
     void disputeTrade_blankReason() throws Exception {
         Long tradeId = 1L;
@@ -352,7 +379,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("dispute trade returns 400 when trade is not under review")
+    @DisplayName("검토 중이 아닌 거래에 분쟁을 신청하면 400을 반환한다")
     @WithMockSecurityUser(userId = 2)
     void disputeTrade_notUnderReview() throws Exception {
         Long tradeId = 1L;
@@ -371,7 +398,7 @@ class TradeControllerTest {
     }
 
     @Test
-    @DisplayName("dispute trade returns 409 when trade is already disputed")
+    @DisplayName("이미 분쟁 중인 거래에 분쟁을 신청하면 409를 반환한다")
     @WithMockSecurityUser(userId = 2)
     void disputeTrade_alreadyDisputed() throws Exception {
         Long tradeId = 1L;
@@ -388,5 +415,4 @@ class TradeControllerTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("TRADE-409-002"));
     }
-
 }

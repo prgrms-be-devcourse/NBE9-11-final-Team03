@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 public record TradeRes(
         Long tradeId,
         Long matchId,
+        Long tradeGroupId,
         Long talentId,
         Long buyerId,
         Long sellerId,
@@ -29,6 +30,7 @@ public record TradeRes(
         return new TradeRes(
                 trade.getId(),
                 trade.getMatchId(),
+                trade.getTradeGroupId(),
                 trade.getTalentId(),
                 trade.getBuyerId(),
                 trade.getSellerId(),
