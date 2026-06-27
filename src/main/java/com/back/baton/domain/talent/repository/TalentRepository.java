@@ -48,8 +48,18 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
     Optional<Talent> findByIdAndDeletedAtIsNull(Long id);
 
     // 관리자 재능 목록 조회 필터 검색.
-    @Query("""
+    @Query(value = """
             SELECT t
+            FROM Talent t
+            JOIN FETCH t.category
+            WHERE t.deletedAt IS NULL
+              AND (:status IS NULL OR t.status = :status)
+              AND (:categoryId IS NULL OR t.category.id = :categoryId)
+              AND (:keyword IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(t.content) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            """,
+            countQuery = """
+            SELECT COUNT(t)
             FROM Talent t
             WHERE t.deletedAt IS NULL
               AND (:status IS NULL OR t.status = :status)

@@ -105,7 +105,7 @@ public class AdminManagementService {
     public AdminTalentRes updateTalentStatus(Long adminId, Long talentId, AdminTalentStatusUpdateReq req) {
         TalentStatus status = req == null ? null : req.status();
         String reason = req == null ? null : req.reason();
-        if (status == null) {
+        if (status == null || (status != TalentStatus.ACTIVE && status != TalentStatus.CLOSED)) {
             throw new CustomException(AdminErrorCode.INVALID_ADMIN_STATUS_CHANGE);
         }
 
@@ -153,7 +153,7 @@ public class AdminManagementService {
     }
 
     private Talent getTalentOrThrow(Long talentId) {
-        return talentRepository.findById(talentId)
+        return talentRepository.findByIdAndDeletedAtIsNull(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
     }
 

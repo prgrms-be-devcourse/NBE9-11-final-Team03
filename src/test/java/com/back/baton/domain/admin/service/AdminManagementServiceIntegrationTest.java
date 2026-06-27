@@ -127,6 +127,22 @@ class AdminManagementServiceIntegrationTest {
         );
     }
 
+    @Test
+    @DisplayName("삭제된 재능 상태 변경 시 실패한다")
+    void updateDeletedTalentStatus() {
+        User admin = saveUser("admin-deleted-talent@test.com");
+        User author = saveUser("author-deleted-talent@test.com");
+        Category category = categoryRepository.save(Category.create("관리자삭제테스트", 100));
+        Talent talent = talentRepository.save(Talent.create(author.getId(), category, "재능", "내용", 2, 100));
+        talent.softDelete();
+
+        assertThatThrownBy(() -> adminManagementService.updateTalentStatus(
+                admin.getId(),
+                talent.getId(),
+                new AdminTalentStatusUpdateReq(TalentStatus.CLOSED, "삭제된 재능 상태 변경")
+        )).isInstanceOf(CustomException.class);
+    }
+
     private User saveUser(String email) {
         return userRepository.save(User.builder()
                 .email(email)
