@@ -174,14 +174,19 @@ public class TradeService {
                             t.getId()
                     );
                 }
-            } else {
-                // 상대방이 아직 확정 전이라면, 내 거래 상태만 변경
+            }
+            // 상대방이 결과물 검토중일 때
+            else if (partnerTrade.getStatus() == TradeStatus.UNDER_REVIEW) {
                 trade.waitPartner();
+            }
+            // 상대방이 확정 가능한 상태가 아닐 때
+            else {
+                throw new CustomException(TradeErrorCode.PARTNER_TRADE_NOT_READY);
             }
 
             return TradeRes.of(trade, escrow);
-
         }
+
         // 단방향
         else {
             trade.complete();
