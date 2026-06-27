@@ -284,11 +284,7 @@ public class MatchProposalService {
         boolean exists = matchProposalRepository.existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
-                req.providerTalentId(),
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                req.providerTalentId()
         );
 
         if (exists) {

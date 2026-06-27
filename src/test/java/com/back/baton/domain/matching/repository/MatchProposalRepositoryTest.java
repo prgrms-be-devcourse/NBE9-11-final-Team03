@@ -45,7 +45,7 @@ class MatchProposalRepositoryTest {
     private EntityManager entityManager;
 
     @Test
-    @DisplayName("지정한 상태에 해당하는 providerTalentId만 조회한다")
+    @DisplayName("REQUESTED 상태의 providerTalentId만 조회한다")
     void findUnavailableProviderTalentIds() {
         Long requesterId = 2L;
         Long requesterTalentId = 1L;
@@ -72,16 +72,15 @@ class MatchProposalRepositoryTest {
 
         List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
-                requesterTalentId,
-                List.of(MatchProposalStatus.REQUESTED)
+                requesterTalentId
         );
 
         assertThat(result).containsExactly(10L);
     }
 
     @Test
-    @DisplayName("여러 상태에 해당하는 providerTalentId를 조회한다")
-    void findUnavailableProviderTalentIds_withMultipleStatuses() {
+    @DisplayName("ACCEPTED 상태라도 연결된 미완료 거래가 없으면 providerTalentId를 조회하지 않는다")
+    void findUnavailableProviderTalentIds_excludeAcceptedWithoutActiveTrade() {
         Long requesterId = 2L;
         Long requesterTalentId = 1L;
 
@@ -98,7 +97,7 @@ class MatchProposalRepositoryTest {
                 requesterTalentId,
                 requesterId,
                 4L,
-                "수락된 제안입니다."
+                "수락됐지만 연결된 거래가 없는 제안입니다."
         );
         acceptedProposal.accept();
 
@@ -107,14 +106,10 @@ class MatchProposalRepositoryTest {
 
         List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
-                requesterTalentId,
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                requesterTalentId
         );
 
-        assertThat(result).containsExactlyInAnyOrder(10L, 20L);
+        assertThat(result).containsExactly(10L);
     }
 
     @Test
@@ -144,8 +139,7 @@ class MatchProposalRepositoryTest {
 
         List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
-                requesterTalentId,
-                List.of(MatchProposalStatus.REQUESTED)
+                requesterTalentId
         );
 
         assertThat(result).containsExactly(10L);
@@ -178,11 +172,60 @@ class MatchProposalRepositoryTest {
 
         List<Long> result = matchProposalRepository.findUnavailableProviderTalentIds(
                 requesterId,
-                requesterTalentId,
-                List.of(MatchProposalStatus.REQUESTED)
+                requesterTalentId
         );
 
         assertThat(result).containsExactly(10L);
+    }
+
+    @Test
+    @DisplayName("내가 보낸 REQUESTED 제안이 있으면 true를 반환한다")
+    void existsSentPendingProposal() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+        Long providerTalentId = 10L;
+
+        matchProposalRepository.save(createProposal(
+                providerTalentId,
+                requesterTalentId,
+                requesterId,
+                3L,
+                "내가 보낸 대기 중 제안입니다."
+        ));
+
+        boolean result = matchProposalRepository.existsSentPendingProposal(
+                requesterId,
+                requesterTalentId,
+                providerTalentId
+        );
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    @DisplayName("상대가 나에게 보낸 REQUESTED 제안이 있으면 true를 반환한다")
+    void existsReceivedPendingProposal() {
+        Long myUserId = 2L;
+        Long myTalentId = 1L;
+        Long providerId = 3L;
+        Long providerTalentId = 10L;
+
+        matchProposalRepository.save(createProposal(
+                myTalentId,
+                providerTalentId,
+                providerId,
+                myUserId,
+                "상대가 나에게 보낸 대기 중 제안입니다."
+        ));
+
+        boolean result = matchProposalRepository.existsReceivedPendingProposal(
+                myUserId,
+                myTalentId,
+                providerId,
+                providerTalentId
+        );
+
+        assertThat(result).isTrue();
     }
 
     @Test
@@ -492,21 +535,18 @@ class MatchProposalRepositoryTest {
 
         Long targetId = targetTalent.getId();
 
-        //target이 provider측, REQUESTED → CANCELLED
         MatchProposal p1 = matchProposalRepository.save(createProposal(
                 targetId, reqTalent.getId(), requester.getId(), provider.getId(), "provider측 제안"));
-        //target이 requester측, REQUESTED → CANCELLED
         MatchProposal p2 = matchProposalRepository.save(createProposal(
                 otherTalent.getId(), targetId, requester.getId(), provider.getId(), "requester측 제안"));
-        //target과 무관, REQUESTED → 유지
         MatchProposal p3 = matchProposalRepository.save(createProposal(
                 otherTalent.getId(), reqTalent.getId(), requester.getId(), provider.getId(), "무관 제안"));
-        //target이 provider측, ACCEPTED → 유지
+
         MatchProposal p4 = createProposal(
                 targetId, acceptedReqTalent.getId(), requester.getId(), provider.getId(), "이미 수락됨");
         p4.accept();
         p4 = matchProposalRepository.save(p4);
-        //target이 requester측, REJECTED → 유지
+
         MatchProposal p5 = createProposal(
                 otherTalent.getId(), targetId, requester.getId(), provider.getId(), "이미 반려됨");
         p5.reject();
@@ -514,10 +554,8 @@ class MatchProposalRepositoryTest {
 
         LocalDateTime beforeUpdate = LocalDateTime.now();
 
-        // when
         matchProposalRepository.cancelRequestedByTalentId(targetId);
 
-        // then
         MatchProposal updated1 = matchProposalRepository.findById(p1.getId()).orElseThrow();
         MatchProposal updated2 = matchProposalRepository.findById(p2.getId()).orElseThrow();
 

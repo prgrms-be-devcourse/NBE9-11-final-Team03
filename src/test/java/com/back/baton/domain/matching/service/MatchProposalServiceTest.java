@@ -57,14 +57,14 @@ class MatchProposalServiceTest {
     @Mock
     private EscrowService escrowService;
 
-    @InjectMocks
-    private MatchProposalService matchProposalService;
-
     @Mock
     private ChatService chatService;
 
     @Mock
     private TradeGroupService tradeGroupService;
+
+    @InjectMocks
+    private MatchProposalService matchProposalService;
 
     @Test
     @DisplayName("단방향 매칭 제안을 생성할 수 있다")
@@ -86,11 +86,7 @@ class MatchProposalServiceTest {
         when(matchProposalRepository.existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
-                req.providerTalentId(),
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                req.providerTalentId()
         )).thenReturn(false);
 
         when(matchProposalRepository.saveAndFlush(any(MatchProposal.class)))
@@ -110,11 +106,7 @@ class MatchProposalServiceTest {
         verify(matchProposalRepository).existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
-                req.providerTalentId(),
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                req.providerTalentId()
         );
         verify(matchProposalRepository).saveAndFlush(any(MatchProposal.class));
     }
@@ -188,6 +180,7 @@ class MatchProposalServiceTest {
                 .isInstanceOf(CustomException.class);
 
         verify(matchProposalRepository, never()).save(any(MatchProposal.class));
+        verify(matchProposalRepository, never()).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -214,6 +207,7 @@ class MatchProposalServiceTest {
                 .isInstanceOf(CustomException.class);
 
         verify(matchProposalRepository, never()).save(any(MatchProposal.class));
+        verify(matchProposalRepository, never()).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -236,26 +230,21 @@ class MatchProposalServiceTest {
         when(matchProposalRepository.existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
-                req.providerTalentId(),
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                req.providerTalentId()
         )).thenReturn(true);
 
         assertThatThrownBy(() -> matchProposalService.createMatchProposal(requesterId, req))
-                .isInstanceOf(CustomException.class);
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
 
         verify(matchProposalRepository).existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
-                req.providerTalentId(),
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                req.providerTalentId()
         );
         verify(matchProposalRepository, never()).save(any(MatchProposal.class));
+        verify(matchProposalRepository, never()).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -291,6 +280,7 @@ class MatchProposalServiceTest {
                 .isEqualTo(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
 
         verify(matchProposalRepository, never()).save(any(MatchProposal.class));
+        verify(matchProposalRepository, never()).saveAndFlush(any(MatchProposal.class));
     }
 
     @Test
@@ -328,12 +318,10 @@ class MatchProposalServiceTest {
 
         when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
-
         when(talentRepository.findById(providerTalentId))
                 .thenReturn(Optional.of(providerTalent));
-
-        when(tradeService.createPurchaseTrade(matchProposal)).thenReturn(trade);
-
+        when(tradeService.createPurchaseTrade(matchProposal))
+                .thenReturn(trade);
         when(matchProposalRepository.save(matchProposal))
                 .thenReturn(matchProposal);
 
@@ -359,9 +347,7 @@ class MatchProposalServiceTest {
                 providerId,
                 creditPrice
         );
-
         verify(chatService).getOrCreateTransactionRoom(TradeChatRoomCreateReq.from(trade));
-
         verify(matchProposalRepository).save(matchProposal);
     }
 
