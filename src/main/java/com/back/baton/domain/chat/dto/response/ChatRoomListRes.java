@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 public record ChatRoomListRes(
         Long roomId,
         Long tradeId,
+        Long tradeGroupId,
         Long talentId,
         String talentTitle,
         Long buyerId,

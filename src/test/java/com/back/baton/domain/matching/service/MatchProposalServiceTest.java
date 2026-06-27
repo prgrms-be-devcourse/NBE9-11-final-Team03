@@ -13,7 +13,9 @@ import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.entity.Trade;
+import com.back.baton.domain.trade.entity.TradeGroup;
 import com.back.baton.domain.trade.entity.TradeType;
+import com.back.baton.domain.trade.service.TradeGroupService;
 import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
@@ -60,6 +62,9 @@ class MatchProposalServiceTest {
 
     @Mock
     private ChatService chatService;
+
+    @Mock
+    private TradeGroupService tradeGroupService;
 
     @Test
     @DisplayName("단방향 매칭 제안을 생성할 수 있다")
@@ -321,7 +326,7 @@ class MatchProposalServiceTest {
         );
         ReflectionTestUtils.setField(trade, "id", tradeId);
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
         when(talentRepository.findById(providerTalentId))
@@ -340,7 +345,7 @@ class MatchProposalServiceTest {
         assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
         assertThat(res.respondedAt()).isNotNull();
 
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
         verify(talentRepository).findById(providerTalentId);
         verify(tradeService).createPurchaseTrade(matchProposal);
         verify(creditService).holdForEscrow(
@@ -361,39 +366,118 @@ class MatchProposalServiceTest {
     }
 
     @Test
-    @DisplayName("양방향 교환 제안 수락은 Trade/Credit/Escrow 구현 전까지 지원하지 않는다")
-    void acceptMatchProposal_swapNotImplemented() {
+    @DisplayName("양방향 교환 제안을 수락하면 TradeGroup, Trade 2건, Credit hold 2건, Escrow 2건, 그룹 채팅방이 생성된다")
+    void acceptMatchProposal_swapSuccess() {
         Long proposalId = 1L;
         Long requesterId = 1L;
         Long providerId = 2L;
+        Long requesterTalentId = 10L;
+        Long providerTalentId = 20L;
+        Long tradeGroupId = 100L;
+        Long requesterReceivesTradeId = 101L;
+        Long providerReceivesTradeId = 102L;
+        int requesterTalentPrice = 100;
+        int providerTalentPrice = 150;
 
         MatchProposal matchProposal = MatchProposal.create(
-                20L,
-                10L,
+                providerTalentId,
+                requesterTalentId,
                 requesterId,
                 providerId,
                 "재능 교환 제안드립니다.",
-                150,
-                100,
-                MatchProposal.createActiveSwapPairKey(10L, 20L)
+                providerTalentPrice,
+                requesterTalentPrice,
+                MatchProposal.createActiveSwapPairKey(requesterTalentId, providerTalentId)
         );
-
         ReflectionTestUtils.setField(matchProposal, "id", proposalId);
 
-        when(matchProposalRepository.findById(proposalId))
+        Talent providerTalent = createTalent(providerTalentId, providerId);
+        Talent requesterTalent = createTalent(requesterTalentId, requesterId);
+
+        TradeGroup tradeGroup = TradeGroup.create(proposalId, TradeType.SWAP);
+        ReflectionTestUtils.setField(tradeGroup, "id", tradeGroupId);
+
+        Trade requesterReceivesTrade = Trade.create(
+                proposalId,
+                tradeGroupId,
+                providerTalentId,
+                requesterId,
+                providerId,
+                providerTalentPrice,
+                TradeType.SWAP
+        );
+        ReflectionTestUtils.setField(requesterReceivesTrade, "id", requesterReceivesTradeId);
+
+        Trade providerReceivesTrade = Trade.create(
+                proposalId,
+                tradeGroupId,
+                requesterTalentId,
+                providerId,
+                requesterId,
+                requesterTalentPrice,
+                TradeType.SWAP
+        );
+        ReflectionTestUtils.setField(providerReceivesTrade, "id", providerReceivesTradeId);
+
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
+        when(talentRepository.findById(providerTalentId))
+                .thenReturn(Optional.of(providerTalent));
+        when(talentRepository.findById(requesterTalentId))
+                .thenReturn(Optional.of(requesterTalent));
+        when(tradeGroupService.create(proposalId, TradeType.SWAP))
+                .thenReturn(tradeGroup);
+        when(tradeService.createSwapTrades(matchProposal, tradeGroup))
+                .thenReturn(List.of(requesterReceivesTrade, providerReceivesTrade));
+        when(matchProposalRepository.save(matchProposal))
+                .thenReturn(matchProposal);
 
-        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(proposalId, providerId))
-                .isInstanceOf(CustomException.class)
-                .extracting("errorCode")
-                .isEqualTo(MatchingErrorCode.SWAP_ACCEPT_NOT_IMPLEMENTED);
+        MatchProposalRes res = matchProposalService.acceptMatchProposal(
+                proposalId,
+                providerId
+        );
 
-        verify(talentRepository, never()).findById(any());
-        verify(tradeService, never()).createPurchaseTrade(any());
-        verify(creditService, never()).holdForEscrow(any(), anyInt(), any());
-        verify(escrowService, never()).create(any(), any(), any(), anyInt());
-        verify(chatService, never()).getOrCreateTransactionRoom(any());
-        verify(matchProposalRepository, never()).save(any());
+        assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
+        assertThat(res.respondedAt()).isNotNull();
+
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
+        verify(talentRepository).findById(providerTalentId);
+        verify(talentRepository).findById(requesterTalentId);
+        verify(tradeGroupService).create(proposalId, TradeType.SWAP);
+        verify(tradeService).createSwapTrades(matchProposal, tradeGroup);
+
+        verify(creditService).holdForEscrow(
+                requesterId,
+                providerTalentPrice,
+                requesterReceivesTradeId
+        );
+        verify(creditService).holdForEscrow(
+                providerId,
+                requesterTalentPrice,
+                providerReceivesTradeId
+        );
+
+        verify(escrowService).create(
+                requesterReceivesTradeId,
+                requesterId,
+                providerId,
+                providerTalentPrice
+        );
+        verify(escrowService).create(
+                providerReceivesTradeId,
+                providerId,
+                requesterId,
+                requesterTalentPrice
+        );
+
+        verify(chatService).getOrCreateSwapTransactionRoom(
+                tradeGroupId,
+                providerTalentId,
+                requesterId,
+                providerId
+        );
+
+        verify(matchProposalRepository).save(matchProposal);
     }
 
     @Test
@@ -412,7 +496,7 @@ class MatchProposalServiceTest {
                 100
         );
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
         assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
@@ -421,13 +505,13 @@ class MatchProposalServiceTest {
         ))
                 .isInstanceOf(CustomException.class);
 
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
         verify(talentRepository, never()).findById(any());
         verify(tradeService, never()).createPurchaseTrade(any());
     }
 
     @Test
-    @DisplayName("이미 수락된 매칭 제안은 기존 수락 결과를 반환한다")
+    @DisplayName("이미 수락된 매칭 제안은 다시 수락할 수 없다")
     void acceptMatchProposal_alreadyAccepted() {
         Long proposalId = 1L;
         Long requesterId = 1L;
@@ -445,18 +529,18 @@ class MatchProposalServiceTest {
         ReflectionTestUtils.setField(matchProposal, "id", proposalId);
         matchProposal.accept();
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
-        MatchProposalRes res = matchProposalService.acceptMatchProposal(
+        assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
                 proposalId,
                 providerId
-        );
+        ))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(MatchingErrorCode.INVALID_MATCHING_STATUS);
 
-        assertThat(res.status()).isEqualTo(MatchProposalStatus.ACCEPTED);
-        assertThat(res.respondedAt()).isNotNull();
-
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
         verify(talentRepository, never()).findById(any());
         verify(tradeService, never()).createPurchaseTrade(any());
         verify(creditService, never()).holdForEscrow(any(), anyInt(), any());
@@ -481,7 +565,7 @@ class MatchProposalServiceTest {
         );
         matchProposal.reject();
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
         assertThatThrownBy(() -> matchProposalService.acceptMatchProposal(
@@ -490,7 +574,7 @@ class MatchProposalServiceTest {
         ))
                 .isInstanceOf(CustomException.class);
 
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
         verify(talentRepository, never()).findById(any());
         verify(tradeService, never()).createPurchaseTrade(any());
     }

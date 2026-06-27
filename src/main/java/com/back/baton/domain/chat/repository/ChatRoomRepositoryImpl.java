@@ -42,6 +42,7 @@ public class ChatRoomRepositoryImpl implements ChatRoomRepositoryCustom {
                 .select(Projections.constructor(ChatRoomListRes.class,
                         chatRoom.id,
                         chatRoom.tradeId,
+                        chatRoom.tradeGroupId,
                         chatRoom.talentId,
                         talent.title,
                         chatRoom.buyerId,

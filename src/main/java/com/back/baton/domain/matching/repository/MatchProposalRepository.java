@@ -4,15 +4,22 @@ import com.back.baton.domain.matching.dto.response.MatchProposalReceivedRes;
 import com.back.baton.domain.matching.dto.response.MatchProposalSentRes;
 import com.back.baton.domain.matching.entity.MatchProposal;
 import com.back.baton.domain.matching.entity.MatchProposalStatus;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface MatchProposalRepository extends JpaRepository<MatchProposal, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select mp from MatchProposal mp where mp.id = :id")
+    Optional<MatchProposal> findByIdWithLock(@Param("id") Long id);
 
     @Query("""
     select count(mp) > 0
