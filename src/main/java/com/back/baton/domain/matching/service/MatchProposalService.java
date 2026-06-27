@@ -103,7 +103,7 @@ public class MatchProposalService {
 
         // TODO: SWAP은 TradeGroup 1건, Trade 2건, Credit hold 2건, Escrow 2건 생성으로 연결
         // Trade/Credit/Escrow 구현 완료 후 이 분기에서 위 예외를 제거하고 연동
-        Trade trade = tradeService.create(matchProposal, matchProposal.getProviderTalentPriceSnapshot()); // 임시 수정
+        Trade trade = tradeService.createPurchaseTrade(matchProposal);
 
         creditService.holdForEscrow(
                 matchProposal.getRequesterId(),

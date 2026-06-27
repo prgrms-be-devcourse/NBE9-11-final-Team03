@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Schema(description = "분쟁 거래 조회 응답 DTO")
 public record DisputeRes(
         Long tradeId,
+        Long matchId,
         Long tradeGroupId,
         Long talentId,
         Long buyerId,
@@ -28,6 +29,7 @@ public record DisputeRes(
     public static DisputeRes of(Trade trade, Escrow escrow) {
         return new DisputeRes(
                 trade.getId(),
+                trade.getMatchId(),
                 trade.getTradeGroupId(),
                 trade.getTalentId(),
                 trade.getBuyerId(),

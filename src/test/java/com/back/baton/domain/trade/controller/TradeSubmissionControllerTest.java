@@ -59,16 +59,24 @@ class TradeSubmissionControllerTest {
         Long tradeId = 1L;
         Long buyerId = 2L;
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, buyerId, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.COMPLETED,
-                EscrowStatus.RELEASED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                buyerId,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.COMPLETED,
+                EscrowStatus.RELEASED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.confirmPurchase(anyLong(), anyLong())).thenReturn(res);
 
-        mockMvc.perform(patch("/api/v1/trade/{tradeId}/confirm", tradeId)
-                        )
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/confirm", tradeId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-10"))

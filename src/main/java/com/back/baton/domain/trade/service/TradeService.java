@@ -35,28 +35,45 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final EscrowRepository escrowRepository;
     private final CreditService creditService;
-    private final TradeGroupRepository tradeGroupRepository;
 
+    // 단방향 거래 생성
     @Transactional
-    public Trade create(MatchProposal matchProposal, Integer price) {
-        TradeType tradeType = matchProposal.getTradeType();
-
-        // 해당 MatchProposal에 매핑되는 TradeGroup을 찾음
-        TradeGroup tradeGroup = tradeGroupRepository.findByMatchProposalId(matchProposal.getId())
-                .orElseGet(() -> tradeGroupRepository.save(
-                        TradeGroup.create(matchProposal.getId(), tradeType)
-                ));
-
+    public Trade createPurchaseTrade(MatchProposal matchProposal) {
         Trade trade = Trade.create(
+                matchProposal.getId(),
+                null, // 단방향 null 처리
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId(),
+                matchProposal.getProviderTalentPriceSnapshot(),
+                TradeType.PURCHASE
+        );
+        return tradeRepository.save(trade);
+    }
+
+    // 양방향 거래 생성
+    @Transactional
+    public List<Trade> createSwapTrades(MatchProposal matchProposal, TradeGroup tradeGroup) {
+        Trade requesterTrade = Trade.create(
+                matchProposal.getId(),
                 tradeGroup.getId(),
                 matchProposal.getProviderTalentId(),
                 matchProposal.getRequesterId(),
                 matchProposal.getProviderId(),
-                price,
-                tradeType
+                matchProposal.getProviderTalentPriceSnapshot(),
+                TradeType.SWAP
         );
 
-        return tradeRepository.save(trade);
+        Trade providerTrade = Trade.create(
+                matchProposal.getId(),
+                tradeGroup.getId(),
+                matchProposal.getRequesterTalentId(),
+                matchProposal.getProviderId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getRequesterTalentPriceSnapshot(),
+                TradeType.SWAP
+        );
+        return tradeRepository.saveAll(List.of(requesterTrade, providerTrade));
     }
 
     public TradeRes getMyTrade(Long tradeId, Long userId) {
@@ -79,19 +96,44 @@ public class TradeService {
         validateTradeParticipant(trade, userId);
         validateCancellable(trade);
 
-        Escrow escrow = escrowRepository.findByTradeId(tradeId)
-                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+        // 양방향
+        if (trade.getTradeType() == TradeType.SWAP) {
+            List<Trade> trades = tradeRepository.findAllByTradeGroupId(trade.getTradeGroupId());
+            for (Trade t : trades) {
+                t.cancel(); // 거래 취소로 상태 변경
 
-        trade.cancel();
-        escrow.refund();
+                Escrow escrow = escrowRepository.findByTradeId(t.getId())
+                        .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+                escrow.refund(); // 에스크로 환불 상태로 변경
 
-        creditService.refundFromEscrow(
-                escrow.getPayerId(),
-                escrow.getAmount(),
-                tradeId
-        );
+                creditService.refundFromEscrow(
+                        escrow.getPayerId(),
+                        escrow.getAmount(),
+                        t.getId()
+                );
+            }
 
-        return TradeRes.of(trade, escrow);
+            // 반환용 Response는 현재 요청받은 거래 기준
+            Escrow requesterEscrow = escrowRepository.findByTradeId(tradeId)
+                    .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+            return TradeRes.of(trade, requesterEscrow);
+
+        // 단방향
+        } else {
+            Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                    .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+            trade.cancel();
+            escrow.refund();
+
+            creditService.refundFromEscrow(
+                    escrow.getPayerId(),
+                    escrow.getAmount(),
+                    tradeId
+            );
+
+            return TradeRes.of(trade, escrow);
+        }
     }
 
     @Transactional
@@ -105,18 +147,54 @@ public class TradeService {
         Escrow escrow = escrowRepository.findByTradeId(tradeId)
                 .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
 
-        escrow.release();
-        trade.complete();
+        // 양방향
+        if (trade.getTradeType() == TradeType.SWAP) {
+            List<Trade> trades = tradeRepository.findAllByTradeGroupId(trade.getTradeGroupId());
+            Trade partnerTrade = trades.stream()
+                    .filter(t -> !t.getId().equals(tradeId))
+                    .findFirst()
+                    .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
 
-        creditService.settleEscrow(
-                escrow.getPayerId(),
-                escrow.getPayeeId(),
-                escrow.getAmount(),
-                escrow.getAmount(),
-                tradeId
-        );
+            // 상대방이 이미 확정을 완료하여 대기 상태인지 검사
+            if (partnerTrade.getStatus() == TradeStatus.AWAITING_PARTNER) {
+                // 양쪽 모두 확정을 완료했으므로 두 거래 모두 COMPLETED 상태로 전환
+                trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
+                partnerTrade.complete();
 
-        return TradeRes.of(trade, escrow);
+                // 두 에스크로 정산 및 송금 실행
+                for (Trade t : trades) {
+                    Escrow e = escrowRepository.findByTradeId(t.getId())
+                            .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+                    e.release();
+                    creditService.settleEscrow(
+                            e.getPayerId(),
+                            e.getPayeeId(),
+                            e.getAmount(),
+                            e.getAmount(),
+                            t.getId()
+                    );
+                }
+            } else {
+                // 상대방이 아직 확정 전이라면, 내 거래 상태만 변경
+                trade.waitPartner();
+            }
+
+            return TradeRes.of(trade, escrow);
+
+        }
+        // 단방향
+        else {
+            trade.complete();
+            escrow.release();
+            creditService.settleEscrow(
+                    escrow.getPayerId(),
+                    escrow.getPayeeId(),
+                    escrow.getAmount(),
+                    escrow.getAmount(),
+                    tradeId
+            );
+            return TradeRes.of(trade, escrow);
+        }
     }
 
     @Transactional
@@ -127,13 +205,32 @@ public class TradeService {
         validateBuyer(trade, buyerId);
         validateDisputable(trade);
 
-        Escrow escrow = escrowRepository.findByTradeId(tradeId)
-                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+        // 양방향
+        if (trade.getTradeType() == TradeType.SWAP) {
+            List<Trade> trades = tradeRepository.findAllByTradeGroupId(trade.getTradeGroupId());
+            for (Trade t : trades) {
+                t.dispute(); // 거래 상태 변경 (UNDER_REVIEW -> DISPUTED)
 
-        trade.dispute(); // 거래 상태 변경 (UNDER_REVIEW -> DISPUTED)
-        escrow.freeze(reason); // 에스크로 상태 변경 (HELD -> FROZEN)
+                Escrow escrow = escrowRepository.findByTradeId(t.getId())
+                        .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+                escrow.freeze(reason); // 에스크로 상태 변경 (HELD -> FROZEN)
+            }
 
-        return TradeRes.of(trade, escrow);
+            Escrow requesterEscrow = escrowRepository.findByTradeId(tradeId)
+                    .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+            return TradeRes.of(trade, requesterEscrow);
+
+        }
+        // 단방향
+        else {
+            Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                    .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+
+            trade.dispute();
+            escrow.freeze(reason);
+
+            return TradeRes.of(trade, escrow);
+        }
     }
 
     @Transactional
@@ -201,7 +298,7 @@ public class TradeService {
     private void validateCancellable(Trade trade) {
         switch (trade.getStatus()) {
             case UNDER_REVIEW -> throw new CustomException(TradeErrorCode.TRADE_UNDER_REVIEW);
-            case COMPLETED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_COMPLETED);
+            case COMPLETED, AWAITING_PARTNER -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_COMPLETED);
             case CANCELLED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_CANCELLED);
             case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_IN_DISPUTE);
             default -> {} // IN_PROGRESS 만 취소 가능

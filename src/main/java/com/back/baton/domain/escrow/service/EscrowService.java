@@ -22,6 +22,7 @@ public class EscrowService {
     @Value("${escrow.fee-rate}")
     private double feeRate;
 
+    @Transactional(readOnly = true)
     public Escrow create(Long tradeId, Long payerId, Long payeeId, Integer amount) {
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(confirmationExpiryDays);
         int fee = (int) Math.floor(amount * feeRate); // 수수료
