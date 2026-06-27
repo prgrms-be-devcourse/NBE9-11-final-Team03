@@ -38,7 +38,6 @@ public class MatchProposalService {
     private final MatchProposalRepository matchProposalRepository;
     private final TalentRepository talentRepository;
     private final TradeService tradeService;
-    private final TradeGroupService tradeGroupService;
     private final CreditService creditService;
     private final EscrowService escrowService;
     private final ChatService chatService;

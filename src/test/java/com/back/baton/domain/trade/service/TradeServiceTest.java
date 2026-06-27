@@ -7,10 +7,8 @@ import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
-import com.back.baton.domain.trade.entity.DisputeVerdict;
-import com.back.baton.domain.trade.entity.Trade;
-import com.back.baton.domain.trade.entity.TradeStatus;
-import com.back.baton.domain.trade.entity.TradeType;
+import com.back.baton.domain.trade.entity.*;
+import com.back.baton.domain.trade.repository.TradeGroupRepository;
 import com.back.baton.domain.trade.repository.TradeRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.domain.matching.entity.MatchProposal;
@@ -56,18 +54,25 @@ class TradeServiceTest {
     @Mock
     private CreditService creditService;
 
+    @Mock
+    private TradeGroupRepository tradeGroupRepository;
+
     @Test
     @DisplayName("거래 생성 시 IN_PROGRESS 상태로 저장된다")
     void create_savedWithInProgressStatus() {
         ArgumentCaptor<Trade> captor = ArgumentCaptor.forClass(Trade.class);
         given(tradeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
+        TradeGroup tradeGroup = TradeGroup.create(1L, TradeType.PURCHASE);
+        ReflectionTestUtils.setField(tradeGroup, "id", 100L);
+        given(tradeGroupRepository.findByMatchProposalId(any())).willReturn(Optional.of(tradeGroup));
+
         MatchProposal matchProposal = mock(MatchProposal.class);
         given(matchProposal.getId()).willReturn(1L);
         given(matchProposal.getProviderTalentId()).willReturn(10L);
         given(matchProposal.getRequesterId()).willReturn(20L);
         given(matchProposal.getProviderId()).willReturn(30L);
-        given(matchProposal.getRequesterTalentId()).willReturn(null);
+        given(matchProposal.getTradeType()).willReturn(TradeType.PURCHASE); // getTradeType() 모킹 추가
 
         tradeService.create(matchProposal, 5000);
 
@@ -81,18 +86,22 @@ class TradeServiceTest {
         ArgumentCaptor<Trade> captor = ArgumentCaptor.forClass(Trade.class);
         given(tradeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
+        TradeGroup tradeGroup = TradeGroup.create(1L, TradeType.PURCHASE);
+        ReflectionTestUtils.setField(tradeGroup, "id", 100L); // tradeGroup.getId()가 100L을 반환
+        given(tradeGroupRepository.findByMatchProposalId(any())).willReturn(Optional.of(tradeGroup));
+
         MatchProposal matchProposal = mock(MatchProposal.class);
         given(matchProposal.getId()).willReturn(1L);
         given(matchProposal.getProviderTalentId()).willReturn(10L);
         given(matchProposal.getRequesterId()).willReturn(20L);
         given(matchProposal.getProviderId()).willReturn(30L);
-        given(matchProposal.getRequesterTalentId()).willReturn(null);
+        given(matchProposal.getTradeType()).willReturn(TradeType.PURCHASE); // getTradeType() 모킹 추가
 
         tradeService.create(matchProposal, 5000);
 
         then(tradeRepository).should().save(captor.capture());
         Trade saved = captor.getValue();
-        assertThat(saved.getTradeGroupId()).isEqualTo(1L);
+        assertThat(saved.getTradeGroupId()).isEqualTo(100L); // tradeGroupId가 Mocking된 TradeGroup ID(100L)인지 검증
         assertThat(saved.getTalentId()).isEqualTo(10L);
         assertThat(saved.getBuyerId()).isEqualTo(20L);
         assertThat(saved.getSellerId()).isEqualTo(30L);
@@ -106,12 +115,16 @@ class TradeServiceTest {
         ArgumentCaptor<Trade> captor = ArgumentCaptor.forClass(Trade.class);
         given(tradeRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
+        TradeGroup tradeGroup = TradeGroup.create(1L, TradeType.SWAP);
+        ReflectionTestUtils.setField(tradeGroup, "id", 100L);
+        given(tradeGroupRepository.findByMatchProposalId(any())).willReturn(Optional.of(tradeGroup));
+
         MatchProposal matchProposal = mock(MatchProposal.class);
         given(matchProposal.getId()).willReturn(1L);
         given(matchProposal.getProviderTalentId()).willReturn(10L);
         given(matchProposal.getRequesterId()).willReturn(20L);
         given(matchProposal.getProviderId()).willReturn(30L);
-        given(matchProposal.getRequesterTalentId()).willReturn(99L);
+        given(matchProposal.getTradeType()).willReturn(TradeType.SWAP); // getTradeType() 모킹 추가
 
         tradeService.create(matchProposal, 5000);
 

@@ -19,6 +19,8 @@ import com.back.baton.global.response.code.TradeErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.back.baton.domain.trade.entity.TradeGroup;
+import com.back.baton.domain.trade.repository.TradeGroupRepository;
 
 import java.util.List;
 import java.util.Map;
@@ -33,18 +35,27 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final EscrowRepository escrowRepository;
     private final CreditService creditService;
+    private final TradeGroupRepository tradeGroupRepository;
 
     @Transactional
     public Trade create(MatchProposal matchProposal, Integer price) {
-        TradeType tradeType = matchProposal.getRequesterTalentId() == null ? TradeType.PURCHASE : TradeType.SWAP;
+        TradeType tradeType = matchProposal.getTradeType();
+
+        // 해당 MatchProposal에 매핑되는 TradeGroup을 찾음
+        TradeGroup tradeGroup = tradeGroupRepository.findByMatchProposalId(matchProposal.getId())
+                .orElseGet(() -> tradeGroupRepository.save(
+                        TradeGroup.create(matchProposal.getId(), tradeType)
+                ));
+
         Trade trade = Trade.create(
-                matchProposal.getId(),
+                tradeGroup.getId(),
                 matchProposal.getProviderTalentId(),
                 matchProposal.getRequesterId(),
                 matchProposal.getProviderId(),
                 price,
                 tradeType
         );
+
         return tradeRepository.save(trade);
     }
 
