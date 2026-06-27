@@ -22,6 +22,7 @@ import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.global.response.code.TradeErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -139,8 +140,19 @@ public class MatchProposalService {
         // Trade 2건 생성
         List<Trade> trades = tradeService.createSwapTrades(matchProposal, tradeGroup);
 
-        Trade requesterReceivesTrade = trades.get(0);
-        Trade providerReceivesTrade = trades.get(1);
+        Trade requesterReceivesTrade = findSwapTrade(
+                trades,
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId()
+        );
+
+        Trade providerReceivesTrade = findSwapTrade(
+                trades,
+                matchProposal.getRequesterTalentId(),
+                matchProposal.getProviderId(),
+                matchProposal.getRequesterId()
+        );
 
         List<SwapEscrowLeg> escrowLegs = List.of(
                 new SwapEscrowLeg(
@@ -185,7 +197,7 @@ public class MatchProposalService {
 
     @Transactional
     public MatchProposalRes rejectMatchProposal(Long proposalId, Long providerId) {
-        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
+        MatchProposal matchProposal = matchProposalRepository.findByIdWithLock(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
         validateRequestedStatus(matchProposal);
@@ -207,6 +219,20 @@ public class MatchProposalService {
     private Talent getTalent(Long talentId) {
         return talentRepository.findById(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+    }
+
+    private Trade findSwapTrade(
+            List<Trade> trades,
+            Long talentId,
+            Long buyerId,
+            Long sellerId
+    ) {
+        return trades.stream()
+                .filter(trade -> Objects.equals(trade.getTalentId(), talentId))
+                .filter(trade -> Objects.equals(trade.getBuyerId(), buyerId))
+                .filter(trade -> Objects.equals(trade.getSellerId(), sellerId))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(TradeErrorCode.INVALID_SWAP_TRADE_MAPPING));
     }
 
     private void validateRequesterOwnsTalent(Long requesterId, Talent requesterTalent) {
@@ -288,7 +314,13 @@ public class MatchProposalService {
     }
 
     private void validateRequesterTalentForAccept(MatchProposal matchProposal) {
-        Talent requesterTalent = getTalent(matchProposal.getRequesterTalentId());
+        Long requesterTalentId = matchProposal.getRequesterTalentId();
+
+        if (requesterTalentId == null) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
+        }
+
+        Talent requesterTalent = getTalent(requesterTalentId);
         validateRequesterOwnsTalent(matchProposal.getRequesterId(), requesterTalent);
         validateTalentAvailable(requesterTalent);
     }

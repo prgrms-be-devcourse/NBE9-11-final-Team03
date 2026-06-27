@@ -39,10 +39,6 @@ import lombok.NoArgsConstructor;
                 @Index(
                         name = "idx_chat_room_trade_lookup",
                         columnList = "trade_id"
-                ),
-                @Index(
-                        name = "idx_chat_room_trade_group_lookup",
-                        columnList = "trade_group_id"
                 )
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

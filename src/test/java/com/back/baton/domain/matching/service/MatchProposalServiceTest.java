@@ -428,7 +428,7 @@ class MatchProposalServiceTest {
         when(tradeGroupService.create(proposalId, TradeType.SWAP))
                 .thenReturn(tradeGroup);
         when(tradeService.createSwapTrades(matchProposal, tradeGroup))
-                .thenReturn(List.of(requesterReceivesTrade, providerReceivesTrade));
+                .thenReturn(List.of(providerReceivesTrade, requesterReceivesTrade));
         when(matchProposalRepository.save(matchProposal))
                 .thenReturn(matchProposal);
 
@@ -594,7 +594,7 @@ class MatchProposalServiceTest {
                 100
         );
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
         MatchProposalRes res = matchProposalService.rejectMatchProposal(proposalId, providerId);
@@ -602,7 +602,7 @@ class MatchProposalServiceTest {
         assertThat(res.status()).isEqualTo(MatchProposalStatus.REJECTED);
         assertThat(res.respondedAt()).isNotNull();
 
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
     }
 
     @Test
@@ -621,13 +621,13 @@ class MatchProposalServiceTest {
                 100
         );
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
         assertThatThrownBy(() -> matchProposalService.rejectMatchProposal(proposalId, invalidProviderId))
                 .isInstanceOf(CustomException.class);
 
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
     }
 
     @Test
@@ -646,13 +646,13 @@ class MatchProposalServiceTest {
         );
         matchProposal.accept();
 
-        when(matchProposalRepository.findById(proposalId))
+        when(matchProposalRepository.findByIdWithLock(proposalId))
                 .thenReturn(Optional.of(matchProposal));
 
         assertThatThrownBy(() -> matchProposalService.rejectMatchProposal(proposalId, providerId))
                 .isInstanceOf(CustomException.class);
 
-        verify(matchProposalRepository).findById(proposalId);
+        verify(matchProposalRepository).findByIdWithLock(proposalId);
     }
 
     private MatchProposal createPurchaseProposal(
