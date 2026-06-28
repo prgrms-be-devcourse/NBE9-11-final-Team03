@@ -110,7 +110,7 @@ public class Escrow extends BaseTimeEntity {
             Long tradeId,
             Long payerId,
             Long payeeId,
-            Integer amount,
+            int amount,
             double feeRate,
             LocalDateTime expiresAt
     ) {
