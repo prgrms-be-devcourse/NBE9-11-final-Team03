@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import java.time.LocalDateTime;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,6 +23,9 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, TradeReposi
     List<Trade> findAllByStatus(TradeStatus status);
 
     List<Trade> findAllByTradeGroupId(Long tradeGroupId);
+
+    // 관리자 대시보드 거래 상태별 수 집계.
+    long countByStatus(TradeStatus status);
 
     @Query("SELECT t FROM Trade t " +
             "JOIN Escrow e ON e.tradeId = t.id " +

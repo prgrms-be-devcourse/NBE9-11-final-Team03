@@ -14,6 +14,10 @@ public interface EscrowRepository extends JpaRepository<Escrow, Long> {
     Optional<Escrow> findByTradeId(Long tradeId);
 
     List<Escrow> findAllByTradeIdIn(List<Long> tradeIds);
+
+    // 관리자 대시보드 에스크로 상태별 수 집계.
+    long countByStatus(EscrowStatus status);
+
     @Query("""
     SELECT CASE WHEN COUNT(e) > 0 THEN true ELSE false END
             FROM Escrow e
