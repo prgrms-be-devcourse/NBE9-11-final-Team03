@@ -44,6 +44,8 @@ public class AuthService {
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
+    private final LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
+
     @Transactional
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
 
@@ -89,16 +91,17 @@ public class AuthService {
     }
 
     public void checkNicknameDuplicated(String nickname){
-        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
-
-        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
+        if(isNicknameDuplicated(nickname)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
     }
 
     public UserCheckNicknameRes checkNickname(String nickname) {
-        checkNicknameDuplicated(nickname); // 중복 닉네임이라면 에러 반환됨
-        return new UserCheckNicknameRes(true);
+        return new UserCheckNicknameRes(!isNicknameDuplicated(nickname));
+    }
+
+    private boolean isNicknameDuplicated(String nickname){
+        return userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt);
     }
 
     public void sendEmailVerificationCode(String email) { // 이메일 인증번호 보내기

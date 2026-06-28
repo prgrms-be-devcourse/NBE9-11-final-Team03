@@ -193,6 +193,29 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("닉네임 중복 확인 - 이미 사용 중인 닉네임이면 false를 반환한다")
+    void checkNickname_fail_whenDuplicated() throws Exception {
+        // given
+        given(authService.checkNickname("batonNick"))
+                .willReturn(new UserCheckNicknameRes(false));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/auth/check-nickname")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "batonNick"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value(SuccessCode.OK.getCode()))
+                .andExpect(jsonPath("$.data.usableNickname").value(false));
+
+        verify(authService).checkNickname("batonNick");
+    }
+
+    @Test
     @DisplayName("API 로그인 성공 - AccessToken은 Body에 담기고, RefreshToken은 HttpOnly 보안 쿠키로 헤더에 설정된다")
     void login_Success_1() throws Exception {
         // given
