@@ -473,13 +473,7 @@ class TradeServiceTest {
         Escrow escrow = createEscrow(buyerId, sellerId);
         ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
 
-        Trade spyTrade = org.mockito.Mockito.spy(trade);
-        org.mockito.Mockito.doAnswer(inv -> {
-            ReflectionTestUtils.setField(spyTrade, "status", TradeStatus.CANCELLED);
-            return null;
-        }).when(spyTrade).cancel();
-
-        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(spyTrade));
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
         TradeRes result = tradeService.resolveDispute(1L, DisputeVerdict.BUYER_WIN);
@@ -813,6 +807,6 @@ class TradeServiceTest {
     }
 
     private Escrow createEscrow(Long payerId, Long payeeId) {
-        return Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
+        return Escrow.createHeld(1L, payerId, payeeId, 5000, 0.1, LocalDateTime.now().plusDays(7));
     }
 }

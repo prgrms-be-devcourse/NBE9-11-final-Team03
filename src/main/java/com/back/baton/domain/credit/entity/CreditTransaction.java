@@ -79,7 +79,7 @@ public class CreditTransaction extends BaseTimeEntity {
     }
 
     // 에스크로 예치용 원장 생성 (금액을 음수로 자동 변환하여 기록)
-    public static CreditTransaction createEscrowHold(Long userId, Long tradeId, Integer amount, Integer balanceAfter) {
+    public static CreditTransaction createEscrowHold(Long userId, Long tradeId, int amount, Integer balanceAfter) {
         return create(userId, tradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter, null);
     }
 
