@@ -61,13 +61,7 @@ public class CreditService {
             throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_ALREADY_EXISTS);
         }
         creditAccountRepository.save(CreditAccount.create(userId, initialCreditAmount));
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId,
-                null,
-                CreditTransactionType.WELCOME, initialCreditAmount,
-                initialCreditAmount,
-                null
-        ));
+        creditTransactionRepository.save(CreditTransaction.createWelcome(userId, initialCreditAmount));
     }
 
     // 크레딧 잠금 - 매칭 제안 수락 시 구매자 크레딧을 거래 완료까지 동결 (거래 취소 시 환불 가능)
@@ -86,15 +80,7 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        // 거래 내역 기록
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId,
-                relatedTradeId,
-                CreditTransactionType.ESCROW_HOLD,
-                -amount,
-                balanceAfter,
-                null
-        ));
+        creditTransactionRepository.save(CreditTransaction.createEscrowHold(userId, relatedTradeId, amount, balanceAfter));
     }
 
     // 크레딧 환불 - 거래 취소 시 에스크로에서 구매자에게 크레딧 반환
@@ -113,14 +99,7 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId,
-                relatedTradeId,
-                CreditTransactionType.REFUND,
-                amount,
-                balanceAfter,
-                null
-        ));
+        creditTransactionRepository.save(CreditTransaction.createRefund(userId, relatedTradeId, amount, balanceAfter));
     }
 
     // 크레딧 정산 - 구매 확정 시 구매자 에스크로 차감 후 판매자에게 지급
@@ -152,29 +131,13 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        // 구매자 거래 내역 기록
-        creditTransactionRepository.save(CreditTransaction.create(
-                buyerId,
-                tradeId,
-                CreditTransactionType.ESCROW_RELEASE,
-                -amount,
-                buyerBalanceAfter,
-                null
-        ));
+        creditTransactionRepository.save(CreditTransaction.createEscrowRelease(buyerId, tradeId, -amount, buyerBalanceAfter));
 
-        // 판매자 거래 내역 기록
-        creditTransactionRepository.save(CreditTransaction.create(
-                sellerId,
-                tradeId,
-                CreditTransactionType.ESCROW_RELEASE,
-                settlementAmount,
-                sellerBalanceAfter,
-                null
-        ));
+        creditTransactionRepository.save(CreditTransaction.createEscrowRelease(sellerId, tradeId, settlementAmount, sellerBalanceAfter));
     }
 
     private void validatePositiveAmount(int amount) {
-        if (amount <= 0) {
+        if (amount < 0) {
             throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
         }
     }

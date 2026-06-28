@@ -354,7 +354,7 @@ class TradeSubmissionServiceTest {
     }
 
     private Escrow createEscrow(Long payerId, Long payeeId) {
-        Escrow escrow = Escrow.createHeld(1L, payerId, payeeId, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
         ReflectionTestUtils.setField(escrow, "id", 1L);
         return escrow;
     }

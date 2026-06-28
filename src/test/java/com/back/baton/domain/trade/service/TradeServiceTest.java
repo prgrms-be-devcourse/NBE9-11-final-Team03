@@ -109,7 +109,6 @@ class TradeServiceTest {
         given(tradeRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
 
         TradeGroup tradeGroup = TradeGroup.create(1L, TradeType.SWAP);
-
         ReflectionTestUtils.setField(tradeGroup, "id", 100L);
         MatchProposal matchProposal = mock(MatchProposal.class);
 
@@ -474,7 +473,14 @@ class TradeServiceTest {
         Escrow escrow = createEscrow(buyerId, sellerId);
         ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
 
-        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
+        // We spy on the trade object and stub cancel() to change status and do nothing else
+        Trade spyTrade = org.mockito.Mockito.spy(trade);
+        org.mockito.Mockito.doAnswer(inv -> {
+            ReflectionTestUtils.setField(spyTrade, "status", TradeStatus.CANCELLED);
+            return null;
+        }).when(spyTrade).cancel();
+
+        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(spyTrade));
         given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
         TradeRes result = tradeService.resolveDispute(1L, DisputeVerdict.BUYER_WIN);
@@ -808,6 +814,6 @@ class TradeServiceTest {
     }
 
     private Escrow createEscrow(Long payerId, Long payeeId) {
-        return Escrow.createHeld(1L, payerId, payeeId, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        return Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
     }
 }
