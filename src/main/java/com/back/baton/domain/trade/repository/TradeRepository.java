@@ -22,4 +22,7 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, TradeReposi
     List<Trade> findAllByStatus(TradeStatus status);
 
     List<Trade> findAllByTradeGroupId(Long tradeGroupId);
+
+    // 관리자 대시보드 거래 상태별 수 집계.
+    long countByStatus(TradeStatus status);
 }

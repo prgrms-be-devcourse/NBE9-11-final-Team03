@@ -32,4 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    // 관리자 대시보드 유저 상태별 수 집계.
+    long countByStatus(UserStatus status);
 }
