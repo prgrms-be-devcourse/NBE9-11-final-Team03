@@ -106,6 +106,15 @@ public class Escrow extends BaseTimeEntity {
         this.expiresAt = null; // 분쟁 발생 시 자동 확정 타이머 정지
     }
 
+    // 에스크로 내 만료 시간 설정
+    public void startReviewPeriod(LocalDateTime reviewRequestedAt, LocalDateTime expiresAt) {
+        if (this.status != EscrowStatus.HELD) {
+            throw new CustomException(EscrowErrorCode.INVALID_ESCROW_STATUS);
+        }
+        this.reviewRequestedAt = reviewRequestedAt;
+        this.expiresAt = expiresAt;
+    }
+
     public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, Integer fee, Integer settlementAmount, LocalDateTime expiresAt) {
         Escrow escrow = new Escrow();
         escrow.tradeId = tradeId;

@@ -136,32 +136,43 @@ public class TradeService {
         }
     }
 
+    // 실제 사용자용 구매 확정
     @Transactional
     public TradeRes confirmPurchase(Long tradeId, Long buyerId) {
         Trade trade = tradeRepository.findByIdWithLock(tradeId)
                 .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
-
         validateBuyer(trade, buyerId);
         validateUnderReview(trade);
-
         Escrow escrow = escrowRepository.findByTradeId(tradeId)
                 .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+        return processPurchaseConfirmation(trade, escrow);
+    }
 
+    // 스케줄러용 자동 구매 확정
+    @Transactional
+    public TradeRes autoConfirm(Long tradeId) {
+        Trade trade = tradeRepository.findByIdWithLock(tradeId)
+                .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
+        if (trade.getStatus() != TradeStatus.UNDER_REVIEW) {
+            throw new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
+        }
+        Escrow escrow = escrowRepository.findByTradeId(tradeId)
+                .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
+        return processPurchaseConfirmation(trade, escrow);
+    }
+
+    // 공통 구매 확정 로직
+    private TradeRes processPurchaseConfirmation(Trade trade, Escrow escrow) {
         // 양방향
         if (trade.getTradeType() == TradeType.SWAP) {
             List<Trade> trades = tradeRepository.findAllByTradeGroupId(trade.getTradeGroupId());
             Trade partnerTrade = trades.stream()
-                    .filter(t -> !t.getId().equals(tradeId))
+                    .filter(t -> !t.getId().equals(trade.getId()))
                     .findFirst()
                     .orElseThrow(() -> new CustomException(TradeErrorCode.TRADE_NOT_FOUND));
-
-            // 상대방이 이미 확정을 완료하여 대기 상태인지 검사
             if (partnerTrade.getStatus() == TradeStatus.AWAITING_PARTNER) {
-                // 양쪽 모두 확정을 완료했으므로 두 거래 모두 COMPLETED 상태로 전환
-                trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
+                trade.complete();
                 partnerTrade.complete();
-
-                // 두 에스크로 정산 및 송금 실행
                 for (Trade t : trades) {
                     Escrow e = escrowRepository.findByTradeId(t.getId())
                             .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
@@ -175,18 +186,14 @@ public class TradeService {
                     );
                 }
             }
-            // 상대방이 결과물 검토중일 때
             else if (partnerTrade.getStatus() == TradeStatus.UNDER_REVIEW) {
                 trade.waitPartner();
             }
-            // 상대방이 확정 가능한 상태가 아닐 때
             else {
                 throw new CustomException(TradeErrorCode.PARTNER_TRADE_NOT_READY);
             }
-
             return TradeRes.of(trade, escrow);
         }
-
         // 단방향
         else {
             trade.complete();
@@ -196,7 +203,7 @@ public class TradeService {
                     escrow.getPayeeId(),
                     escrow.getAmount(),
                     escrow.getAmount(),
-                    tradeId
+                    trade.getId()
             );
             return TradeRes.of(trade, escrow);
         }

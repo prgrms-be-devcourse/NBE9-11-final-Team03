@@ -20,6 +20,8 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,9 @@ public class TradeSubmissionService {
     private final EscrowRepository escrowRepository;
     private final TradeSubmissionRepository tradeSubmissionRepository;
     private final S3Service s3Service;
+
+    @Value("${escrow.confirmation-expiry-days:7}")
+    private int confirmationExpiryDays;
 
     public TradeSubmissionRes getSubmission(Long tradeId, Long buyerId) {
         Trade trade = getTrade(tradeId);
@@ -66,6 +71,9 @@ public class TradeSubmissionService {
         validateFileKeyBelongsToTrade(tradeId, req.fileKey()); // fileKey 경로 검증
 
         Escrow escrow = getEscrow(tradeId);
+
+        // 에스크로 검토 시작/만료 일시 계산
+        escrow.startReviewPeriod(LocalDateTime.now(), LocalDateTime.now().plusDays(confirmationExpiryDays));
 
         TradeSubmission submission = TradeSubmission.create(escrow.getId(), req.fileKey(), req.description());
         tradeSubmissionRepository.save(submission);
