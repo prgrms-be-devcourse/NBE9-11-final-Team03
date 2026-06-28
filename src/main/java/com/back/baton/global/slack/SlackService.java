@@ -17,7 +17,9 @@ public class SlackService {
     private String webhookUrl;
 
     // 재사용 가능한 HTTP 클라이언트 생성
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .build();
 
     public void sendNotification(String message) {
         if (webhookUrl == null || webhookUrl.isBlank() || webhookUrl.startsWith("${")) {

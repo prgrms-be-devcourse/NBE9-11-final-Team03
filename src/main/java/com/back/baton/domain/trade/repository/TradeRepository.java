@@ -29,7 +29,7 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, TradeReposi
 
     @Query("SELECT t FROM Trade t " +
             "JOIN Escrow e ON e.tradeId = t.id " +
-            "WHERE t.status = 'UNDER_REVIEW' " +
+            "WHERE t.status = com.back.baton.domain.trade.entity.TradeStatus.UNDER_REVIEW " +
             "AND e.expiresAt <= :now")
     List<Trade> findExpiredUnderReviewTrades(@Param("now") LocalDateTime now);
 }

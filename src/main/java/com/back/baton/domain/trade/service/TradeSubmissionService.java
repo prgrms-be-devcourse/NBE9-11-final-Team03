@@ -73,7 +73,8 @@ public class TradeSubmissionService {
         Escrow escrow = getEscrow(tradeId);
 
         // 에스크로 검토 시작/만료 일시 계산
-        escrow.startReviewPeriod(LocalDateTime.now(), LocalDateTime.now().plusDays(confirmationExpiryDays));
+        LocalDateTime now = LocalDateTime.now();
+        escrow.startReviewPeriod(now, now.plusDays(confirmationExpiryDays));
 
         TradeSubmission submission = TradeSubmission.create(escrow.getId(), req.fileKey(), req.description());
         tradeSubmissionRepository.save(submission);
