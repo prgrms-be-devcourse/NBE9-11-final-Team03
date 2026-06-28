@@ -13,7 +13,7 @@ import java.net.http.HttpResponse;
 @Service
 public class SlackService {
 
-    @Value("${slack.webhook-url}")
+    @Value("${slack.webhook-url:}")
     private String webhookUrl;
 
     // 재사용 가능한 HTTP 클라이언트 생성
