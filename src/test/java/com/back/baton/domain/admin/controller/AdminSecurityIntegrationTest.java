@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,7 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "jwt.secret=admin-security-integration-test-secret-key",
-        "hash.salt=admin-security-test-salt"
+        "hash.salt=admin-security-test-salt",
+        "app.mail.from=admin-security-test@baton.local"
 })
 @AutoConfigureMockMvc
 class AdminSecurityIntegrationTest {
@@ -27,6 +30,9 @@ class AdminSecurityIntegrationTest {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private JavaMailSender javaMailSender;
 
     @Test
     @DisplayName("일반 유저가 관리자 API를 호출하면 403을 반환한다")
