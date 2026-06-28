@@ -473,7 +473,6 @@ class TradeServiceTest {
         Escrow escrow = createEscrow(buyerId, sellerId);
         ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
 
-        // We spy on the trade object and stub cancel() to change status and do nothing else
         Trade spyTrade = org.mockito.Mockito.spy(trade);
         org.mockito.Mockito.doAnswer(inv -> {
             ReflectionTestUtils.setField(spyTrade, "status", TradeStatus.CANCELLED);
