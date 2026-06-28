@@ -28,6 +28,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -155,19 +156,21 @@ public class MatchProposalService {
         );
 
         List<SwapEscrowLeg> escrowLegs = List.of(
-                new SwapEscrowLeg(
-                        requesterReceivesTrade,
-                        matchProposal.getRequesterId(), // payer
-                        matchProposal.getProviderId(),  // payee
-                        matchProposal.getProviderTalentPriceSnapshot()
-                ),
-                new SwapEscrowLeg(
-                        providerReceivesTrade,
-                        matchProposal.getProviderId(),  // payer
-                        matchProposal.getRequesterId(), // payee
-                        matchProposal.getRequesterTalentPriceSnapshot()
-                )
-        );
+                        new SwapEscrowLeg(
+                                requesterReceivesTrade,
+                                matchProposal.getRequesterId(), // payer
+                                matchProposal.getProviderId(),  // payee
+                                matchProposal.getProviderTalentPriceSnapshot()
+                        ),
+                        new SwapEscrowLeg(
+                                providerReceivesTrade,
+                                matchProposal.getProviderId(),  // payer
+                                matchProposal.getRequesterId(), // payee
+                                matchProposal.getRequesterTalentPriceSnapshot()
+                        )
+                ).stream()
+                .sorted(Comparator.comparing(SwapEscrowLeg::payerId))
+                .toList();
 
         // Credit hold 2건
         // Escrow 2건
