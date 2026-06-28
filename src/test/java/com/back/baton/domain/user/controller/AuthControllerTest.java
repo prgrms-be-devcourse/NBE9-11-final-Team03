@@ -2,6 +2,7 @@ package com.back.baton.domain.user.controller;
 
 import com.back.baton.domain.user.dto.request.UserLoginReq;
 import com.back.baton.domain.user.dto.request.UserSignupReq;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.User;
@@ -166,6 +167,29 @@ class AuthControllerTest {
 
         // then
         resultActions.andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 확인 성공 - 사용 가능한 닉네임이면 true를 반환한다")
+    void checkNickname_success() throws Exception {
+        // given
+        given(authService.checkNickname("batonNick"))
+                .willReturn(new UserCheckNicknameRes(true));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/auth/check-nickname")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "batonNick"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value(SuccessCode.OK.getCode()))
+                .andExpect(jsonPath("$.data.usableNickname").value(true));
+
+        verify(authService).checkNickname("batonNick");
     }
 
     @Test

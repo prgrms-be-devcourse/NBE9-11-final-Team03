@@ -2,6 +2,7 @@ package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.profile.service.ProfileService;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -53,8 +54,6 @@ public class AuthService {
         // 2. 닉네임 검증
         checkNicknameDuplicated(nickname);
 
-        //TODO: 2-2. 닉네임 중복 확인 별도 구현
-
         // 3. 비밀번호 형식 검증
         password = password.strip(); // 앞뒤 공백 제거
         int lastAtIndex = email.lastIndexOf('@');
@@ -95,6 +94,11 @@ public class AuthService {
         if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
+    }
+
+    public UserCheckNicknameRes checkNickname(String nickname) {
+        checkNicknameDuplicated(nickname); // 중복 닉네임이라면 에러 반환됨
+        return new UserCheckNicknameRes(true);
     }
 
     public void sendEmailVerificationCode(String email) { // 이메일 인증번호 보내기

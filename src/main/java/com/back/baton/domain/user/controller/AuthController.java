@@ -1,9 +1,7 @@
 package com.back.baton.domain.user.controller;
 
-import com.back.baton.domain.user.dto.request.UserEmailVerificationReq;
-import com.back.baton.domain.user.dto.request.UserEmailVerificationSendReq;
-import com.back.baton.domain.user.dto.request.UserLoginReq;
-import com.back.baton.domain.user.dto.request.UserSignupReq;
+import com.back.baton.domain.user.dto.request.*;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserLoginRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
@@ -120,5 +118,16 @@ public class AuthController {
     ){
         authService.verifyEmail(req.email(), req.verificationCode());
         return ApiResponses.success(SuccessCode.USER_EMAIL_VERIFICATION_SUCCESS, null);
+    }
+
+
+    @PostMapping("/check-nickname")
+    @Operation(
+            summary = "닉네임 중복 확인",
+            description = "회원가입 전에 닉네임 사용 가능 여부를 확인합니다."
+    )
+    public ResponseEntity<ApiResponse<UserCheckNicknameRes>> checkNickname(@Valid @RequestBody UserCheckNicknameReq req) {
+        UserCheckNicknameRes res = authService.checkNickname(req.nickname());
+        return ApiResponses.ok(res);
     }
 }
