@@ -16,6 +16,7 @@ import com.back.baton.domain.talent.entity.ReportStatus;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentReport;
 import com.back.baton.domain.talent.entity.TalentStatus;
+import com.back.baton.domain.talent.dto.response.TalentDetailRes;
 import com.back.baton.domain.talent.repository.TalentReportRepository;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.user.entity.User;
@@ -96,8 +97,16 @@ public class AdminManagementService {
     }
 
     // 재능 상세 정보를 조회한다.
-    public AdminTalentRes getTalent(Long talentId) {
-        return AdminTalentRes.from(getTalentOrThrow(talentId));
+    public TalentDetailRes getTalent(Long talentId) {
+        var rows = talentRepository.findDetailById(talentId);
+        if (rows.isEmpty()) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
+        }
+
+        Object[] row = rows.getFirst();
+        Talent talent = (Talent) row[0];
+        User author = (User) row[1];
+        return TalentDetailRes.from(talent, author);
     }
 
     // 재능 상태를 변경하고 관리자 조치 이력을 남긴다.

@@ -8,6 +8,7 @@ import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -30,7 +31,7 @@ public class AdminActionLogController {
     @GetMapping
     @Operation(summary = "관리자 조치 이력 조회")
     public ResponseEntity<ApiResponse<AdminPageRes<AdminActionLogRes>>> getActionLogs(
-            @ParameterObject @ModelAttribute AdminActionLogSearchReq req,
+            @Valid @ParameterObject @ModelAttribute AdminActionLogSearchReq req,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ApiResponses.ok(adminActionLogService.getActionLogs(req, pageable));
