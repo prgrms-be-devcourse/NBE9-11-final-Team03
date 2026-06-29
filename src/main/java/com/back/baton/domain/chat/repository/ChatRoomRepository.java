@@ -2,7 +2,9 @@ package com.back.baton.domain.chat.repository;
 
 import com.back.baton.domain.chat.entity.ChatRoom;
 import com.back.baton.domain.chat.entity.ChatRoomType;
+
 import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,11 +27,20 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long>, ChatR
     );
 
     @Query("""
-        select cr
-        from ChatRoom cr
-        where cr.tradeId = :tradeId
-        """)
+            select cr
+            from ChatRoom cr
+            where cr.tradeId = :tradeId
+            """)
     Optional<ChatRoom> findByTradeId(
             @Param("tradeId") Long tradeId
+    );
+
+    @Query("""
+            select cr
+            from ChatRoom cr
+            where cr.tradeGroupId = :tradeGroupId
+            """)
+    Optional<ChatRoom> findByTradeGroupId(
+            @Param("tradeGroupId") Long tradeGroupId
     );
 }

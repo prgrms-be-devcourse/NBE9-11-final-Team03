@@ -109,7 +109,6 @@ class TradeServiceTest {
         given(tradeRepository.saveAll(any())).willAnswer(inv -> inv.getArgument(0));
 
         TradeGroup tradeGroup = TradeGroup.create(1L, TradeType.SWAP);
-
         ReflectionTestUtils.setField(tradeGroup, "id", 100L);
         MatchProposal matchProposal = mock(MatchProposal.class);
 
@@ -808,6 +807,6 @@ class TradeServiceTest {
     }
 
     private Escrow createEscrow(Long payerId, Long payeeId) {
-        return Escrow.createHeld(1L, payerId, payeeId, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        return Escrow.createHeld(1L, payerId, payeeId, 5000, 0.1, LocalDateTime.now().plusDays(7));
     }
 }

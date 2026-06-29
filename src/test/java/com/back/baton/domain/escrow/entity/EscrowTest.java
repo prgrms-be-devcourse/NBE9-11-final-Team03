@@ -16,15 +16,15 @@ class EscrowTest {
     @Test
     @DisplayName("에스크로 생성 시 초기 상태는 HELD이다")
     void createHeld_status() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
 
         assertThat(escrow.getStatus()).isEqualTo(EscrowStatus.HELD);
     }
 
     @Test
-    @DisplayName("에스크로 생성 시 fee는 0이고 settlementAmount는 amount와 같다")
+    @DisplayName("에스크로 생성 시 수수료율에 따라 수수료와 정산 금액이 자동 계산된다")
     void createHeld_feeAndSettlement() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
 
         assertThat(escrow.getFee()).isEqualTo(500);
         assertThat(escrow.getSettlementAmount()).isEqualTo(4500);
@@ -35,7 +35,7 @@ class EscrowTest {
     void createHeld_fields() {
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
 
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, expiresAt);
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, expiresAt);
 
         assertThat(escrow.getTradeId()).isEqualTo(1L);
         assertThat(escrow.getPayerId()).isEqualTo(10L);
@@ -47,7 +47,7 @@ class EscrowTest {
     @Test
     @DisplayName("에스크로 환불 시 상태가 REFUNDED로 변경된다")
     void refund_status() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
 
         escrow.refund();
 
@@ -57,7 +57,7 @@ class EscrowTest {
     @Test
     @DisplayName("에스크로 환불 시 settledAt이 설정된다")
     void refund_settledAt() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
 
         escrow.refund();
 
@@ -67,7 +67,7 @@ class EscrowTest {
     @Test
     @DisplayName("HELD 상태가 아닌 에스크로를 환불하면 INVALID_ESCROW_STATUS 예외가 발생한다")
     void refund_invalidStatus_refunded() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
         ReflectionTestUtils.setField(escrow, "status", EscrowStatus.REFUNDED);
 
         assertThatThrownBy(escrow::refund)
@@ -79,7 +79,7 @@ class EscrowTest {
     @Test
     @DisplayName("RELEASED 상태의 에스크로를 환불하면 INVALID_ESCROW_STATUS 예외가 발생한다")
     void refund_invalidStatus_released() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
         ReflectionTestUtils.setField(escrow, "status", EscrowStatus.RELEASED);
 
         assertThatThrownBy(escrow::refund)
@@ -91,7 +91,7 @@ class EscrowTest {
     @Test
     @DisplayName("에스크로 동결 시 FROZEN 상태로 변경되고 사유 저장 및 만료 시각이 초기화된다")
     void freeze_status() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
 
         escrow.freeze("결과물이 약속한 조건과 다릅니다.");
 
@@ -103,7 +103,7 @@ class EscrowTest {
     @Test
     @DisplayName("HELD 상태가 아닌 에스크로를 동결하면 INVALID_ESCROW_STATUS 예외가 발생한다")
     void freeze_invalidStatus() {
-        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(1L, 10L, 20L, 5000, 0.1, LocalDateTime.now().plusDays(7));
         ReflectionTestUtils.setField(escrow, "status", EscrowStatus.FROZEN);
 
         assertThatThrownBy(() -> escrow.freeze("사유"))

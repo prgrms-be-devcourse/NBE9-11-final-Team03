@@ -22,11 +22,13 @@ import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.global.response.code.TradeErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -38,6 +40,7 @@ public class MatchProposalService {
     private final MatchProposalRepository matchProposalRepository;
     private final TalentRepository talentRepository;
     private final TradeService tradeService;
+    private final TradeGroupService tradeGroupService;
     private final CreditService creditService;
     private final EscrowService escrowService;
     private final ChatService chatService;
@@ -81,28 +84,31 @@ public class MatchProposalService {
             Long proposalId,
             Long providerId
     ) {
-        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
+        MatchProposal matchProposal = matchProposalRepository.findByIdWithLock(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
         validateProviderAuthority(providerId, matchProposal);
 
-        if (matchProposal.getStatus() == MatchProposalStatus.ACCEPTED) {
-            return MatchProposalRes.from(matchProposal);
-        }
-
         validateRequestedStatus(matchProposal);
 
-        // TODO: Trade/Credit/Escrow의 SWAP 그룹 생성 구현 전까지 양방향 거래 수락 차단
-        if (matchProposal.isSwap()) {
-            throw new CustomException(MatchingErrorCode.SWAP_ACCEPT_NOT_IMPLEMENTED);
+        TradeType tradeType = matchProposal.getTradeType();
+
+        if (tradeType == TradeType.PURCHASE) {
+            acceptPurchaseProposal(matchProposal, providerId);
+        } else {
+            acceptSwapProposal(matchProposal, providerId);
         }
 
-        Talent providerTalent = getTalent(matchProposal.getProviderTalentId());
-        validateProviderOwnsTalent(providerId, providerTalent);
-        validateTalentAvailable(providerTalent);
+        matchProposal.accept();
 
-        // TODO: SWAP은 TradeGroup 1건, Trade 2건, Credit hold 2건, Escrow 2건 생성으로 연결
-        // Trade/Credit/Escrow 구현 완료 후 이 분기에서 위 예외를 제거하고 연동
+        MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
+
+        return MatchProposalRes.from(savedMatchProposal);
+    }
+
+    private void acceptPurchaseProposal(MatchProposal matchProposal, Long providerId) {
+        validateProviderTalentForAccept(providerId, matchProposal);
+
         Trade trade = tradeService.createPurchaseTrade(matchProposal);
 
         creditService.holdForEscrow(
@@ -118,18 +124,83 @@ public class MatchProposalService {
                 matchProposal.getProviderTalentPriceSnapshot()
         );
 
-        matchProposal.accept();
-
         chatService.getOrCreateTransactionRoom(TradeChatRoomCreateReq.from(trade));
+    }
 
-        MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
+    private void acceptSwapProposal(MatchProposal matchProposal, Long providerId) {
+        // provider/requester talent 재검증
+        validateProviderTalentForAccept(providerId, matchProposal);
+        validateRequesterTalentForAccept(matchProposal);
 
-        return MatchProposalRes.from(savedMatchProposal);
+        // TradeGroup 생성
+        TradeGroup tradeGroup = tradeGroupService.create(
+                matchProposal.getId(),
+                TradeType.SWAP
+        );
+
+        // Trade 2건 생성
+        List<Trade> trades = tradeService.createSwapTrades(matchProposal, tradeGroup);
+
+        Trade requesterReceivesTrade = findSwapTrade(
+                trades,
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId()
+        );
+
+        Trade providerReceivesTrade = findSwapTrade(
+                trades,
+                matchProposal.getRequesterTalentId(),
+                matchProposal.getProviderId(),
+                matchProposal.getRequesterId()
+        );
+
+        List<SwapEscrowLeg> escrowLegs = List.of(
+                        new SwapEscrowLeg(
+                                requesterReceivesTrade,
+                                matchProposal.getRequesterId(), // payer
+                                matchProposal.getProviderId(),  // payee
+                                matchProposal.getProviderTalentPriceSnapshot()
+                        ),
+                        new SwapEscrowLeg(
+                                providerReceivesTrade,
+                                matchProposal.getProviderId(),  // payer
+                                matchProposal.getRequesterId(), // payee
+                                matchProposal.getRequesterTalentPriceSnapshot()
+                        )
+                ).stream()
+                .sorted(Comparator.comparing(SwapEscrowLeg::payerId))
+                .toList();
+
+        // Credit hold 2건
+        // Escrow 2건
+        for (SwapEscrowLeg escrowLeg : escrowLegs) {
+            creditService.holdForEscrow(
+                    escrowLeg.payerId(),
+                    escrowLeg.amount(),
+                    escrowLeg.trade().getId()
+            );
+
+            escrowService.create(
+                    escrowLeg.trade().getId(),
+                    escrowLeg.payerId(),
+                    escrowLeg.payeeId(),
+                    escrowLeg.amount()
+            );
+        }
+
+        // TradeGroup 기준 채팅방 1개 생성
+        chatService.getOrCreateSwapTransactionRoom(
+                tradeGroup.getId(),
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId()
+        );
     }
 
     @Transactional
     public MatchProposalRes rejectMatchProposal(Long proposalId, Long providerId) {
-        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
+        MatchProposal matchProposal = matchProposalRepository.findByIdWithLock(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
         validateRequestedStatus(matchProposal);
@@ -151,6 +222,20 @@ public class MatchProposalService {
     private Talent getTalent(Long talentId) {
         return talentRepository.findById(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+    }
+
+    private Trade findSwapTrade(
+            List<Trade> trades,
+            Long talentId,
+            Long buyerId,
+            Long sellerId
+    ) {
+        return trades.stream()
+                .filter(trade -> Objects.equals(trade.getTalentId(), talentId))
+                .filter(trade -> Objects.equals(trade.getBuyerId(), buyerId))
+                .filter(trade -> Objects.equals(trade.getSellerId(), sellerId))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(TradeErrorCode.INVALID_SWAP_TRADE_MAPPING));
     }
 
     private void validateRequesterOwnsTalent(Long requesterId, Talent requesterTalent) {
@@ -202,11 +287,7 @@ public class MatchProposalService {
         boolean exists = matchProposalRepository.existsActiveProposal(
                 requesterId,
                 req.requesterTalentId(),
-                req.providerTalentId(),
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
+                req.providerTalentId()
         );
 
         if (exists) {
@@ -223,5 +304,31 @@ public class MatchProposalService {
         if (matchProposalRepository.existsByActiveSwapPairKey(activeSwapPairKey)) {
             throw new CustomException(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
         }
+    }
+
+    private void validateProviderTalentForAccept(Long providerId, MatchProposal matchProposal) {
+        Talent providerTalent = getTalent(matchProposal.getProviderTalentId());
+        validateProviderOwnsTalent(providerId, providerTalent);
+        validateTalentAvailable(providerTalent);
+    }
+
+    private void validateRequesterTalentForAccept(MatchProposal matchProposal) {
+        Long requesterTalentId = matchProposal.getRequesterTalentId();
+
+        if (requesterTalentId == null) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
+        }
+
+        Talent requesterTalent = getTalent(requesterTalentId);
+        validateRequesterOwnsTalent(matchProposal.getRequesterId(), requesterTalent);
+        validateTalentAvailable(requesterTalent);
+    }
+
+    private record SwapEscrowLeg(
+            Trade trade,
+            Long payerId,
+            Long payeeId,
+            Integer amount
+    ) {
     }
 }
