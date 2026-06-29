@@ -77,7 +77,11 @@ export function assertApiSuccess(res, name) {
 // setup 단계 또는 PURCHASE 반복 실행마다 독립적인 테스트 사용자를 생성합니다.
 export function signupUser(prefix) {
   const suffix = uniqueSuffix();
-  const nickname = `${prefix}${suffix}`.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+  // slice(0, 10)이 타임스탬프 앞자리만 남겨 같은 prefix 닉네임이 'buyload178'처럼
+  // 수 시간 동안 고정·중복되던 문제를 막기 위해, prefix 앞 3자 + base36 랜덤 7자
+  // (약 780억 조합)로 3~10자 제약을 만족하는 고유 닉네임을 생성합니다.
+  const rand = Math.random().toString(36).slice(2).padEnd(7, '0').slice(0, 7);
+  const nickname = `${prefix.slice(0, 3)}${rand}`.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
   const email = `${prefix}-${suffix}@example.com`;
   const password = 'Qa!2026xy';
 

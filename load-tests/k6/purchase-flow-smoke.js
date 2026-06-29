@@ -38,7 +38,11 @@ export default function () {
     requestMessage: 'k6 purchase flow smoke request',
   }, buyerToken);
   assertApiSuccess(proposalRes, 'create proposal');
-  const proposalId = parseData(proposalRes).id;
+  const proposal = parseData(proposalRes);
+  if (!proposal) {
+    throw new Error(`create proposal failed: status=${proposalRes.status}`);
+  }
+  const proposalId = proposal.id;
 
   const acceptRes = api(
     'PATCH',
@@ -52,7 +56,7 @@ export default function () {
   // 3. 제안 수락으로 생성된 Trade를 거래 목록에서 찾습니다.
   const tradesRes = api('GET', '/api/v1/trade?size=20', null, buyerToken);
   assertApiSuccess(tradesRes, 'trade list');
-  const trades = parseData(tradesRes).content || [];
+  const trades = parseData(tradesRes)?.content || [];
   const trade = trades.find((row) => row.sellerId === seller.userId && row.talentId === talentId);
 
   if (!trade) {
