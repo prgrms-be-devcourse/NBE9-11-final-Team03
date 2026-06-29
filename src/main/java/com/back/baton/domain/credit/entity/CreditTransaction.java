@@ -71,4 +71,25 @@ public class CreditTransaction extends BaseTimeEntity {
         ct.detailReason = detailReason;
         return ct;
     }
+
+    /* 거래 원장 생성 로직 캡슐화를 위한 정적 팩토리 메소드 */
+    // 신규 가입 웰컴 크레딧용 원장 생성
+    public static CreditTransaction createWelcome(Long userId, Integer initialAmount) {
+        return create(userId, null, CreditTransactionType.WELCOME, initialAmount, initialAmount, null);
+    }
+
+    // 에스크로 예치용 원장 생성 (금액을 음수로 자동 변환하여 기록)
+    public static CreditTransaction createEscrowHold(Long userId, Long tradeId, int amount, Integer balanceAfter) {
+        return create(userId, tradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter, null);
+    }
+
+    // 에스크로 환불용 원장 생성 (환불은 잔액이 늘어나므로 양수로 기록)
+    public static CreditTransaction createRefund(Long userId, Long tradeId, Integer amount, Integer balanceAfter) {
+        return create(userId, tradeId, CreditTransactionType.REFUND, amount, balanceAfter, null);
+    }
+
+    // 에스크로 최종 정산(지급/차감)용 원장 생성 (부호가 포함된 금액을 그대로 전달)
+    public static CreditTransaction createEscrowRelease(Long userId, Long tradeId, Integer signedAmount, Integer balanceAfter) {
+        return create(userId, tradeId, CreditTransactionType.ESCROW_RELEASE, signedAmount, balanceAfter, null);
+    }
 }

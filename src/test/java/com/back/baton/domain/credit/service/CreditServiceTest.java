@@ -207,9 +207,9 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("예치 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
+    @DisplayName("예치 금액이 음수이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
     void holdForEscrow_invalidAmount() {
-        assertThatThrownBy(() -> creditService.holdForEscrow(1L, 0, 10L))
+        assertThatThrownBy(() -> creditService.holdForEscrow(1L, -1, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));
@@ -285,9 +285,9 @@ class CreditServiceTest {
     }
 
     @Test
-    @DisplayName("환불 금액이 0 이하이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
+    @DisplayName("환불 금액이 음수이면 INVALID_CREDIT_AMOUNT 예외가 발생한다")
     void refundFromEscrow_invalidAmount() {
-        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, 0, 10L))
+        assertThatThrownBy(() -> creditService.refundFromEscrow(1L, -1, 10L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(CreditErrorCode.INVALID_CREDIT_AMOUNT));

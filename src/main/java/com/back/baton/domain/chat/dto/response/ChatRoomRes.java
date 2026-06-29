@@ -10,6 +10,7 @@ public record ChatRoomRes(
         Long buyerId,
         Long sellerId,
         Long tradeId,
+        Long tradeGroupId,
         ChatRoomType status,
         LocalDateTime lastMessageAt,
         LocalDateTime createdAt
@@ -21,6 +22,7 @@ public record ChatRoomRes(
                 chatRoom.getBuyerId(),
                 chatRoom.getSellerId(),
                 chatRoom.getTradeId(),
+                chatRoom.getTradeGroupId(),
                 chatRoom.getStatus(),
                 chatRoom.getLastMessageAt(),
                 chatRoom.getCreatedAt()

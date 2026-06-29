@@ -62,6 +62,7 @@ class ChatRoomControllerTest {
                 currentUserId,
                 sellerId,
                 null,
+                null,
                 ChatRoomType.MATCH,
                 null,
                 LocalDateTime.now()

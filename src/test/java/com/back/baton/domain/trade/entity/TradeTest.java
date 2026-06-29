@@ -42,8 +42,13 @@ class TradeTest {
     @Test
     @DisplayName("분쟁 신청 시 상태가 DISPUTED로 변경된다")
     void dispute_status() {
+        // 거래 생성 (초기 상태: IN_PROGRESS)
         Trade trade = Trade.create(1L, null, 10L, 20L, 30L, 5000, TradeType.PURCHASE);
 
+        // 결과물 제출 처리 추가 (상태: IN_PROGRESS -> UNDER_REVIEW)
+        trade.submitResult();
+
+        // 분쟁 신청 진행 (상태: UNDER_REVIEW -> DISPUTED)
         trade.dispute();
 
         assertThat(trade.getStatus()).isEqualTo(TradeStatus.DISPUTED);
