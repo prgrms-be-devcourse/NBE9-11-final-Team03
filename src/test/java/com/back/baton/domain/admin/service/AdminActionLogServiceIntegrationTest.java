@@ -10,19 +10,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {
         "jwt.secret=admin-action-log-test-secret-key",
-        "hash.salt=admin-action-log-test-salt"
+        "hash.salt=admin-action-log-test-salt",
+        "app.mail.from=admin-action-log-test@baton.local"
 })
 @Transactional
 class AdminActionLogServiceIntegrationTest {
 
     @Autowired
     private AdminActionLogService adminActionLogService;
+
+    @MockitoBean
+    private JavaMailSender javaMailSender;
 
     @Test
     @DisplayName("관리자 조치 이력을 기록하고 조회한다")

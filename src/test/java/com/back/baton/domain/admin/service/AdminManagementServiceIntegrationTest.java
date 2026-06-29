@@ -16,6 +16,7 @@ import com.back.baton.domain.talent.entity.ReportStatus;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentReport;
 import com.back.baton.domain.talent.entity.TalentStatus;
+import com.back.baton.domain.talent.dto.response.TalentDetailRes;
 import com.back.baton.domain.talent.repository.TalentReportRepository;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.user.entity.User;
@@ -141,6 +142,28 @@ class AdminManagementServiceIntegrationTest {
                 talent.getId(),
                 new AdminTalentStatusUpdateReq(TalentStatus.CLOSED, "삭제된 재능 상태 변경")
         )).isInstanceOf(CustomException.class);
+    }
+
+    @Test
+    @DisplayName("Admin talent detail includes content")
+    void getTalentDetailIncludesContent() {
+        User author = saveUser("author-detail@test.com");
+        Category category = categoryRepository.save(Category.create("detail-category", 100));
+        Talent talent = talentRepository.save(Talent.create(
+                author.getId(),
+                category,
+                "detail-title",
+                "detail-content",
+                2,
+                100
+        ));
+
+        TalentDetailRes response = adminManagementService.getTalent(talent.getId());
+
+        assertThat(response.id()).isEqualTo(talent.getId());
+        assertThat(response.author().authorId()).isEqualTo(author.getId());
+        assertThat(response.content()).isEqualTo("detail-content");
+        assertThat(talentRepository.findById(talent.getId()).orElseThrow().getViewCount()).isZero();
     }
 
     private User saveUser(String email) {

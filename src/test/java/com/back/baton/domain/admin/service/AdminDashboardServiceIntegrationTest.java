@@ -92,8 +92,7 @@ class AdminDashboardServiceIntegrationTest {
                 buyer.getId(),
                 seller.getId(),
                 100,
-                0,
-                100,
+                0.0,
                 LocalDateTime.now().plusDays(7)
         ));
         talentReportRepository.save(TalentReport.create(
