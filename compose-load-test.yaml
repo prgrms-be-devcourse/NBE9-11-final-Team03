@@ -1,0 +1,40 @@
+services:
+  k6-smoke:
+    image: grafana/k6:2.0.0
+    environment:
+      BASE_URL: ${BASE_URL:-http://54.116.23.255}
+      SMOKE_VUS: ${SMOKE_VUS:-1}
+      SMOKE_DURATION: ${SMOKE_DURATION:-30s}
+    volumes:
+      - ./load-tests/k6:/scripts:ro
+    command: run /scripts/smoke-read.js
+
+  k6-read:
+    image: grafana/k6:2.0.0
+    environment:
+      BASE_URL: ${BASE_URL:-http://54.116.23.255}
+      READ_VUS: ${READ_VUS:-5}
+      READ_HOLD: ${READ_HOLD:-2m}
+    volumes:
+      - ./load-tests/k6:/scripts:ro
+    command: run /scripts/read-apis.js
+
+  k6-auth:
+    image: grafana/k6:2.0.0
+    environment:
+      BASE_URL: ${BASE_URL:-http://54.116.23.255}
+      AUTH_VUS: ${AUTH_VUS:-3}
+      AUTH_HOLD: ${AUTH_HOLD:-1m}
+    volumes:
+      - ./load-tests/k6:/scripts:ro
+    command: run /scripts/auth-login.js
+
+  k6-purchase:
+    image: grafana/k6:2.0.0
+    environment:
+      BASE_URL: ${BASE_URL:-http://54.116.23.255}
+      PURCHASE_VUS: ${PURCHASE_VUS:-1}
+      PURCHASE_ITERATIONS: ${PURCHASE_ITERATIONS:-1}
+    volumes:
+      - ./load-tests/k6:/scripts:ro
+    command: run /scripts/purchase-flow-smoke.js
