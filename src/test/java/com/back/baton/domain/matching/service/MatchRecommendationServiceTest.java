@@ -3,7 +3,6 @@ package com.back.baton.domain.matching.service;
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
-import com.back.baton.domain.matching.entity.MatchProposalStatus;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.matching.repository.MatchRecommendationQueryRepository;
 import com.back.baton.domain.talent.entity.Talent;
@@ -15,9 +14,9 @@ import com.back.baton.global.response.code.TalentErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Constructor;
@@ -29,9 +28,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class MatchRecommendationServiceTest {
+
+    private static final String SENT_PENDING_PROPOSAL_REASON = "이미 보낸 교환 제안이 대기 중입니다.";
+    private static final String RECEIVED_PENDING_PROPOSAL_REASON = "상대가 보낸 교환 제안이 있습니다. 받은 제안을 확인해 주세요.";
+    private static final String TRADE_IN_PROGRESS_REASON = "이미 진행 중인 교환 거래가 있습니다.";
 
     @Mock
     private TalentRepository talentRepository;
@@ -51,76 +55,7 @@ class MatchRecommendationServiceTest {
         Long requesterId = 2L;
         Long requesterTalentId = 1L;
         Long categoryId = 10L;
-
-        Category category = createCategory(categoryId);
-        Talent requesterTalent = createTalent(requesterTalentId, requesterId, category);
-
-        List<MatchRecommendationRes> recommendations = List.of(
-                new MatchRecommendationRes(
-                        3L,
-                        4L,
-                        categoryId,
-                        "백엔드",
-                        "MySQL 튜닝 도와드립니다",
-                        "MySQL 기본 쿼리와 인덱스를 도와드립니다.",
-                        120,
-                        2,
-                        BigDecimal.valueOf(4.00),
-                        1,
-                        true,
-                        null
-                )
-        );
-
-        given(talentRepository.findById(requesterTalentId))
-                .willReturn(Optional.of(requesterTalent));
-
-        given(matchRecommendationQueryRepository.findMatchRecommendations(
-                categoryId,
-                requesterId
-        )).willReturn(recommendations);
-
-        given(matchProposalRepository.findUnavailableProviderTalentIds(
-                requesterId,
-                requesterTalentId,
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
-        )).willReturn(List.of());
-
-        List<MatchRecommendationRes> result =
-                matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
-
-        assertThat(result).hasSize(1);
-
-        MatchRecommendationRes recommendation = result.getFirst();
-
-        assertThat(recommendation.talentId()).isEqualTo(3L);
-        assertThat(recommendation.providerId()).isEqualTo(4L);
-        assertThat(recommendation.proposalRequestEnabled()).isTrue();
-        assertThat(recommendation.proposalRequestDisabledReason()).isNull();
-
-        then(talentRepository).should().findById(requesterTalentId);
-        then(matchRecommendationQueryRepository).should()
-                .findMatchRecommendations(categoryId, requesterId);
-        then(matchProposalRepository).should()
-                .findUnavailableProviderTalentIds(
-                        requesterId,
-                        requesterTalentId,
-                        List.of(
-                                MatchProposalStatus.REQUESTED,
-                                MatchProposalStatus.ACCEPTED
-                        )
-                );
-    }
-
-    @Test
-    @DisplayName("이미 진행 중인 제안이 있는 추천 상대는 제안 요청이 비활성화된다")
-    void getMatchRecommendations_disabledProposalRequest() {
-        Long requesterId = 2L;
-        Long requesterTalentId = 1L;
-        Long categoryId = 10L;
+        Long providerId = 4L;
         Long providerTalentId = 3L;
 
         Category category = createCategory(categoryId);
@@ -129,7 +64,7 @@ class MatchRecommendationServiceTest {
         List<MatchRecommendationRes> recommendations = List.of(
                 new MatchRecommendationRes(
                         providerTalentId,
-                        4L,
+                        providerId,
                         categoryId,
                         "백엔드",
                         "MySQL 튜닝 도와드립니다",
@@ -151,39 +86,226 @@ class MatchRecommendationServiceTest {
                 requesterId
         )).willReturn(recommendations);
 
-        given(matchProposalRepository.findUnavailableProviderTalentIds(
+        List<MatchRecommendationRes> result =
+                matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
+
+        assertThat(result).hasSize(1);
+
+        MatchRecommendationRes recommendation = result.get(0);
+
+        assertThat(recommendation.talentId()).isEqualTo(providerTalentId);
+        assertThat(recommendation.providerId()).isEqualTo(providerId);
+        assertThat(recommendation.proposalRequestEnabled()).isTrue();
+        assertThat(recommendation.proposalRequestDisabledReason()).isNull();
+
+        then(talentRepository).should().findById(requesterTalentId);
+        then(matchRecommendationQueryRepository).should()
+                .findMatchRecommendations(categoryId, requesterId);
+        then(matchProposalRepository).should()
+                .existsSentPendingProposal(requesterId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsReceivedPendingProposal(requesterId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsTradeInProgressProposal(requesterId, requesterTalentId, providerTalentId);
+    }
+
+    @Test
+    @DisplayName("이미 보낸 대기 중 제안이 있는 추천 상대는 제안 요청이 비활성화된다")
+    void getMatchRecommendations_disabledBySentPendingProposal() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+        Long categoryId = 10L;
+        Long providerId = 4L;
+        Long providerTalentId = 3L;
+
+        Category category = createCategory(categoryId);
+        Talent requesterTalent = createTalent(requesterTalentId, requesterId, category);
+
+        List<MatchRecommendationRes> recommendations = List.of(
+                new MatchRecommendationRes(
+                        providerTalentId,
+                        providerId,
+                        categoryId,
+                        "백엔드",
+                        "MySQL 튜닝 도와드립니다",
+                        "MySQL 기본 쿼리와 인덱스를 도와드립니다.",
+                        120,
+                        2,
+                        BigDecimal.valueOf(4.00),
+                        1,
+                        true,
+                        null
+                )
+        );
+
+        given(talentRepository.findById(requesterTalentId))
+                .willReturn(Optional.of(requesterTalent));
+
+        given(matchRecommendationQueryRepository.findMatchRecommendations(
+                categoryId,
+                requesterId
+        )).willReturn(recommendations);
+
+        given(matchProposalRepository.existsSentPendingProposal(
                 requesterId,
                 requesterTalentId,
-                List.of(
-                        MatchProposalStatus.REQUESTED,
-                        MatchProposalStatus.ACCEPTED
-                )
-        )).willReturn(List.of(providerTalentId));
+                providerTalentId
+        )).willReturn(true);
 
         List<MatchRecommendationRes> result =
                 matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
 
         assertThat(result).hasSize(1);
 
-        MatchRecommendationRes recommendation = result.getFirst();
+        MatchRecommendationRes recommendation = result.get(0);
 
         assertThat(recommendation.talentId()).isEqualTo(providerTalentId);
         assertThat(recommendation.proposalRequestEnabled()).isFalse();
         assertThat(recommendation.proposalRequestDisabledReason())
-                .isEqualTo("이미 진행 중인 제안이 있습니다.");
+                .isEqualTo(SENT_PENDING_PROPOSAL_REASON);
 
         then(talentRepository).should().findById(requesterTalentId);
         then(matchRecommendationQueryRepository).should()
                 .findMatchRecommendations(categoryId, requesterId);
         then(matchProposalRepository).should()
-                .findUnavailableProviderTalentIds(
-                        requesterId,
-                        requesterTalentId,
-                        List.of(
-                                MatchProposalStatus.REQUESTED,
-                                MatchProposalStatus.ACCEPTED
-                        )
-                );
+                .existsSentPendingProposal(requesterId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should(never())
+                .existsReceivedPendingProposal(requesterId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should(never())
+                .existsTradeInProgressProposal(requesterId, requesterTalentId, providerTalentId);
+    }
+
+    @Test
+    @DisplayName("상대가 보낸 대기 중 제안이 있는 추천 상대는 제안 요청이 비활성화된다")
+    void getMatchRecommendations_disabledByReceivedPendingProposal() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+        Long categoryId = 10L;
+        Long providerId = 4L;
+        Long providerTalentId = 3L;
+
+        Category category = createCategory(categoryId);
+        Talent requesterTalent = createTalent(requesterTalentId, requesterId, category);
+
+        List<MatchRecommendationRes> recommendations = List.of(
+                new MatchRecommendationRes(
+                        providerTalentId,
+                        providerId,
+                        categoryId,
+                        "백엔드",
+                        "MySQL 튜닝 도와드립니다",
+                        "MySQL 기본 쿼리와 인덱스를 도와드립니다.",
+                        120,
+                        2,
+                        BigDecimal.valueOf(4.00),
+                        1,
+                        true,
+                        null
+                )
+        );
+
+        given(talentRepository.findById(requesterTalentId))
+                .willReturn(Optional.of(requesterTalent));
+
+        given(matchRecommendationQueryRepository.findMatchRecommendations(
+                categoryId,
+                requesterId
+        )).willReturn(recommendations);
+
+        given(matchProposalRepository.existsReceivedPendingProposal(
+                requesterId,
+                requesterTalentId,
+                providerId,
+                providerTalentId
+        )).willReturn(true);
+
+        List<MatchRecommendationRes> result =
+                matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
+
+        assertThat(result).hasSize(1);
+
+        MatchRecommendationRes recommendation = result.get(0);
+
+        assertThat(recommendation.talentId()).isEqualTo(providerTalentId);
+        assertThat(recommendation.proposalRequestEnabled()).isFalse();
+        assertThat(recommendation.proposalRequestDisabledReason())
+                .isEqualTo(RECEIVED_PENDING_PROPOSAL_REASON);
+
+        then(talentRepository).should().findById(requesterTalentId);
+        then(matchRecommendationQueryRepository).should()
+                .findMatchRecommendations(categoryId, requesterId);
+        then(matchProposalRepository).should()
+                .existsSentPendingProposal(requesterId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsReceivedPendingProposal(requesterId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should(never())
+                .existsTradeInProgressProposal(requesterId, requesterTalentId, providerTalentId);
+    }
+
+    @Test
+    @DisplayName("진행 중인 거래가 있는 추천 상대는 제안 요청이 비활성화된다")
+    void getMatchRecommendations_disabledByTradeInProgress() {
+        Long requesterId = 2L;
+        Long requesterTalentId = 1L;
+        Long categoryId = 10L;
+        Long providerId = 4L;
+        Long providerTalentId = 3L;
+
+        Category category = createCategory(categoryId);
+        Talent requesterTalent = createTalent(requesterTalentId, requesterId, category);
+
+        List<MatchRecommendationRes> recommendations = List.of(
+                new MatchRecommendationRes(
+                        providerTalentId,
+                        providerId,
+                        categoryId,
+                        "백엔드",
+                        "MySQL 튜닝 도와드립니다",
+                        "MySQL 기본 쿼리와 인덱스를 도와드립니다.",
+                        120,
+                        2,
+                        BigDecimal.valueOf(4.00),
+                        1,
+                        true,
+                        null
+                )
+        );
+
+        given(talentRepository.findById(requesterTalentId))
+                .willReturn(Optional.of(requesterTalent));
+
+        given(matchRecommendationQueryRepository.findMatchRecommendations(
+                categoryId,
+                requesterId
+        )).willReturn(recommendations);
+
+        given(matchProposalRepository.existsTradeInProgressProposal(
+                requesterId,
+                requesterTalentId,
+                providerTalentId
+        )).willReturn(true);
+
+        List<MatchRecommendationRes> result =
+                matchRecommendationService.getMatchRecommendations(requesterTalentId, requesterId);
+
+        assertThat(result).hasSize(1);
+
+        MatchRecommendationRes recommendation = result.get(0);
+
+        assertThat(recommendation.talentId()).isEqualTo(providerTalentId);
+        assertThat(recommendation.proposalRequestEnabled()).isFalse();
+        assertThat(recommendation.proposalRequestDisabledReason())
+                .isEqualTo(TRADE_IN_PROGRESS_REASON);
+
+        then(talentRepository).should().findById(requesterTalentId);
+        then(matchRecommendationQueryRepository).should()
+                .findMatchRecommendations(categoryId, requesterId);
+        then(matchProposalRepository).should()
+                .existsSentPendingProposal(requesterId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsReceivedPendingProposal(requesterId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsTradeInProgressProposal(requesterId, requesterTalentId, providerTalentId);
     }
 
     @Test
@@ -276,6 +398,7 @@ class MatchRecommendationServiceTest {
     void getMatchRecommendationDetail_success() {
         Long requesterTalentId = 1L;
         Long providerTalentId = 2L;
+        Long providerId = 3L;
         Long userId = 1L;
 
         Category category = createCategory(1L);
@@ -283,7 +406,7 @@ class MatchRecommendationServiceTest {
 
         MatchRecommendationDetailRes detail = new MatchRecommendationDetailRes(
                 providerTalentId,
-                3L,
+                providerId,
                 1L,
                 "디자인",
                 "Figma 와이어프레임 제작",
@@ -309,13 +432,6 @@ class MatchRecommendationServiceTest {
                 providerTalentId
         )).willReturn(Optional.of(detail));
 
-        given(matchProposalRepository.existsActiveProposal(
-                userId,
-                requesterTalentId,
-                providerTalentId,
-                List.of(MatchProposalStatus.REQUESTED, MatchProposalStatus.ACCEPTED)
-        )).willReturn(false);
-
         MatchRecommendationDetailRes result =
                 matchRecommendationService.getMatchRecommendationDetail(
                         requesterTalentId,
@@ -324,7 +440,7 @@ class MatchRecommendationServiceTest {
                 );
 
         assertThat(result.talentId()).isEqualTo(providerTalentId);
-        assertThat(result.providerId()).isEqualTo(3L);
+        assertThat(result.providerId()).isEqualTo(providerId);
         assertThat(result.categoryName()).isEqualTo("디자인");
         assertThat(result.title()).isEqualTo("Figma 와이어프레임 제작");
         assertThat(result.proposalRequestEnabled()).isTrue();
@@ -334,12 +450,11 @@ class MatchRecommendationServiceTest {
         then(matchRecommendationQueryRepository).should()
                 .findMatchRecommendationDetail(category.getId(), providerTalentId);
         then(matchProposalRepository).should()
-                .existsActiveProposal(
-                        userId,
-                        requesterTalentId,
-                        providerTalentId,
-                        List.of(MatchProposalStatus.REQUESTED, MatchProposalStatus.ACCEPTED)
-                );
+                .existsSentPendingProposal(userId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsReceivedPendingProposal(userId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsTradeInProgressProposal(userId, requesterTalentId, providerTalentId);
     }
 
     @Test
@@ -395,10 +510,11 @@ class MatchRecommendationServiceTest {
     }
 
     @Test
-    @DisplayName("진행 중인 제안이 있으면 추천 상대 상세 조회 시 제안 요청이 비활성화된다")
-    void getMatchRecommendationDetail_withActiveProposal_disabled() {
+    @DisplayName("이미 보낸 대기 중 제안이 있으면 추천 상대 상세 조회 시 제안 요청이 비활성화된다")
+    void getMatchRecommendationDetail_withSentPendingProposal_disabled() {
         Long requesterTalentId = 1L;
         Long providerTalentId = 2L;
+        Long providerId = 3L;
         Long userId = 1L;
 
         Category category = createCategory(1L);
@@ -406,7 +522,7 @@ class MatchRecommendationServiceTest {
 
         MatchRecommendationDetailRes detail = new MatchRecommendationDetailRes(
                 providerTalentId,
-                3L,
+                providerId,
                 category.getId(),
                 "디자인",
                 "Figma 와이어프레임 제작",
@@ -432,11 +548,10 @@ class MatchRecommendationServiceTest {
                 providerTalentId
         )).willReturn(Optional.of(detail));
 
-        given(matchProposalRepository.existsActiveProposal(
+        given(matchProposalRepository.existsSentPendingProposal(
                 userId,
                 requesterTalentId,
-                providerTalentId,
-                List.of(MatchProposalStatus.REQUESTED, MatchProposalStatus.ACCEPTED)
+                providerTalentId
         )).willReturn(true);
 
         MatchRecommendationDetailRes result =
@@ -449,18 +564,154 @@ class MatchRecommendationServiceTest {
         assertThat(result.talentId()).isEqualTo(providerTalentId);
         assertThat(result.proposalRequestEnabled()).isFalse();
         assertThat(result.proposalRequestDisabledReason())
-                .isEqualTo("이미 진행 중인 제안이 있습니다.");
+                .isEqualTo(SENT_PENDING_PROPOSAL_REASON);
 
         then(talentRepository).should().findById(requesterTalentId);
         then(matchRecommendationQueryRepository).should()
                 .findMatchRecommendationDetail(category.getId(), providerTalentId);
         then(matchProposalRepository).should()
-                .existsActiveProposal(
-                        userId,
+                .existsSentPendingProposal(userId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should(never())
+                .existsReceivedPendingProposal(userId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should(never())
+                .existsTradeInProgressProposal(userId, requesterTalentId, providerTalentId);
+    }
+
+    @Test
+    @DisplayName("상대가 보낸 대기 중 제안이 있으면 추천 상대 상세 조회 시 제안 요청이 비활성화된다")
+    void getMatchRecommendationDetail_withReceivedPendingProposal_disabled() {
+        Long requesterTalentId = 1L;
+        Long providerTalentId = 2L;
+        Long providerId = 3L;
+        Long userId = 1L;
+
+        Category category = createCategory(1L);
+        Talent requesterTalent = createTalent(requesterTalentId, userId, category);
+
+        MatchRecommendationDetailRes detail = new MatchRecommendationDetailRes(
+                providerTalentId,
+                providerId,
+                category.getId(),
+                "디자인",
+                "Figma 와이어프레임 제작",
+                "초기 서비스 아이디어를 Figma 저충실도 와이어프레임으로 만듭니다.",
+                100,
+                4,
+                BigDecimal.valueOf(4.6),
+                8,
+                12,
+                "이미자",
+                "Figma 기반 와이어프레임과 포트폴리오 UI를 주로 작업합니다.",
+                "https://example.com/profile.png",
+                BigDecimal.valueOf(85),
+                true,
+                null
+        );
+
+        given(talentRepository.findById(requesterTalentId))
+                .willReturn(Optional.of(requesterTalent));
+
+        given(matchRecommendationQueryRepository.findMatchRecommendationDetail(
+                category.getId(),
+                providerTalentId
+        )).willReturn(Optional.of(detail));
+
+        given(matchProposalRepository.existsReceivedPendingProposal(
+                userId,
+                requesterTalentId,
+                providerId,
+                providerTalentId
+        )).willReturn(true);
+
+        MatchRecommendationDetailRes result =
+                matchRecommendationService.getMatchRecommendationDetail(
                         requesterTalentId,
                         providerTalentId,
-                        List.of(MatchProposalStatus.REQUESTED, MatchProposalStatus.ACCEPTED)
+                        userId
                 );
+
+        assertThat(result.talentId()).isEqualTo(providerTalentId);
+        assertThat(result.proposalRequestEnabled()).isFalse();
+        assertThat(result.proposalRequestDisabledReason())
+                .isEqualTo(RECEIVED_PENDING_PROPOSAL_REASON);
+
+        then(talentRepository).should().findById(requesterTalentId);
+        then(matchRecommendationQueryRepository).should()
+                .findMatchRecommendationDetail(category.getId(), providerTalentId);
+        then(matchProposalRepository).should()
+                .existsSentPendingProposal(userId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsReceivedPendingProposal(userId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should(never())
+                .existsTradeInProgressProposal(userId, requesterTalentId, providerTalentId);
+    }
+
+    @Test
+    @DisplayName("진행 중인 거래가 있으면 추천 상대 상세 조회 시 제안 요청이 비활성화된다")
+    void getMatchRecommendationDetail_withTradeInProgress_disabled() {
+        Long requesterTalentId = 1L;
+        Long providerTalentId = 2L;
+        Long providerId = 3L;
+        Long userId = 1L;
+
+        Category category = createCategory(1L);
+        Talent requesterTalent = createTalent(requesterTalentId, userId, category);
+
+        MatchRecommendationDetailRes detail = new MatchRecommendationDetailRes(
+                providerTalentId,
+                providerId,
+                category.getId(),
+                "디자인",
+                "Figma 와이어프레임 제작",
+                "초기 서비스 아이디어를 Figma 저충실도 와이어프레임으로 만듭니다.",
+                100,
+                4,
+                BigDecimal.valueOf(4.6),
+                8,
+                12,
+                "이미자",
+                "Figma 기반 와이어프레임과 포트폴리오 UI를 주로 작업합니다.",
+                "https://example.com/profile.png",
+                BigDecimal.valueOf(85),
+                true,
+                null
+        );
+
+        given(talentRepository.findById(requesterTalentId))
+                .willReturn(Optional.of(requesterTalent));
+
+        given(matchRecommendationQueryRepository.findMatchRecommendationDetail(
+                category.getId(),
+                providerTalentId
+        )).willReturn(Optional.of(detail));
+
+        given(matchProposalRepository.existsTradeInProgressProposal(
+                userId,
+                requesterTalentId,
+                providerTalentId
+        )).willReturn(true);
+
+        MatchRecommendationDetailRes result =
+                matchRecommendationService.getMatchRecommendationDetail(
+                        requesterTalentId,
+                        providerTalentId,
+                        userId
+                );
+
+        assertThat(result.talentId()).isEqualTo(providerTalentId);
+        assertThat(result.proposalRequestEnabled()).isFalse();
+        assertThat(result.proposalRequestDisabledReason())
+                .isEqualTo(TRADE_IN_PROGRESS_REASON);
+
+        then(talentRepository).should().findById(requesterTalentId);
+        then(matchRecommendationQueryRepository).should()
+                .findMatchRecommendationDetail(category.getId(), providerTalentId);
+        then(matchProposalRepository).should()
+                .existsSentPendingProposal(userId, requesterTalentId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsReceivedPendingProposal(userId, requesterTalentId, providerId, providerTalentId);
+        then(matchProposalRepository).should()
+                .existsTradeInProgressProposal(userId, requesterTalentId, providerTalentId);
     }
 
     @Test
