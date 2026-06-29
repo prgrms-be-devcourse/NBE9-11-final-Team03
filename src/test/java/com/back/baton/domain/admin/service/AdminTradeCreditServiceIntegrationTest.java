@@ -91,7 +91,7 @@ class AdminTradeCreditServiceIntegrationTest {
                 TradeType.PURCHASE
         ));
         Escrow escrow = escrowRepository.save(
-                Escrow.createHeld(trade.getId(), buyerId, sellerId, 100, 10, 90, LocalDateTime.now().plusDays(7))
+                Escrow.createHeld(trade.getId(), buyerId, sellerId, 100, 0.1, LocalDateTime.now().plusDays(7))
         );
         creditAccountRepository.save(CreditAccount.create(buyerId, 900));
         creditTransactionRepository.save(CreditTransaction.create(
