@@ -11,6 +11,7 @@ import com.back.baton.domain.admin.dto.response.AdminTalentReportRes;
 import com.back.baton.domain.admin.dto.response.AdminTalentRes;
 import com.back.baton.domain.admin.dto.response.AdminUserRes;
 import com.back.baton.domain.admin.service.AdminManagementService;
+import com.back.baton.domain.talent.dto.response.TalentDetailRes;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.security.CurrentUser;
@@ -75,7 +76,7 @@ public class AdminManagementController {
 
     @GetMapping("/talents/{talentId}")
     @Operation(summary = "관리자 재능 상세 조회")
-    public ResponseEntity<ApiResponse<AdminTalentRes>> getTalent(@PathVariable Long talentId) {
+    public ResponseEntity<ApiResponse<TalentDetailRes>> getTalent(@PathVariable Long talentId) {
         return ApiResponses.ok(adminManagementService.getTalent(talentId));
     }
 
