@@ -51,7 +51,7 @@ class TradeServiceAutoConfirmTest {
         ReflectionTestUtils.setField(trade, "id", tradeId);
         ReflectionTestUtils.setField(trade, "status", TradeStatus.UNDER_REVIEW);
 
-        Escrow escrow = Escrow.createHeld(tradeId, 2L, 3L, 5000, 500, 4500, LocalDateTime.now().plusDays(7));
+        Escrow escrow = Escrow.createHeld(tradeId, 2L, 3L, 5000, 0.1, LocalDateTime.now().plusDays(7));
 
         given(tradeRepository.findByIdWithLock(tradeId)).willReturn(Optional.of(trade));
         given(escrowRepository.findByTradeId(tradeId)).willReturn(Optional.of(escrow));

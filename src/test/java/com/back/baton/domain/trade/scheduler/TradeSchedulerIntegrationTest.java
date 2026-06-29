@@ -91,8 +91,7 @@ class TradeSchedulerIntegrationTest {
                 buyer.getId(),
                 seller.getId(),
                 1000,
-                100,
-                900,
+                0.1,
                 expiredTime
         ));
 

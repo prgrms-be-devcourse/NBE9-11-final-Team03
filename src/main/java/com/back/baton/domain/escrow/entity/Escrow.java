@@ -115,14 +115,23 @@ public class Escrow extends BaseTimeEntity {
         this.expiresAt = expiresAt;
     }
 
-    public static Escrow createHeld(Long tradeId, Long payerId, Long payeeId, Integer amount, Integer fee, Integer settlementAmount, LocalDateTime expiresAt) {
+    public static Escrow createHeld(
+            Long tradeId,
+            Long payerId,
+            Long payeeId,
+            int amount,
+            double feeRate,
+            LocalDateTime expiresAt
+    ) {
         Escrow escrow = new Escrow();
         escrow.tradeId = tradeId;
         escrow.payerId = payerId;
         escrow.payeeId = payeeId;
         escrow.amount = amount;
-        escrow.fee = fee;
-        escrow.settlementAmount = settlementAmount;
+
+        escrow.fee = (int) Math.floor(amount * feeRate);
+        escrow.settlementAmount = amount - escrow.fee;
+
         escrow.status = EscrowStatus.HELD;
         escrow.expiresAt = expiresAt;
         return escrow;

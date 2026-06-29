@@ -36,7 +36,7 @@ class TradeRepositoryTest {
         tradeRepository.saveAndFlush(trade1);
 
         LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(1); // 1분 전 만료
-        escrowRepository.save(Escrow.createHeld(trade1.getId(), 2L, 3L, 5000, 500, 4500, expiredTime));
+        escrowRepository.save(Escrow.createHeld(trade1.getId(), 2L, 3L, 5000, 0.1, expiredTime));
 
         // 만료되지 않은 UNDER_REVIEW 거래 생성 (대상 아님)
         Trade trade2 = tradeRepository.save(Trade.create(2L, null, 11L, 2L, 3L, 5000, TradeType.PURCHASE));
@@ -44,12 +44,12 @@ class TradeRepositoryTest {
         tradeRepository.saveAndFlush(trade2);
 
         LocalDateTime futureTime = LocalDateTime.now().plusDays(7); // 7일 후 만료
-        escrowRepository.save(Escrow.createHeld(trade2.getId(), 2L, 3L, 5000, 500, 4500, futureTime));
+        escrowRepository.save(Escrow.createHeld(trade2.getId(), 2L, 3L, 5000, 0.1, futureTime));
 
         // 만료되었으나 IN_PROGRESS 상태인 거래 생성 (대상 아님)
         Trade trade3 = tradeRepository.save(Trade.create(3L, null, 12L, 2L, 3L, 5000, TradeType.PURCHASE));
         LocalDateTime expiredTime2 = LocalDateTime.now().minusMinutes(5);
-        escrowRepository.save(Escrow.createHeld(trade3.getId(), 2L, 3L, 5000, 500, 4500, expiredTime2));
+        escrowRepository.save(Escrow.createHeld(trade3.getId(), 2L, 3L, 5000, 0.1, expiredTime2));
 
         // 쿼리 실행
         List<Trade> result = tradeRepository.findExpiredUnderReviewTrades(LocalDateTime.now());
