@@ -7,7 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "trade")
+@Table(name = "trade", indexes = {
+        @Index(name = "idx_trade_match_id", columnList = "match_id"),
+        @Index(name = "idx_trade_trade_group_id", columnList = "trade_group_id")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Trade extends BaseTimeEntity {
@@ -16,8 +19,11 @@ public class Trade extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "match_id", nullable = false, unique = true) // 하나의 match에 대해 하나의 trade만 존재 (거래가 취소되면 재거래 불가)
+    @Column(name = "match_id", nullable = false) // unique 제약 제거
     private Long matchId;
+
+    @Column(name = "trade_group_id", updatable = false) // null 허용
+    private Long tradeGroupId;
 
     @Column(name = "talent_id", nullable = false)
     private Long talentId;
@@ -39,9 +45,10 @@ public class Trade extends BaseTimeEntity {
     @Column(name = "trade_type", length = 20, nullable = false)
     private TradeType tradeType;
 
-    public static Trade create(Long matchId, Long talentId, Long buyerId, Long sellerId, Integer creditPrice, TradeType tradeType) {
+    public static Trade create(Long matchId, Long tradeGroupId, Long talentId, Long buyerId, Long sellerId, Integer creditPrice, TradeType tradeType) {
         Trade trade = new Trade();
         trade.matchId = matchId;
+        trade.tradeGroupId = tradeGroupId;
         trade.talentId = talentId;
         trade.buyerId = buyerId;
         trade.sellerId = sellerId;
@@ -65,5 +72,9 @@ public class Trade extends BaseTimeEntity {
 
     public void dispute() {
         this.status = TradeStatus.DISPUTED;
+    }
+
+    public void waitPartner() {
+        this.status = TradeStatus.AWAITING_PARTNER;
     }
 }

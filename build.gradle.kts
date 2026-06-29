@@ -64,6 +64,14 @@ dependencies {
     // AWS S3
     implementation(platform("software.amazon.awssdk:bom:2.31.0"))
     implementation("software.amazon.awssdk:s3")
+
+    //mail
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
+    //caffeine
+    implementation("com.github.ben-manes.caffeine:caffeine")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("org.springframework:spring-context-support")
 }
 
 tasks.withType<Test> {

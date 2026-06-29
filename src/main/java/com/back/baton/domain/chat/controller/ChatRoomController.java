@@ -1,11 +1,15 @@
 package com.back.baton.domain.chat.controller;
 
 import com.back.baton.domain.chat.dto.request.ChatRoomCreateReq;
+import com.back.baton.domain.chat.dto.response.ChatRoomListRes;
 import com.back.baton.domain.chat.dto.response.ChatRoomRes;
 import com.back.baton.domain.chat.service.ChatService;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
+import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.response.code.SuccessCode;
+import com.back.baton.global.security.CurrentUser;
+import com.back.baton.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,17 +32,31 @@ public class ChatRoomController {
 
     private final ChatService chatService;
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<CursorPageRes<ChatRoomListRes>>> getMyChatRooms(
+            @CurrentUser SecurityUser currentUser,
+            @RequestParam(required = false) Long cursor,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        Long userId = currentUser.getUserId();
+        CursorPageRes<ChatRoomListRes> response = chatService.getMyChatRooms(userId, cursor, size);
+        return ApiResponses.success(SuccessCode.CHAT_ROOMS_FOUND, response);
+    }
+
     @PostMapping
     @Operation(
             summary = "채팅방 생성 또는 조회",
             description = "사용자가 특정 재능 판매자와 1:1 채팅방을 생성하거나, 이미 존재하는 채팅방을 조회합니다."
     )
     public ResponseEntity<ApiResponse<ChatRoomRes>> getOrCreateChatRoom(
-            @Valid @RequestBody ChatRoomCreateReq req
+            @Valid @RequestBody ChatRoomCreateReq req,
+            @CurrentUser SecurityUser currentUser
     ) {
+        Long buyerId = currentUser.getUserId();
+
         ChatRoomRes response = chatService.getOrCreateMatchRoom(
                 req.talentId(),
-                req.buyerId()
+                buyerId
         );
 
         return ApiResponses.success(SuccessCode.CHAT_ROOM_CREATED, response);
@@ -52,13 +70,11 @@ public class ChatRoomController {
     public ResponseEntity<ApiResponse<ChatRoomRes>> getChatRoom(
             @Parameter(description = "채팅방 ID", example = "1", required = true)
             @PathVariable Long chatRoomId,
-
-            @Parameter(description = "조회 요청자 회원 ID. 인증 연동 전까지 query parameter로 전달합니다.", example = "23", required = true)
-            @RequestParam Long userId
+            @CurrentUser SecurityUser currentUser
     ) {
         ChatRoomRes response = chatService.getChatRoomInfo(
                 chatRoomId,
-                userId
+                currentUser.getUserId()
         );
 
         return ApiResponses.success(SuccessCode.CHAT_ROOM_FOUND, response);

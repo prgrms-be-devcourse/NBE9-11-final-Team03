@@ -10,7 +10,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+
 import java.time.LocalDateTime;
+
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,10 +21,24 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @Table(name = "chat_room",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_chat_room_trade_id",
+                        columnNames = "trade_id"
+                ),
+                @UniqueConstraint(
+                        name = "uk_chat_room_trade_group_id",
+                        columnNames = "trade_group_id"
+                )
+        },
         indexes = {
                 @Index(
                         name = "idx_chat_room_match_lookup",
-                        columnList = "talent_id, buyer_id, seller_id, status, deleted_at"
+                        columnList = "talent_id, buyer_id, seller_id, status"
+                ),
+                @Index(
+                        name = "idx_chat_room_trade_lookup",
+                        columnList = "trade_id"
                 )
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -43,6 +60,9 @@ public class ChatRoom extends BaseTimeEntity {
     @Column(name = "trade_id")
     private Long tradeId;
 
+    @Column(name = "trade_group_id")
+    private Long tradeGroupId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ChatRoomType status;
@@ -50,20 +70,19 @@ public class ChatRoom extends BaseTimeEntity {
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
     private ChatRoom(
             Long talentId,
             Long buyerId,
             Long sellerId,
             Long tradeId,
+            Long tradeGroupId,
             ChatRoomType status
     ) {
         this.talentId = talentId;
         this.buyerId = buyerId;
         this.sellerId = sellerId;
         this.tradeId = tradeId;
+        this.tradeGroupId = tradeGroupId;
         this.status = status;
     }
 
@@ -76,6 +95,7 @@ public class ChatRoom extends BaseTimeEntity {
                 talentId,
                 buyerId,
                 sellerId,
+                null,
                 null,
                 ChatRoomType.MATCH
         );
@@ -92,6 +112,23 @@ public class ChatRoom extends BaseTimeEntity {
                 buyerId,
                 sellerId,
                 tradeId,
+                null,
+                ChatRoomType.TRANSACTION
+        );
+    }
+
+    public static ChatRoom createForSwapTransaction(
+            Long talentId,
+            Long buyerId,
+            Long sellerId,
+            Long tradeGroupId
+    ) {
+        return new ChatRoom(
+                talentId,
+                buyerId,
+                sellerId,
+                null,
+                tradeGroupId,
                 ChatRoomType.TRANSACTION
         );
     }
@@ -102,9 +139,5 @@ public class ChatRoom extends BaseTimeEntity {
 
     public boolean isParticipant(Long userId) {
         return buyerId.equals(userId) || sellerId.equals(userId);
-    }
-
-    public void delete() {
-        this.deletedAt = LocalDateTime.now();
     }
 }

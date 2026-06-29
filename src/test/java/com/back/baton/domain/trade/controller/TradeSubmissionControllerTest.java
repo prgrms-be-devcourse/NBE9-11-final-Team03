@@ -59,16 +59,24 @@ class TradeSubmissionControllerTest {
         Long tradeId = 1L;
         Long buyerId = 2L;
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, buyerId, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.COMPLETED,
-                EscrowStatus.RELEASED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                buyerId,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.COMPLETED,
+                EscrowStatus.RELEASED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
-        when(tradeSubmissionService.confirmPurchase(anyLong(), anyLong())).thenReturn(res);
+        when(tradeService.confirmPurchase(anyLong(), anyLong())).thenReturn(res);
 
-        mockMvc.perform(patch("/api/v1/trade/{tradeId}/confirm", tradeId)
-                        )
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/confirm", tradeId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-10"))
@@ -80,7 +88,7 @@ class TradeSubmissionControllerTest {
     @DisplayName("구매 확정 API - 구매자가 아니면 403 반환")
     @WithMockSecurityUser(userId = 999)
     void confirmPurchase_accessDenied() throws Exception {
-        when(tradeSubmissionService.confirmPurchase(anyLong(), anyLong()))
+        when(tradeService.confirmPurchase(anyLong(), anyLong()))
                 .thenThrow(new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED));
 
         mockMvc.perform(patch("/api/v1/trade/1/confirm")
@@ -94,7 +102,7 @@ class TradeSubmissionControllerTest {
     @DisplayName("구매 확정 API - 검토 중이 아닌 거래이면 400 반환")
     @WithMockSecurityUser(userId = 2)
     void confirmPurchase_notUnderReview() throws Exception {
-        when(tradeSubmissionService.confirmPurchase(anyLong(), anyLong()))
+        when(tradeService.confirmPurchase(anyLong(), anyLong()))
                 .thenThrow(new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW));
 
         mockMvc.perform(patch("/api/v1/trade/1/confirm")

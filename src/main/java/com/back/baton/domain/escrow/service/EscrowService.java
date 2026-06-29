@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class EscrowService {
 
     private final EscrowRepository escrowRepository;
@@ -19,9 +19,14 @@ public class EscrowService {
     @Value("${escrow.confirmation-expiry-days}")
     private int confirmationExpiryDays;
 
+    @Value("${escrow.fee-rate}")
+    private double feeRate;
+
     public Escrow create(Long tradeId, Long payerId, Long payeeId, Integer amount) {
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(confirmationExpiryDays);
-        Escrow escrow = Escrow.createHeld(tradeId, payerId, payeeId, amount, expiresAt);
+
+        Escrow escrow = Escrow.createHeld(tradeId, payerId, payeeId, amount, feeRate, expiresAt);
+
         return escrowRepository.save(escrow);
     }
 }

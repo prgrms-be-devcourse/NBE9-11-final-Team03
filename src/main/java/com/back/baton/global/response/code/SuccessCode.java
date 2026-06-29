@@ -25,6 +25,8 @@ public enum SuccessCode {
     TRADE_SUBMISSION_OK(HttpStatus.OK, "200-9", "결과물 조회에 성공했습니다."),
     TRADE_COMPLETED(HttpStatus.OK, "200-10", "거래가 완료되었습니다."),
     TRADE_DISPUTED(HttpStatus.OK, "200-11", "분쟁이 신청되었습니다."),
+    TRADE_DISPUTE_RESOLVED(HttpStatus.OK, "200-16", "분쟁이 처리되었습니다."),
+    TRADE_DISPUTES_OK(HttpStatus.OK, "200-17", "분쟁 목록 조회에 성공했습니다."),
 
     TALENT_ATTACHMENT_CREATED(HttpStatus.CREATED, "201-4", "재능 첨부 등록에 성공했습니다."),
     TALENT_ATTACHMENT_OK(HttpStatus.OK, "200-3", "재능 첨부 요청에 성공했습니다."),
@@ -35,18 +37,20 @@ public enum SuccessCode {
     CHAT_MESSAGE_SENT(HttpStatus.OK, "200-11", "채팅 메시지 전송에 성공했습니다."),
     CHAT_MESSAGES_FOUND(HttpStatus.OK, "200-12", "채팅 메시지 목록 조회에 성공했습니다."),
     CHAT_ROOM_FOUND(HttpStatus.OK, "200-13", "채팅방 조회에 성공했습니다."),
+    CHAT_ROOMS_FOUND(HttpStatus.OK, "200-16", "채팅방 목록 조회에 성공했습니다."),
 
     USER_LOGIN_SUCCESS(HttpStatus.OK, "200-1", "로그인에 성공했습니다."),
     USER_REISSUE_SUCCESS(HttpStatus.OK, "200-12", "토큰 재발행에 성공했습니다."),
     USER_LOGOUT_SUCCESS(HttpStatus.OK, "200-3","로그아웃에 성공했습니다."),
     USER_WITHDRAW_SUCCESS(HttpStatus.OK, "200-11","탈퇴에 성공했습니다."),
     USER_SIGNUP_SUCCESS(HttpStatus.CREATED, "201-1", "회원가입에 성공했습니다."),
+    USER_EMAIL_SEND_SUCCESS(HttpStatus.OK, "200-18", "이메일 인증 코드 발송에 성공했습니다."),
 
     CATEGORY_OK(HttpStatus.OK, "200-13", "카테고리 조회에 성공했습니다."),
-
+    PROFILE_FOUND_SUCCESS(HttpStatus.OK, "200-17","프로필 조회에 성공했습니다."),
     PROFILE_UPDATE_SUCCESS(HttpStatus.OK, "200-13","프로필 수정에 성공했습니다."),
-    PROFILE_FOUND_SUCCESS(HttpStatus.OK, "200-17","프로필 조회에 성공했습니다.");
-
+    USER_EMAIL_VERIFICATION_SUCCESS(HttpStatus.OK, "200-19", "이메일 인증에 성공했습니다."),
+    ;
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
