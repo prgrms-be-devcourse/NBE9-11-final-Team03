@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,4 +46,10 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, TradeReposi
             @Param("tradeType") TradeType tradeType,
             Pageable pageable
     );
+
+    @Query("SELECT t FROM Trade t " +
+            "JOIN Escrow e ON e.tradeId = t.id " +
+            "WHERE t.status = com.back.baton.domain.trade.entity.TradeStatus.UNDER_REVIEW " +
+            "AND e.expiresAt <= :now")
+    List<Trade> findExpiredUnderReviewTrades(@Param("now") LocalDateTime now);
 }
