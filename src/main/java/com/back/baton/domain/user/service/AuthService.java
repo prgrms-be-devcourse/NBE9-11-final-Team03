@@ -2,6 +2,7 @@ package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.profile.service.ProfileService;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -43,6 +44,8 @@ public class AuthService {
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
+    private final LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
+
     @Transactional
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
 
@@ -52,8 +55,6 @@ public class AuthService {
 
         // 2. 닉네임 검증
         checkNicknameDuplicated(nickname);
-
-        //TODO: 2-2. 닉네임 중복 확인 별도 구현
 
         // 3. 비밀번호 형식 검증
         password = password.strip(); // 앞뒤 공백 제거
@@ -90,11 +91,17 @@ public class AuthService {
     }
 
     public void checkNicknameDuplicated(String nickname){
-        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
-
-        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
+        if(isNicknameDuplicated(nickname)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
+    }
+
+    public UserCheckNicknameRes checkNickname(String nickname) {
+        return new UserCheckNicknameRes(!isNicknameDuplicated(nickname));
+    }
+
+    private boolean isNicknameDuplicated(String nickname){
+        return userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt);
     }
 
     public void sendEmailVerificationCode(String email) { // 이메일 인증번호 보내기

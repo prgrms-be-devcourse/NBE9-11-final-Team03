@@ -2,6 +2,7 @@ package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.profile.service.ProfileService;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -124,6 +125,34 @@ public class AuthServiceTest {
         // 패스워드가 틀렸으므로 암호화 및 저장 로직은 절대 실행되면 안 됨
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 확인 - 사용 가능한 닉네임이면 true를 반환한다")
+    void checkNickname_available() {
+        // given
+        given(userRepository.existsByNicknameAndDeletedAt(eq("batonNick"), any(LocalDateTime.class)))
+                .willReturn(false);
+
+        // when
+        UserCheckNicknameRes result = authService.checkNickname("batonNick");
+
+        // then
+        assertThat(result.usableNickname()).isTrue();
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 확인 - 이미 사용 중인 닉네임이면 false를 반환한다")
+    void checkNickname_duplicated() {
+        // given
+        given(userRepository.existsByNicknameAndDeletedAt(eq("batonNick"), any(LocalDateTime.class)))
+                .willReturn(true);
+
+        // when
+        UserCheckNicknameRes result = authService.checkNickname("batonNick");
+
+        // then
+        assertThat(result.usableNickname()).isFalse();
     }
     @Test
     @DisplayName("로그인 성공 - 기존 RefreshToken이 없는 경우 새로운 토큰을 생성(save)한다")
