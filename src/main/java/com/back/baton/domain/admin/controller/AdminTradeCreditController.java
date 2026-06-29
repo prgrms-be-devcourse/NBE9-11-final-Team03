@@ -12,6 +12,7 @@ import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -35,7 +36,7 @@ public class AdminTradeCreditController {
     @GetMapping("/trades")
     @Operation(summary = "관리자 거래 목록 조회")
     public ResponseEntity<ApiResponse<AdminPageRes<AdminTradeRes>>> getTrades(
-            @ParameterObject @ModelAttribute AdminTradeSearchReq req,
+            @Valid @ParameterObject @ModelAttribute AdminTradeSearchReq req,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ApiResponses.ok(adminTradeCreditService.getTrades(req, pageable));
