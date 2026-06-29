@@ -75,7 +75,7 @@ public class AdminTradeCreditService {
             throw new CustomException(UserErrorCode.USER_NOT_FOUND);
         }
 
-        Page<CreditTransactionRes> transactions = creditTransactionRepository.findByUserIdOrderByIdDesc(userId, pageable)
+        Page<CreditTransactionRes> transactions = creditTransactionRepository.findByUserId(userId, pageable)
                 .map(CreditTransactionRes::from);
         return AdminPageRes.from(transactions);
     }

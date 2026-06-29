@@ -8,5 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface CreditTransactionRepository extends JpaRepository<CreditTransaction, Long>, CreditTransactionRepositoryCustom {
 
     // 관리자 유저 크레딧 거래 내역 조회.
-    Page<CreditTransaction> findByUserIdOrderByIdDesc(Long userId, Pageable pageable);
+    Page<CreditTransaction> findByUserId(Long userId, Pageable pageable);
 }
