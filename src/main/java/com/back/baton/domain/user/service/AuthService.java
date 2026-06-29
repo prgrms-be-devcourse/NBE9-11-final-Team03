@@ -2,6 +2,7 @@ package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.profile.service.ProfileService;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -27,7 +28,7 @@ import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordValidator passwordValidator;
@@ -38,27 +39,22 @@ public class AuthService {
     private final WithdrawnUserRepository withdrawnUserRepository;
     private final WithdrawnEncoder withdrawnEncoder;
     private final ProfileService profileService;
+    private final EmailVerificationService emailVerificationService;
 
     @Value("${user.initial-trust-score}")
     private BigDecimal initialTrustScore; // 초기 신뢰 점수
 
+    private final LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
+
+    @Transactional
     public UserSignupRes signup(String email, String password, String nickname, String introduction, String profileImgUrl) {
+
         // 1. 이메일 검증
-        email = email.strip();
-        email = email.toLowerCase();
-        if(userRepository.existsByEmail(email)){
-            throw new CustomException(UserErrorCode.DUPLICATED_USER);
-        }
-        // 1-2. 탈퇴한 유저 중에서도 확인
-        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
-            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
-        }
-        // TODO: 1-3. 이메일 인증 여부 확인
+        email = normalizeEmail(email); // 이메일 형식 변환
+        validateNotDuplicatedEmail(email); // 이메일 중복 여부 확인
 
         // 2. 닉네임 검증
         checkNicknameDuplicated(nickname);
-
-        //TODO: 2-2. 닉네임 중복 확인 별도 구현
 
         // 3. 비밀번호 형식 검증
         password = password.strip(); // 앞뒤 공백 제거
@@ -67,6 +63,9 @@ public class AuthService {
         if(!passwordValidator.validate(password, username)){ // 비밀번호 검증
             throw new CustomException(UserErrorCode.INVALID_PASSWORD_FORMAT);
         }
+
+        // 이메일 인증 여부 확인
+        consumeVerifiedEmail(email);
 
         // 4. 비밀번호 암호화-> 솔트 + 암호화 + 연산 반복 -> BCrypt 적용
         String encodedPwd = passwordEncoder.encode(password);
@@ -92,15 +91,38 @@ public class AuthService {
     }
 
     public void checkNicknameDuplicated(String nickname){
-        LocalDateTime defaultDeletedAt = LocalDateTime.of(1880, 6, 16,0,0,0); // 과거의 시점으로 고정
-
-        if(userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt)){
+        if(isNicknameDuplicated(nickname)){
             throw new CustomException(UserErrorCode.DUPLICATED_USER);
         }
     }
 
+    public UserCheckNicknameRes checkNickname(String nickname) {
+        return new UserCheckNicknameRes(!isNicknameDuplicated(nickname));
+    }
+
+    private boolean isNicknameDuplicated(String nickname){
+        return userRepository.existsByNicknameAndDeletedAt(nickname, defaultDeletedAt);
+    }
+
+    public void sendEmailVerificationCode(String email) { // 이메일 인증번호 보내기
+        email = normalizeEmail(email);
+        validateNotDuplicatedEmail(email); // 이메일 중복 여부 확인
+        emailVerificationService.sendVerificationCode(email);
+    }
+
+    public void verifyEmail( String email, String code) { // 인증코드 확인
+        email = normalizeEmail(email);
+        emailVerificationService.verifyEmail(email, code);
+    }
+
+    public void consumeVerifiedEmail(String email){ // 인증 완료된 메일인지 확인
+        emailVerificationService.consumeVerifiedEmail(email);
+    }
+
+    @Transactional
     public UserTokenDto login(String email, String password) {
         // 1. User 검증
+        email = normalizeEmail(email);
         User user = userRepository.findByEmail(email).orElseThrow(()-> new CustomException(UserErrorCode.USER_NOT_FOUND));
         checkUserStatus(user.getStatus());
 
@@ -121,6 +143,7 @@ public class AuthService {
         return new UserTokenDto(accessTokenValue, refreshTokenValue);
     }
 
+    @Transactional
     public UserTokenDto reissue(String savedRefreshTokenValue) {
         // 1. 가져온 refreshToken 검증
         if(savedRefreshTokenValue==null){
@@ -157,6 +180,11 @@ public class AuthService {
 
     }
 
+    @Transactional
+    public void logout(Long userId){
+        refreshTokenRepository.deleteByUserIdCustom(userId); // refreshToken 삭제
+    }
+
     private void checkUserStatus(UserStatus userStatus){ // 계정 상태에 따른 처리
         if(userStatus.equals(UserStatus.SUSPENDED)){ // 휴면
             throw new CustomException(UserErrorCode.SUSPENDED_STATUS);
@@ -189,7 +217,16 @@ public class AuthService {
         );
     }
 
-    public void logout(Long userId){
-        refreshTokenRepository.deleteByUserIdCustom(userId); // refreshToken 삭제
+    private String normalizeEmail(String email) { // 이메일 형식 변환
+        return email.strip().toLowerCase();
+    }
+    private void validateNotDuplicatedEmail(String email){ // 이메일 중복 확인
+        if(userRepository.existsByEmail(email)){
+            throw new CustomException(UserErrorCode.DUPLICATED_USER);
+        }
+        // 1-2. 탈퇴한 유저 중에서도 확인
+        if(withdrawnUserRepository.existsByEncodedEmail(withdrawnEncoder.encode(email))){
+            throw new CustomException(UserErrorCode.UNUSABLE_EMAIL);
+        }
     }
 }

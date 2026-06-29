@@ -1,6 +1,7 @@
 package com.back.baton.domain.talent.service;
 
 import com.back.baton.domain.category.entity.Category;
+import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.repository.TradeRepository;
@@ -21,7 +22,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class TalentServiceDeleteTest {
@@ -29,9 +32,10 @@ class TalentServiceDeleteTest {
     @InjectMocks TalentService talentService;
     @Mock TalentRepository talentRepository;
     @Mock TradeRepository tradeRepository;
+    @Mock MatchProposalRepository matchProposalRepository;
 
     @Test
-    @DisplayName("본인 글이고 삭제 전이며 진행 중이거나 검토 중인 거래가 없으면 deletedAt이 기록된다")
+    @DisplayName("본인 글이고 삭제 전이며 진행 중이거나 검토 중인 거래가 없으면 deletedAt이 기록되고 REQUESTED 제안이 취소된다")
     void deleteTalent_success() {
         // given
         Long authorId = 1L;
@@ -45,6 +49,7 @@ class TalentServiceDeleteTest {
 
         // then
         assertThat(talent.isDeleted()).isTrue();
+        then(matchProposalRepository).should().cancelRequestedByTalentId(talentId);
     }
 
     @Test
@@ -56,6 +61,7 @@ class TalentServiceDeleteTest {
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(99L, 1L), TalentErrorCode.TALENT_NOT_FOUND);
+        then(matchProposalRepository).should(never()).cancelRequestedByTalentId(eq(99L));
     }
 
     @Test
@@ -73,6 +79,7 @@ class TalentServiceDeleteTest {
                 () -> talentService.deleteTalent(talentId, authorId),
                 TalentErrorCode.TALENT_CANNOT_DELETE
         );
+        then(matchProposalRepository).should(never()).cancelRequestedByTalentId(eq(talentId));
     }
 
     @Test
@@ -84,6 +91,7 @@ class TalentServiceDeleteTest {
 
         // when & then
         assertErrorCode(() -> talentService.deleteTalent(10L, 2L), TalentErrorCode.TALENT_FORBIDDEN);
+        then(matchProposalRepository).should(never()).cancelRequestedByTalentId(eq(10L));
     }
 
     @Test

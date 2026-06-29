@@ -112,4 +112,8 @@
                 this.deletedAt = LocalDateTime.now();
             }
         }
+
+        public void changeStatus(TalentStatus status) {
+            this.status = status;
+        }
     }

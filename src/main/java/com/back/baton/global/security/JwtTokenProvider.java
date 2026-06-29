@@ -62,16 +62,20 @@ public class JwtTokenProvider {
         }
     }
 
-    public DecodedJWT resolveToken(HttpServletRequest request){ // 헤더에서 acessToken 추출 및 검증, 반환
-        String authorization = request.getHeader("Authorization");
+    public DecodedJWT resolveToken(HttpServletRequest request) {
+        return resolveToken(request.getHeader("Authorization"));
+    }
+
+    public DecodedJWT resolveToken(String authorization){ // 헤더에서 accessToken 추출 및 검증, 반환
         String accessToken = null;
-        if(authorization==null || authorization.isEmpty()){
+
+        if(authorization == null || authorization.isEmpty()){
             return null;
         }
         if(!authorization.startsWith("Bearer ")){
             return null;
         }
-        accessToken = authorization.replace("Bearer ", "");
+        accessToken = authorization.substring("Bearer ".length());
 
         try{
             Algorithm algorithm = Algorithm.HMAC256(secretKey.getBytes());

@@ -1,7 +1,7 @@
 package com.back.baton.domain.user.controller;
 
-import com.back.baton.domain.user.dto.request.UserLoginReq;
-import com.back.baton.domain.user.dto.request.UserSignupReq;
+import com.back.baton.domain.user.dto.request.*;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserLoginRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
@@ -96,5 +96,38 @@ public class AuthController {
         return ApiResponses.success(SuccessCode.USER_LOGOUT_SUCCESS,null);
     }
 
+    @PostMapping("/email-send")
+    @Operation(
+            summary = "이메일 인증 번호 발송",
+            description = "이메일 인증 번호를 발송합니다."
+    )
+    public ResponseEntity<ApiResponse<Void>> sendEmail(
+            @Valid @RequestBody UserEmailVerificationSendReq req
+    ){
+        authService.sendEmailVerificationCode(req.email());
+        return ApiResponses.success(SuccessCode.USER_EMAIL_SEND_SUCCESS, null);
+    }
 
+    @PostMapping("/email-verification")
+    @Operation(
+            summary = "이메일 인증 번호 확인",
+            description = "이메일 인증 번호를 받아서 검증하고, 결과를 반환합니다."
+    )
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(
+            @Valid @RequestBody UserEmailVerificationReq req
+    ){
+        authService.verifyEmail(req.email(), req.verificationCode());
+        return ApiResponses.success(SuccessCode.USER_EMAIL_VERIFICATION_SUCCESS, null);
+    }
+
+
+    @PostMapping("/check-nickname")
+    @Operation(
+            summary = "닉네임 중복 확인",
+            description = "회원가입 전에 닉네임 사용 가능 여부를 확인합니다."
+    )
+    public ResponseEntity<ApiResponse<UserCheckNicknameRes>> checkNickname(@Valid @RequestBody UserCheckNicknameReq req) {
+        UserCheckNicknameRes res = authService.checkNickname(req.nickname());
+        return ApiResponses.ok(res);
+    }
 }

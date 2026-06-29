@@ -73,7 +73,14 @@ class ChatMessageIntegrationTest {
                 .andExpect(jsonPath("$.data.content").value(content))
                 .andExpect(jsonPath("$.data.read").value(false));
 
-        List<ChatMessage> savedMessages = chatMessageRepository.findMessages(chatRoom.getId());
+        Long cursor = null;
+        int size = 20;
+
+        List<ChatMessage> savedMessages = chatMessageRepository.findMessages(
+                chatRoom.getId(),
+                cursor,
+                size
+        );
 
         assertThat(savedMessages).hasSize(1);
         assertThat(savedMessages.get(0).getChatRoom().getId()).isEqualTo(chatRoom.getId());
@@ -86,12 +93,14 @@ class ChatMessageIntegrationTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-12"))
                 .andExpect(jsonPath("$.message").value("채팅 메시지 목록 조회에 성공했습니다."))
-                .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data.length()").value(1))
-                .andExpect(jsonPath("$.data[0].roomId").value(chatRoom.getId()))
-                .andExpect(jsonPath("$.data[0].senderId").value(buyerId))
-                .andExpect(jsonPath("$.data[0].messageType").value("TEXT"))
-                .andExpect(jsonPath("$.data[0].content").value(content))
-                .andExpect(jsonPath("$.data[0].read").value(false));
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content.length()").value(1))
+                .andExpect(jsonPath("$.data.content[0].roomId").value(chatRoom.getId()))
+                .andExpect(jsonPath("$.data.content[0].senderId").value(buyerId))
+                .andExpect(jsonPath("$.data.content[0].messageType").value("TEXT"))
+                .andExpect(jsonPath("$.data.content[0].content").value(content))
+                .andExpect(jsonPath("$.data.content[0].read").value(false))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
+                .andExpect(jsonPath("$.data.nextCursor").value(savedMessages.get(0).getId()));
     }
 }
