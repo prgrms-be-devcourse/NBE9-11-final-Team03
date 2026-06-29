@@ -11,12 +11,14 @@ import com.back.baton.domain.admin.dto.response.AdminTalentReportRes;
 import com.back.baton.domain.admin.dto.response.AdminTalentRes;
 import com.back.baton.domain.admin.dto.response.AdminUserRes;
 import com.back.baton.domain.admin.service.AdminManagementService;
+import com.back.baton.domain.talent.dto.response.TalentDetailRes;
 import com.back.baton.global.response.ApiResponse;
 import com.back.baton.global.response.ApiResponses;
 import com.back.baton.global.security.CurrentUser;
 import com.back.baton.global.security.SecurityUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +44,7 @@ public class AdminManagementController {
     @GetMapping("/users")
     @Operation(summary = "관리자 유저 목록 조회")
     public ResponseEntity<ApiResponse<AdminPageRes<AdminUserRes>>> getUsers(
-            @ParameterObject @ModelAttribute AdminUserSearchReq req,
+            @Valid @ParameterObject @ModelAttribute AdminUserSearchReq req,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ApiResponses.ok(adminManagementService.getUsers(req, pageable));
@@ -59,7 +61,7 @@ public class AdminManagementController {
     public ResponseEntity<ApiResponse<AdminUserRes>> updateUserStatus(
             @CurrentUser SecurityUser currentUser,
             @PathVariable Long userId,
-            @RequestBody AdminUserStatusUpdateReq req
+            @Valid @RequestBody AdminUserStatusUpdateReq req
     ) {
         return ApiResponses.ok(adminManagementService.updateUserStatus(currentUser.getUserId(), userId, req));
     }
@@ -67,7 +69,7 @@ public class AdminManagementController {
     @GetMapping("/talents")
     @Operation(summary = "관리자 재능 목록 조회")
     public ResponseEntity<ApiResponse<AdminPageRes<AdminTalentRes>>> getTalents(
-            @ParameterObject @ModelAttribute AdminTalentSearchReq req,
+            @Valid @ParameterObject @ModelAttribute AdminTalentSearchReq req,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ApiResponses.ok(adminManagementService.getTalents(req, pageable));
@@ -75,7 +77,7 @@ public class AdminManagementController {
 
     @GetMapping("/talents/{talentId}")
     @Operation(summary = "관리자 재능 상세 조회")
-    public ResponseEntity<ApiResponse<AdminTalentRes>> getTalent(@PathVariable Long talentId) {
+    public ResponseEntity<ApiResponse<TalentDetailRes>> getTalent(@PathVariable Long talentId) {
         return ApiResponses.ok(adminManagementService.getTalent(talentId));
     }
 
@@ -84,7 +86,7 @@ public class AdminManagementController {
     public ResponseEntity<ApiResponse<AdminTalentRes>> updateTalentStatus(
             @CurrentUser SecurityUser currentUser,
             @PathVariable Long talentId,
-            @RequestBody AdminTalentStatusUpdateReq req
+            @Valid @RequestBody AdminTalentStatusUpdateReq req
     ) {
         return ApiResponses.ok(adminManagementService.updateTalentStatus(currentUser.getUserId(), talentId, req));
     }
@@ -92,7 +94,7 @@ public class AdminManagementController {
     @GetMapping("/reports")
     @Operation(summary = "관리자 신고 목록 조회")
     public ResponseEntity<ApiResponse<AdminPageRes<AdminTalentReportRes>>> getReports(
-            @ParameterObject @ModelAttribute AdminReportSearchReq req,
+            @Valid @ParameterObject @ModelAttribute AdminReportSearchReq req,
             @PageableDefault(size = 20, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return ApiResponses.ok(adminManagementService.getReports(req, pageable));
@@ -109,7 +111,7 @@ public class AdminManagementController {
     public ResponseEntity<ApiResponse<AdminTalentReportRes>> resolveReport(
             @CurrentUser SecurityUser currentUser,
             @PathVariable Long reportId,
-            @RequestBody AdminReportResolveReq req
+            @Valid @RequestBody AdminReportResolveReq req
     ) {
         return ApiResponses.ok(adminManagementService.resolveReport(currentUser.getUserId(), reportId, req));
     }

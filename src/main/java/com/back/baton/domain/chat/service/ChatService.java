@@ -103,6 +103,28 @@ public class ChatService {
         return ChatRoomRes.from(chatRoom);
     }
 
+    @Transactional
+    public ChatRoomRes getOrCreateSwapTransactionRoom(
+            Long tradeGroupId,
+            Long talentId,
+            Long requesterId,
+            Long providerId
+    ) {
+        validateSelfChat(requesterId, providerId);
+
+        ChatRoom chatRoom = chatRoomRepository.findByTradeGroupId(tradeGroupId)
+                .orElseGet(() -> chatRoomRepository.save(
+                        ChatRoom.createForSwapTransaction(
+                                talentId,
+                                requesterId,
+                                providerId,
+                                tradeGroupId
+                        )
+                ));
+
+        return ChatRoomRes.from(chatRoom);
+    }
+
     public ChatRoomRes getChatRoomInfo(
             Long roomId,
             Long userId

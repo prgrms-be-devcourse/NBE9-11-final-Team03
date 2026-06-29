@@ -22,12 +22,11 @@ public class EscrowService {
     @Value("${escrow.fee-rate}")
     private double feeRate;
 
-    @Transactional(readOnly = true)
     public Escrow create(Long tradeId, Long payerId, Long payeeId, Integer amount) {
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(confirmationExpiryDays);
-        int fee = (int) Math.floor(amount * feeRate); // 수수료
-        int settlementAmount = amount - fee; // 정산 금액
-        Escrow escrow = Escrow.createHeld(tradeId, payerId, payeeId, amount, fee, settlementAmount, expiresAt);
+
+        Escrow escrow = Escrow.createHeld(tradeId, payerId, payeeId, amount, feeRate, expiresAt);
+
         return escrowRepository.save(escrow);
     }
 }

@@ -84,7 +84,6 @@ public class TalentService {
 
         talent.update(category, request.title(), request.content(), request.estimatedHours(), request.creditPrice());
         // Dirty Checking: save() 없이 커밋 시 UPDATE
-        // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
         return TalentUpdateRes.from(talent);
     }
 
@@ -107,7 +106,6 @@ public class TalentService {
         talent.softDelete();
         // Requested 일 때 재능 삭제/비활성화시 CANCELLED처리
         matchProposalRepository.cancelRequestedByTalentId(talentId);
-        // TODO: 캐시 도입(TALENT 카테고리/상세 캐싱) 시 @CacheEvict로 무효화 추가
     }
 
     // 커서 페이징 (공통 CursorPageRes 사용)

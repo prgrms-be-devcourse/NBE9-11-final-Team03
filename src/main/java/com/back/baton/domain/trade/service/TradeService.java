@@ -3,6 +3,7 @@ package com.back.baton.domain.trade.service;
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
@@ -35,6 +36,7 @@ public class TradeService {
     private final TradeRepository tradeRepository;
     private final EscrowRepository escrowRepository;
     private final CreditService creditService;
+    private final MatchProposalRepository matchProposalRepository;
 
     // 단방향 거래 생성
     @Transactional
@@ -113,12 +115,14 @@ public class TradeService {
                 );
             }
 
+            matchProposalRepository.clearActiveSwapPairKeyById(trade.getMatchId());
+
             // 반환용 Response는 현재 요청받은 거래 기준
             Escrow requesterEscrow = escrowRepository.findByTradeId(tradeId)
                     .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
             return TradeRes.of(trade, requesterEscrow);
 
-        // 단방향
+            // 단방향
         } else {
             Escrow escrow = escrowRepository.findByTradeId(tradeId)
                     .orElseThrow(() -> new CustomException(EscrowErrorCode.ESCROW_NOT_FOUND));
@@ -185,6 +189,8 @@ public class TradeService {
                             t.getId()
                     );
                 }
+
+                matchProposalRepository.clearActiveSwapPairKeyById(trade.getMatchId());
             }
             else if (partnerTrade.getStatus() == TradeStatus.UNDER_REVIEW) {
                 trade.waitPartner();
@@ -313,7 +319,8 @@ public class TradeService {
             case COMPLETED, AWAITING_PARTNER -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_COMPLETED);
             case CANCELLED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_CANCELLED);
             case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_IN_DISPUTE);
-            default -> {} // IN_PROGRESS 만 취소 가능
+            default -> {
+            } // IN_PROGRESS 만 취소 가능
         }
     }
 
@@ -336,7 +343,8 @@ public class TradeService {
 
     private void validateDisputable(Trade trade) {
         switch (trade.getStatus()) {
-            case UNDER_REVIEW -> {} // 검토 중인 거래만 분쟁 신청 가능
+            case UNDER_REVIEW -> {
+            } // 검토 중인 거래만 분쟁 신청 가능
             case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_DISPUTED);
             default -> throw new CustomException(TradeErrorCode.TRADE_NOT_UNDER_REVIEW);
         }
