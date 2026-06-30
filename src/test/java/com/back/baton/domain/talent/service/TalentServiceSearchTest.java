@@ -91,7 +91,7 @@ class TalentServiceSearchTest {
     }
 
     private TalentListRes row(Long id) {
-        return new TalentListRes(id, "백엔드", "제목" + id, 100, 2,
+        return new TalentListRes(id, 1L, "user1", "백엔드", "제목" + id, 100, 2,
                 BigDecimal.ZERO, 0, 0, LocalDateTime.now());
     }
 }
