@@ -100,14 +100,16 @@ class TalentRepositoryTest {
     @DisplayName("countByAuthorIdAndDeletedAtIsNull - 삭제되지 않은 본인 재능만 센다")
     void countByAuthorIdAndDeletedAtIsNull() {
         Category category = saveCategory();
-        save(category, "재능1");          // author 1
-        save(category, "재능2");          // author 1
-        Talent deleted = save(category, "삭제됨"); // author 1, soft delete
+        Long authorId = saveUserId();
+        Long otherAuthorId = saveUserId();
+        save(category, "재능1", authorId);
+        save(category, "재능2", authorId);
+        Talent deleted = save(category, "삭제됨", authorId);
         deleted.softDelete();
         talentRepository.save(deleted);
-        talentRepository.save(Talent.create(2L, category, "남의재능", "내용", 2, 100)); // 다른 author
+        talentRepository.save(Talent.create(otherAuthorId, category, "남의재능", "내용", 2, 100));
 
-        assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).isEqualTo(2);
+        assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(authorId)).isEqualTo(2);
     }
 
     @Test
@@ -150,7 +152,23 @@ class TalentRepositoryTest {
     }
 
     private Talent save(Category category, String title) {
-        Talent talent = Talent.create(1L, category, title, "내용", 2, 100);
+        return save(category, title, saveUserId());
+    }
+
+    private Talent save(Category category, String title, Long authorId) {
+        Talent talent = Talent.create(authorId, category, title, "내용", 2, 100);
         return talentRepository.save(talent);
+    }
+
+    private Long saveUserId() {
+        String suffix = String.valueOf(System.nanoTime());
+        User user = User.builder()
+                .email("author" + suffix + "@test.com")
+                .password("password")
+                .nickname("author" + suffix)
+                .introduction("intro")
+                .trustScore(BigDecimal.ZERO)
+                .build();
+        return userRepository.save(user).getId();
     }
 }
