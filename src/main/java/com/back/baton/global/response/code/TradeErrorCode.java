@@ -17,6 +17,7 @@ public enum TradeErrorCode implements ErrorCode {
     INVALID_DISPUTE_REASON(HttpStatus.BAD_REQUEST, "TRADE-400-007", "분쟁 사유는 5자 이상 200자 이하여야 합니다."),
     TRADE_NO_DISPUTES(HttpStatus.NOT_FOUND, "TRADE-404-003", "분쟁 중인 거래가 없습니다."),
     PARTNER_TRADE_NOT_READY(HttpStatus.BAD_REQUEST, "TRADE-400-008", "상대방의 거래가 결과물 검토 중 상태여야 확정 대기가 가능합니다."),
+    TRADE_ALREADY_IN_PROGRESS(HttpStatus.BAD_REQUEST, "TRADE-400-009", "이미 진행된 거래는 취소할 수 없습니다."),
     INVALID_SWAP_TRADE_MAPPING(HttpStatus.INTERNAL_SERVER_ERROR, "TRADE-500-001", "SWAP 거래 매핑이 올바르지 않습니다.");
 
     private final HttpStatus httpStatus;
