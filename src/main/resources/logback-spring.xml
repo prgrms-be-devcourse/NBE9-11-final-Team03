@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Baton 로깅 + Sentry 알림 설정 (BATON-157)
+  - appender(로그 출력 위치)와 프로파일별 로그 레벨을 정의한다.
+  - 패키지별 세부 레벨(예: org.hibernate.SQL)은 application-*.yaml의 logging.level에서 관리한다.
+  - ERROR 로그(미처리 예외 포함)는 Sentry로도 전송된다(SENTRY 어펜더).
+    ※ Sentry Spring Boot 스타터는 Spring Boot 4 비호환(RestClientCustomizer 부재)이라
+       sentry-logback 어펜더만 사용한다. DSN은 SENTRY_DSN 환경변수로 주입(없으면 비활성).
+-->
+<configuration>
+    <!-- Spring Boot 기본 콘솔 패턴(CONSOLE_LOG_PATTERN), 색상 변환 규칙 등을 가져온다. -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- 로그 파일 저장 경로. 환경변수 LOG_DIR로 재정의 가능(기본 ./logs). -->
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}"/>
+    <!-- 파일 출력 패턴(콘솔은 Spring 기본 색상 패턴 사용). -->
+    <property name="FILE_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- 콘솔: 컨테이너(prod)에서는 stdout이 docker logs로 수집된다. -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 전체 로그 파일: 일자별 + 50MB 단위 롤링, 14일/2GB 보관. -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/baton.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/baton.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>14</maxHistory>
+            <totalSizeCap>2GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 에러 전용 파일: WARN 이상만 분리 기록 → 운영 중 에러/예외를 빠르게 확인. -->
+    <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/baton-error.log</file>
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <level>WARN</level>
+        </filter>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/baton-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Sentry: ERROR 로그(미처리 예외 포함)를 Sentry로 전송해 알림.
+         DSN은 SENTRY_DSN 환경변수에서 읽음(없으면 Sentry 비활성=no-op). -->
+    <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+        <minimumEventLevel>ERROR</minimumEventLevel>
+        <minimumBreadcrumbLevel>INFO</minimumBreadcrumbLevel>
+    </appender>
+
+    <!-- 로컬: 콘솔 + 파일, 앱 패키지는 DEBUG로 상세히. (SENTRY는 DSN 없으면 no-op) -->
+    <springProfile name="local">
+        <logger name="com.back.baton" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+            <appender-ref ref="SENTRY"/>
+        </root>
+    </springProfile>
+
+    <!-- dev: 콘솔 + 파일 + Sentry, 앱 패키지는 DEBUG. -->
+    <springProfile name="dev">
+        <logger name="com.back.baton" level="DEBUG"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+            <appender-ref ref="SENTRY"/>
+        </root>
+    </springProfile>
+
+    <!-- prod: 콘솔(stdout) + 파일 + Sentry, 앱 패키지는 INFO. -->
+    <springProfile name="prod">
+        <logger name="com.back.baton" level="INFO"/>
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+            <appender-ref ref="ERROR_FILE"/>
+            <appender-ref ref="SENTRY"/>
+        </root>
+    </springProfile>
+
+    <!-- 그 외(테스트 등 프로파일 미지정): 파일·Sentry 없이 콘솔만. -->
+    <springProfile name="!local &amp; !dev &amp; !prod">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+</configuration>
