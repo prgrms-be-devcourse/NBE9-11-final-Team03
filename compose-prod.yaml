@@ -29,6 +29,11 @@ services:
     depends_on:
       mysql:
         condition: service_healthy # ◀ 중요: MySQL 헬스체크가 통과되면 스프링이 켜짐
+  frontend:
+    image: ujin3261/dev11-final-team03-frontend:latest
+    restart: always
+    ports:
+      - '3000:3000'
 
 volumes:
     db_data:
