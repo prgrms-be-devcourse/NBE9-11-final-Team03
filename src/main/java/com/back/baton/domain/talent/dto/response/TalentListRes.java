@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 
 public record TalentListRes(
         Long talentId,
+        Long authorId,
+        String authorNickname,
         String categoryName,
         String title,
         Integer creditPrice,
