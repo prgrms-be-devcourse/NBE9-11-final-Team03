@@ -192,7 +192,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
                     mp.requesterTalentId is null
                     or (requesterTalent.id is not null and requesterTalent.deletedAt is null)
               )
-            order by mp.createdAt desc
+            order by mp.createdAt desc, mp.id desc
             """)
     List<MatchProposalReceivedRes> findReceivedProposals(
             @Param("providerId") Long providerId
@@ -224,7 +224,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
                     mp.requesterTalentId is null
                     or (requesterTalent.id is not null and requesterTalent.deletedAt is null)
               )
-            order by mp.createdAt desc
+            order by mp.createdAt desc, mp.id desc
             """)
     List<MatchProposalReceivedRes> findReceivedProposalsByStatus(
             @Param("providerId") Long providerId,
@@ -267,7 +267,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
                     mp.requesterTalentId is null
                     or (requesterTalent.id is not null and requesterTalent.deletedAt is null)
               )
-            order by mp.createdAt desc
+            order by mp.createdAt desc, mp.id desc
             """)
     List<MatchProposalSentRes> findSentProposals(
             @Param("requesterId") Long requesterId
@@ -299,7 +299,7 @@ public interface MatchProposalRepository extends JpaRepository<MatchProposal, Lo
                     mp.requesterTalentId is null
                     or (requesterTalent.id is not null and requesterTalent.deletedAt is null)
               )
-            order by mp.createdAt desc
+            order by mp.createdAt desc, mp.id desc
             """)
     List<MatchProposalSentRes> findSentProposalsByStatus(
             @Param("requesterId") Long requesterId,

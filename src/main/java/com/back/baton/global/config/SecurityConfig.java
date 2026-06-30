@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -60,6 +61,12 @@ public class SecurityConfig {
                                 "/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/reissue", "/ws/**",
                                 "/api/v1/auth/email-send","/api/v1/auth/email-verification", "/api/v1/auth/check-nickname"
                         ).permitAll()
+
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/categories", "/api/v1/talents", "/api/v1/talents/search",
+                                "/api/v1/talents/*", "/api/v1/talents/*/attachments"
+                        ).permitAll()
+
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll() // swagger 활성화
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
