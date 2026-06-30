@@ -42,6 +42,12 @@ public class EmailVerificationService {
 
     public void sendVerificationCode(String email) {
         email = normalize(email);
+
+        EmailVerification existing = verifications.getIfPresent(email);
+        if (existing != null && existing.expiredAt().isAfter(LocalDateTime.now())) {
+            throw new CustomException(UserErrorCode.EMAIL_VERIFICATION_ALREADY_SENT);
+        }
+
         EmailVerification verification = createVerification(false);
         // SMTP 이메일 인증 연결
         emailSender.sendVerificationCode(email, verification.code(), expiryMinutes);
