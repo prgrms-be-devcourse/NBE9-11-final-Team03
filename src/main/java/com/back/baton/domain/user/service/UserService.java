@@ -13,6 +13,7 @@ import com.back.baton.domain.user.repository.WithdrawnUserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.List;
 
 import static java.time.LocalDateTime.now;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -78,7 +80,12 @@ public class UserService {
     @Transactional
     @Scheduled(cron = "0 0 15 * * *", zone = "Asia/Seoul")
     public void deleteExpiredWithdrawalUsers() {
-        LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
-        withdrawnUserRepository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
+        try {
+            LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
+            withdrawnUserRepository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
+        } catch (Exception e) {
+            // 데이터 정리 배치 실패를 조용히 넘기지 않고 ERROR로 남겨 Sentry로 알린다.
+            log.error("탈퇴 회원 정보 자동 삭제 스케줄러 실패", e);
+        }
     }
 }
