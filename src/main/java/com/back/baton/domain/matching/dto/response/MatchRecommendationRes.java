@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public record MatchRecommendationRes(
         Long talentId,
+        Long requesterTalentId,
         Long providerId,
         Long categoryId,
         String categoryName,

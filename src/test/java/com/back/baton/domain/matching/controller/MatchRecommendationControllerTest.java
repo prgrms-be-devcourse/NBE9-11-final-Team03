@@ -4,13 +4,13 @@ import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.service.MatchRecommendationService;
 import com.back.baton.global.security.JwtTokenProvider;
+import com.back.baton.support.security.WithMockSecurityUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import com.back.baton.support.security.WithMockSecurityUser;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -37,17 +37,17 @@ class MatchRecommendationControllerTest {
     @DisplayName("매칭 추천 목록 조회 API - 인증 사용자 ID를 사용한다")
     @WithMockSecurityUser(userId = 2)
     void getMatchRecommendations_Success() throws Exception {
-        Long talentId = 1L;
         Long userId = 2L;
 
         List<MatchRecommendationRes> res = List.of(
                 new MatchRecommendationRes(
                         3L,
+                        1L,
                         4L,
                         10L,
-                        "백엔드",
-                        "MySQL 튜닝 도와드립니다",
-                        "MySQL 기본 쿼리와 인덱스를 도와드립니다.",
+                        "Design",
+                        "Figma lesson",
+                        "Figma wireframe lesson",
                         120,
                         2,
                         BigDecimal.valueOf(4.00),
@@ -57,18 +57,18 @@ class MatchRecommendationControllerTest {
                 )
         );
 
-        given(matchRecommendationService.getMatchRecommendations(talentId, userId))
+        given(matchRecommendationService.getMatchRecommendations(userId))
                 .willReturn(res);
 
-        mockMvc.perform(get("/api/v1/match-recommendations")
-                        .param("talentId", String.valueOf(talentId)))
+        mockMvc.perform(get("/api/v1/match-recommendations"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-6"))
                 .andExpect(jsonPath("$.data[0].talentId").value(3L))
+                .andExpect(jsonPath("$.data[0].requesterTalentId").value(1L))
                 .andExpect(jsonPath("$.data[0].providerId").value(4L))
                 .andExpect(jsonPath("$.data[0].categoryId").value(10L))
-                .andExpect(jsonPath("$.data[0].categoryName").value("백엔드"))
-                .andExpect(jsonPath("$.data[0].title").value("MySQL 튜닝 도와드립니다"))
+                .andExpect(jsonPath("$.data[0].categoryName").value("Design"))
+                .andExpect(jsonPath("$.data[0].title").value("Figma lesson"))
                 .andExpect(jsonPath("$.data[0].creditPrice").value(120))
                 .andExpect(jsonPath("$.data[0].estimatedHours").value(2))
                 .andExpect(jsonPath("$.data[0].completeCount").value(1))
@@ -76,7 +76,7 @@ class MatchRecommendationControllerTest {
                 .andExpect(jsonPath("$.data[0].proposalRequestDisabledReason").isEmpty());
 
         then(matchRecommendationService).should()
-                .getMatchRecommendations(talentId, userId);
+                .getMatchRecommendations(userId);
     }
 
     @Test
@@ -91,16 +91,16 @@ class MatchRecommendationControllerTest {
                 providerTalentId,
                 3L,
                 1L,
-                "디자인",
-                "Figma 와이어프레임 제작",
-                "초기 서비스 아이디어를 Figma 와이어프레임으로 만듭니다.",
+                "Design",
+                "Figma lesson",
+                "Figma wireframe lesson",
                 100,
                 4,
                 BigDecimal.valueOf(4.6),
                 8,
                 12,
-                "디자이너",
-                "Figma 기반 와이어프레임과 스토리보드 UI를 주로 작업합니다.",
+                "designer",
+                "Figma portfolio UI",
                 "https://example.com/profile.png",
                 BigDecimal.valueOf(85),
                 true,
@@ -120,8 +120,8 @@ class MatchRecommendationControllerTest {
                 .andExpect(jsonPath("$.data.talentId").value(providerTalentId))
                 .andExpect(jsonPath("$.data.providerId").value(3L))
                 .andExpect(jsonPath("$.data.categoryId").value(1L))
-                .andExpect(jsonPath("$.data.categoryName").value("디자인"))
-                .andExpect(jsonPath("$.data.title").value("Figma 와이어프레임 제작"))
+                .andExpect(jsonPath("$.data.categoryName").value("Design"))
+                .andExpect(jsonPath("$.data.title").value("Figma lesson"))
                 .andExpect(jsonPath("$.data.creditPrice").value(100))
                 .andExpect(jsonPath("$.data.estimatedHours").value(4))
                 .andExpect(jsonPath("$.data.avgRating").value(4.6))

@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/match-recommendations")
 @RequiredArgsConstructor
-@Tag(name = "Matching / Recommendation", description = "매칭 추천 대상 목록 및 상세 조회 API")
+@Tag(name = "Matching / Recommendation", description = "매칭 추천 목록 및 상세 조회 API")
 public class MatchRecommendationController {
 
     private final MatchRecommendationService matchRecommendationService;
@@ -32,15 +32,13 @@ public class MatchRecommendationController {
     @GetMapping
     @Operation(
             summary = "매칭 추천 대상 목록 조회",
-            description = "현재 로그인한 사용자의 재능과 같은 카테고리에 속한 추천 재능 목록을 조회합니다."
+            description = "현재 로그인한 사용자의 등록된 재능 카테고리와 프로필의 원하는 재능 카테고리를 기준으로 추천 재능 목록을 조회합니다."
     )
     public ResponseEntity<ApiResponse<List<MatchRecommendationRes>>> getMatchRecommendations(
-            @Parameter(description = "요청자의 재능 ID", example = "1", required = true)
-            @RequestParam Long talentId,
             @CurrentUser SecurityUser currentUser
     ) {
         Long userId = currentUser.getUserId();
-        List<MatchRecommendationRes> response = matchRecommendationService.getMatchRecommendations(talentId, userId);
+        List<MatchRecommendationRes> response = matchRecommendationService.getMatchRecommendations(userId);
 
         return ApiResponses.success(SuccessCode.MATCH_RECOMMENDATIONS_FOUND, response);
     }
