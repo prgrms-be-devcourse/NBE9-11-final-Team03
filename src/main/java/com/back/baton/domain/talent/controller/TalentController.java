@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/talents")
@@ -135,6 +136,16 @@ public class TalentController {
             @PathVariable Long talentId
     ) {
         TalentDetailRes response = talentService.getTalentDetail(talentId);
+        return ApiResponses.success(SuccessCode.TALENT_OK, response);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "내 재능 목록 조회",
+            description = "현재 로그인한 사용자가 등록한(삭제되지 않은) 재능 목록을 조회합니다.")
+    public ResponseEntity<ApiResponse<List<TalentListRes>>> getMyTalents(
+            @CurrentUser SecurityUser currentUser
+    ) {
+        List<TalentListRes> response = talentService.getMyTalents(currentUser.getUserId());
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 }
