@@ -154,6 +154,20 @@ class TalentRepositoryTest {
                 .containsExactly(mine2.getId(), mine1.getId());
     }
 
+    @Test
+    @DisplayName("increaseCompleteCount - 해당 재능의 완료 건수를 1 증가시킨다")
+    void increaseCompleteCount_increments() {
+        Category category = saveCategory();
+        Long authorId = saveUserId();
+        Talent talent = save(category, "재능1", authorId);
+
+        int updated = talentRepository.increaseCompleteCount(talent.getId());
+
+        assertThat(updated).isEqualTo(1); // 1행 갱신
+        // 벌크 업데이트라 영속성 컨텍스트 우회 -> 새 쿼리로 값 확인
+        assertThat(talentRepository.findMyTalents(authorId).get(0).completeCount()).isEqualTo(1);
+    }
+
     private Category saveCategory() {
         try {
             Constructor<Category> constructor = Category.class.getDeclaredConstructor();

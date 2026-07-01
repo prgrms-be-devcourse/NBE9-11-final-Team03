@@ -96,4 +96,9 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
         order by t.id desc
         """)
     List<TalentListRes> findMyTalents(@Param("authorId") Long authorId);
+
+    // 거래 완료 시 완료 건수를 1 증가
+    @Modifying
+    @Query("update Talent t set t.completeCount = t.completeCount + 1 where t.id = :talentId and t.deletedAt is null")
+    int increaseCompleteCount(@Param("talentId") Long talentId);
 }

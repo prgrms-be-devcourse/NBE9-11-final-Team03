@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.dto.response.TradeRes;
 import com.back.baton.domain.trade.entity.Trade;
 import com.back.baton.domain.trade.entity.TradeStatus;
@@ -42,6 +43,9 @@ class TradeServiceAutoConfirmTest {
     @Mock
     private CreditService creditService;
 
+    @Mock
+    private TalentRepository talentRepository;
+
     @Test
     @DisplayName("autoConfirm - 단방향 거래가 COMPLETED로 변경되고 에스크로가 RELEASED로 변경 및 정산된다")
     void autoConfirm_success_purchase() {
@@ -72,6 +76,8 @@ class TradeServiceAutoConfirmTest {
                 escrow.getAmount(),
                 tradeId
         );
+
+        verify(talentRepository).increaseCompleteCount(10L);
     }
 
     @Test
