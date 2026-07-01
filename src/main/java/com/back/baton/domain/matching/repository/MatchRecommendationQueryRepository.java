@@ -36,7 +36,7 @@ public class MatchRecommendationQueryRepository {
         return queryFactory
                 .select(Projections.constructor(MatchRecommendationRes.class,
                         talent.id,
-                        requesterTalent.id,
+                        requesterTalent.id.min(),
                         talent.authorId,
                         category.id,
                         category.name,
@@ -66,6 +66,19 @@ public class MatchRecommendationQueryRepository {
                         requesterTalent.deletedAt.isNull(),
                         talent.status.eq(TalentStatus.ACTIVE),
                         talent.deletedAt.isNull()
+                )
+                .groupBy(
+                        talent.id,
+                        talent.authorId,
+                        category.id,
+                        category.name,
+                        talent.title,
+                        talent.content,
+                        talent.creditPrice,
+                        talent.estimatedHours,
+                        talent.avgRating,
+                        talent.completeCount,
+                        talent.viewCount
                 )
                 .orderBy(
                         talent.avgRating.desc(),

@@ -62,6 +62,7 @@ class MatchRecommendationQueryRepositoryTest {
         saveProfile(deletedProvider, List.of(backend));
 
         Talent requesterTalent = saveTalent(requester.getId(), backend, "requester backend", 0, 0, BigDecimal.ZERO);
+        saveTalent(requester.getId(), backend, "requester backend duplicate category", 0, 0, BigDecimal.ZERO);
         Talent recommended1 = saveTalent(provider1.getId(), design, "figma lesson", 10, 3, BigDecimal.valueOf(4.50));
         Talent recommended2 = saveTalent(provider2.getId(), design, "ux review", 5, 1, BigDecimal.valueOf(4.00));
 
