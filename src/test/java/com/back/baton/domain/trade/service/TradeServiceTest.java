@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.entity.EscrowStatus;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
@@ -53,6 +54,9 @@ class TradeServiceTest {
 
     @Mock
     private CreditService creditService;
+
+    @Mock
+    private TalentRepository talentRepository;
 
     @Mock
     private TradeGroupRepository tradeGroupRepository;

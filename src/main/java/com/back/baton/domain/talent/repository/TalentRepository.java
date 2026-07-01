@@ -1,5 +1,6 @@
 package com.back.baton.domain.talent.repository;
 
+import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.global.exception.CustomException;
@@ -82,4 +83,22 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
         return findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
     }
+
+    @Query("""
+        select new com.back.baton.domain.talent.dto.response.TalentListRes(
+            t.id, t.authorId, u.nickname, c.name, t.title,
+            t.creditPrice, t.estimatedHours, t.avgRating, t.completeCount,
+            t.viewCount, t.createdAt)
+        from Talent t
+        join t.category c
+        join User u on u.id = t.authorId
+        where t.authorId = :authorId and t.deletedAt is null
+        order by t.id desc
+        """)
+    List<TalentListRes> findMyTalents(@Param("authorId") Long authorId);
+
+    // 거래 완료 시 완료 건수를 1 증가
+    @Modifying
+    @Query("update Talent t set t.completeCount = t.completeCount + 1 where t.id = :talentId and t.deletedAt is null")
+    int increaseCompleteCount(@Param("talentId") Long talentId);
 }

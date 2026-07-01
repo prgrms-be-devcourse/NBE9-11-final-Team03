@@ -4,6 +4,7 @@ import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.escrow.entity.Escrow;
 import com.back.baton.domain.escrow.repository.EscrowRepository;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
+import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.dto.response.DisputeRes;
 import com.back.baton.domain.trade.dto.response.TradeListRes;
 import com.back.baton.domain.trade.dto.response.TradeRes;
@@ -37,6 +38,7 @@ public class TradeService {
     private final EscrowRepository escrowRepository;
     private final CreditService creditService;
     private final MatchProposalRepository matchProposalRepository;
+    private final TalentRepository talentRepository;
 
     // 단방향 거래 생성
     @Transactional
@@ -188,6 +190,7 @@ public class TradeService {
                             e.getAmount(),
                             t.getId()
                     );
+                    talentRepository.increaseCompleteCount(t.getTalentId()); // 완료된 각 거래(양쪽 재능) +1
                 }
 
                 matchProposalRepository.clearActiveSwapPairKeyById(trade.getMatchId());
@@ -203,6 +206,7 @@ public class TradeService {
         // 단방향
         else {
             trade.complete();
+            talentRepository.increaseCompleteCount(trade.getTalentId()); // 재능 완료 건수 +1
             escrow.release();
             creditService.settleEscrow(
                     escrow.getPayerId(),
@@ -277,6 +281,7 @@ public class TradeService {
         // 판매자 승소 -> 거래 완료 + 에스크로 정산
         else {
             trade.complete(); // 거래 상태 변경 (UNDER_REVIEW -> COMPLETED)
+            talentRepository.increaseCompleteCount(trade.getTalentId()); // 분쟁 승소로 거래 완료 시 +1
             escrow.releaseFrozen(); // 에스크로 상태 변경 (FROZEN -> RELEASED)
             creditService.settleEscrow(
                     escrow.getPayerId(),
