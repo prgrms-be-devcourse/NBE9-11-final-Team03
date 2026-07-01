@@ -319,8 +319,8 @@ public class TradeService {
             case COMPLETED, AWAITING_PARTNER -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_COMPLETED);
             case CANCELLED -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_CANCELLED);
             case DISPUTED -> throw new CustomException(TradeErrorCode.TRADE_IN_DISPUTE);
-            default -> {
-            } // IN_PROGRESS 만 취소 가능
+            case IN_PROGRESS -> throw new CustomException(TradeErrorCode.TRADE_ALREADY_IN_PROGRESS);
+            default -> throw new CustomException(TradeErrorCode.TRADE_ACCESS_DENIED);
         }
     }
 

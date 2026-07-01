@@ -36,7 +36,7 @@ class TalentControllerSearchTest {
     @DisplayName("검색 성공 - 200과 커서 페이지 응답을 반환한다")
     void searchTalents_success() throws Exception {
         // given
-        var item = new TalentListRes(5L, "백엔드", "스프링 리뷰", 100, 2,
+        var item = new TalentListRes(5L, 7L, "user7", "백엔드", "스프링 리뷰", 100, 2,
                 BigDecimal.valueOf(4.5), 3, 10, LocalDateTime.now());
         var page = CursorPageRes.of(List.of(item), true, 5L);
         given(talentService.searchTalents(any(), any(), eq(20), any())).willReturn(page);
@@ -49,6 +49,8 @@ class TalentControllerSearchTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.code").value("200-2"))
                 .andExpect(jsonPath("$.data.content[0].talentId").value(5))
+                .andExpect(jsonPath("$.data.content[0].authorId").value(7))
+                .andExpect(jsonPath("$.data.content[0].authorNickname").value("user7"))
                 .andExpect(jsonPath("$.data.content[0].categoryName").value("백엔드"))
                 .andExpect(jsonPath("$.data.hasNext").value(true))
                 .andExpect(jsonPath("$.data.nextCursor").value(5));

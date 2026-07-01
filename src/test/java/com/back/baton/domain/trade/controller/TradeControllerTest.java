@@ -314,6 +314,22 @@ class TradeControllerTest {
     }
 
     @Test
+    @DisplayName("이미 진행된 거래를 취소하면 400을 반환한다")
+    @WithMockSecurityUser(userId = 2)
+    void cancelTrade_alreadyInProgress() throws Exception {
+        Long tradeId = 1L;
+        Long userId = 2L;
+
+        when(tradeService.cancelTrade(tradeId, userId))
+                .thenThrow(new CustomException(TradeErrorCode.TRADE_ALREADY_IN_PROGRESS));
+
+        mockMvc.perform(patch("/api/v1/trade/{tradeId}/cancel", tradeId))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("TRADE-400-009"));
+    }
+
+    @Test
     @DisplayName("분쟁 중인 거래를 취소하면 400을 반환한다")
     @WithMockSecurityUser(userId = 2)
     void cancelTrade_inDispute() throws Exception {

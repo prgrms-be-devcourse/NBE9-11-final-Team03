@@ -1,53 +1,46 @@
-# Baton k6 Initial Load Test Report
+# Baton k6 초기 부하테스트 결과 보고서
 
-> Date: 2026-06-29
-> Branch: `chore/BATON-148-k6-load-test`
-> Target: `http://54.116.23.255`
-> Tool: k6 v2.0.0
+> 기준일: 2026-06-29
+> 기준 브랜치: `chore/BATON-148-k6-load-test`
+> 테스트 대상: `http://54.116.23.255`
+> 테스트 도구: k6 v2.0.0
 
-## 1. Purpose
+## 1. 테스트 목적
 
-Validate that the initial k6 scenarios can execute against the deployed Baton
-dev server and establish baseline latency and failure-rate measurements.
+배포된 Baton 개발 서버에서 k6 시나리오가 정상적으로 실행되는지 확인하고, 응답 시간과 요청 실패율의 초기 기준값을 확보한다.
 
-## 2. Pass Criteria
+## 2. 통과 기준
 
-| Metric | Target |
+| 측정 지표 | 목표 |
 | --- | ---: |
-| HTTP failure rate | `< 1%` |
-| Read API p95 | `< 1000ms` |
-| Login API p95 | `< 1500ms` |
-| Purchase flow p95 | `< 2000ms` |
+| HTTP 요청 실패율 | `< 1%` |
+| 조회 API p95 | `< 1000ms` |
+| 로그인 API p95 | `< 1500ms` |
+| PURCHASE 흐름 p95 | `< 2000ms` |
 
-## 3. Results
+## 3. 테스트 결과
 
-| Scenario | Load | Requests | Failure rate | Average | p95 | Maximum | Result |
+| 시나리오 | 부하 조건 | 요청 수 | 실패율 | 평균 | p95 | 최대 | 판정 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| smoke-read | 1 VU, 10s | 35 | 0% | 51.15ms | 125.01ms | 442.32ms | Pass |
-| read-apis | up to 5 VUs, 70s | 1,151 | 0% | 22.76ms | 32.61ms | 215.53ms | Pass |
-| auth-login | up to 3 VUs, 70s | 125 | 0% | 106.36ms | 115.12ms | 315.87ms | Pass |
-| purchase-flow-smoke | 1 VU, 1 iteration | 12 | 0% | 103.60ms | 220.89ms | 338.02ms | Pass |
+| `smoke-read` | 가상 사용자 1명, 10초 | 35 | 0% | 51.15ms | 125.01ms | 442.32ms | 통과 |
+| `read-apis` | 최대 가상 사용자 5명, 70초 | 1,151 | 0% | 22.76ms | 32.61ms | 215.53ms | 통과 |
+| `auth-login` | 최대 가상 사용자 3명, 70초 | 125 | 0% | 106.36ms | 115.12ms | 315.87ms | 통과 |
+| `purchase-flow-smoke` | 가상 사용자 1명, 1회 반복 | 12 | 0% | 103.60ms | 220.89ms | 338.02ms | 통과 |
 
-## 4. Verified Behavior
+## 4. 확인된 동작
 
-- Read APIs returned successful `ApiResponse` values under the initial load.
-- Repeated login completed without HTTP failures.
-- The purchase flow completed signup, login, talent creation, proposal accept,
-  trade creation, submission, purchase confirmation, and balance checks.
-- All configured k6 thresholds passed.
+- 초기 부하 조건에서 조회 API가 정상적인 `ApiResponse`를 반환했다.
+- 반복 로그인 요청이 HTTP 실패 없이 완료됐다.
+- PURCHASE 시나리오에서 회원가입, 로그인, 재능 등록, 제안 수락, 거래 생성, 결과물 제출, 구매 확정, 잔액 확인이 완료됐다.
+- 설정한 k6 임계치를 모든 시나리오가 통과했다.
 
-## 5. Environment Notes
+## 5. 테스트 환경 참고 사항
 
-- Docker Compose configuration validation passed.
-- Docker-based execution was not completed because the local Docker Desktop
-  engine was not running and its Windows service could not be started from the
-  current session.
-- The same scripts were executed with the locally installed k6 binary.
-- Proxy variables inherited by the shell initially pointed to `127.0.0.1:9`;
-  clearing them allowed direct access to the dev server.
+- Docker Compose 설정 검증은 통과했다.
+- 로컬 Docker Desktop 엔진이 실행되지 않았고 현재 세션에서 Windows 서비스를 시작할 수 없어 Docker 기반 실행은 완료하지 못했다.
+- 동일한 스크립트를 로컬에 설치된 k6 실행 파일로 수행했다.
+- 셸에 상속된 프록시 환경 변수가 처음에는 `127.0.0.1:9`를 가리켰다. 프록시 변수를 제거한 뒤 개발 서버에 직접 접근할 수 있었다.
 
-## 6. Next Test
+## 6. 후속 테스트
 
-Run the read scenario at 10 and 20 VUs while collecting server CPU, memory,
-database connection, and error-log evidence. Keep the purchase flow at a low
-iteration count because it creates persistent test data.
+조회 시나리오를 가상 사용자 10명과 20명 조건으로 확대하고 서버 CPU, 메모리, 데이터베이스 연결 수, 오류 로그를 함께 수집한다. PURCHASE 시나리오는 영구 테스트 데이터를 생성하므로 반복 횟수를 낮게 유지한다.
