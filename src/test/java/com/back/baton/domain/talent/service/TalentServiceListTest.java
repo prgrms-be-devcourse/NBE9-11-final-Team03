@@ -93,6 +93,15 @@ class TalentServiceListTest {
         assertThat(sizeCaptor.getValue()).isEqualTo(1);
     }
 
+    @Test
+    @DisplayName("getMyTalents - 인증 사용자 id로 조회해 결과를 그대로 반환한다")
+    void getMyTalents_delegatesToRepository() {
+        given(talentRepository.findMyTalents(1L)).willReturn(List.of(row(3L), row(1L)));
+        List<TalentListRes> result = talentService.getMyTalents(1L);
+        assertThat(result).extracting(TalentListRes::talentId).containsExactly(3L, 1L);
+        verify(talentRepository).findMyTalents(1L);
+    }
+
     // 테스트용 목록 항목 (id만 의미 있음 나머진 더미)
     private TalentListRes row(Long id) {
         return new TalentListRes(id, 1L, "user1", "백엔드", "제목" + id, 100, 2,
