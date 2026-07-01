@@ -29,3 +29,6 @@ s3:
 
 talent:
   max-count-per-user: 3 # 1인당 재능 등록 상한
+
+# Sentry 알림: DSN/환경은 SENTRY_DSN, SENTRY_ENVIRONMENT 환경변수로 주입한다.
+# (logback의 SENTRY 어펜더가 읽음. 비어 있으면 Sentry 비활성=개발 안전)

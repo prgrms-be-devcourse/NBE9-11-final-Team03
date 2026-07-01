@@ -86,9 +86,12 @@ public interface TalentRepository extends JpaRepository<Talent, Long>, TalentRep
 
     @Query("""
         select new com.back.baton.domain.talent.dto.response.TalentListRes(
-            t.id, t.category.name, t.title, t.creditPrice, t.estimatedHours,
-            t.avgRating, t.completeCount, t.viewCount, t.createdAt)
+            t.id, t.authorId, u.nickname, c.name, t.title,
+            t.creditPrice, t.estimatedHours, t.avgRating, t.completeCount,
+            t.viewCount, t.createdAt)
         from Talent t
+        join t.category c
+        join User u on u.id = t.authorId
         where t.authorId = :authorId and t.deletedAt is null
         order by t.id desc
         """)

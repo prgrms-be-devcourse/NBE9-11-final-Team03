@@ -5,6 +5,8 @@ import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentSortType;
+import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
 import com.back.baton.global.exception.CustomException;
@@ -17,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Constructor;
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +31,8 @@ class TalentRepositoryTest {
     @Autowired TalentRepository talentRepository;
     @Autowired
     CategoryRepository categoryRepository; // 카테고리 저장용
+    @Autowired
+    UserRepository userRepository;
 
     @Test
     @DisplayName("최신순(id desc)으로 size+1개를 조회하고, 삭제된 글은 제외한다")
@@ -72,17 +77,39 @@ class TalentRepositoryTest {
     }
 
     @Test
+    @DisplayName("목록 조회 응답에 작성자 ID와 닉네임을 포함한다")
+    void findTalentList_includesAuthorInfo() {
+        Category category = saveCategory();
+        User author = userRepository.save(User.builder()
+                .email("author@test.com")
+                .password("password")
+                .nickname("author1")
+                .introduction("intro")
+                .trustScore(BigDecimal.ZERO)
+                .build());
+        talentRepository.save(Talent.create(author.getId(), category, "작성자 포함", "내용", 2, 100));
+
+        List<TalentListRes> result = talentRepository.findTalentList(null, 10, TalentSortType.LATEST);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).authorId()).isEqualTo(author.getId());
+        assertThat(result.get(0).authorNickname()).isEqualTo("author1");
+    }
+
+    @Test
     @DisplayName("countByAuthorIdAndDeletedAtIsNull - 삭제되지 않은 본인 재능만 센다")
     void countByAuthorIdAndDeletedAtIsNull() {
         Category category = saveCategory();
-        save(category, "재능1");          // author 1
-        save(category, "재능2");          // author 1
-        Talent deleted = save(category, "삭제됨"); // author 1, soft delete
+        Long authorId = saveUserId();
+        Long otherAuthorId = saveUserId();
+        save(category, "재능1", authorId);
+        save(category, "재능2", authorId);
+        Talent deleted = save(category, "삭제됨", authorId);
         deleted.softDelete();
         talentRepository.save(deleted);
-        talentRepository.save(Talent.create(2L, category, "남의재능", "내용", 2, 100)); // 다른 author
+        talentRepository.save(Talent.create(otherAuthorId, category, "남의재능", "내용", 2, 100));
 
-        assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(1L)).isEqualTo(2);
+        assertThat(talentRepository.countByAuthorIdAndDeletedAtIsNull(authorId)).isEqualTo(2);
     }
 
     @Test
@@ -112,17 +139,19 @@ class TalentRepositoryTest {
     @DisplayName("findMyTalents - 본인의 삭제되지 않은 재능만 id desc로 조회한다")
     void findMyTalents_onlyMineAndNotDeleted() {
         Category category = saveCategory();
-        Talent mine1 = save(category, "재능1");                                       // author 1
-        talentRepository.save(Talent.create(2L, category, "남의재능", "내용", 2, 100)); // author 2 -> 제외
-        Talent mine2 = save(category, "재능2");                                       // author 1
-        Talent mineDeleted = save(category, "삭제됨");                                 // author 1 -> 삭제로 제외
+        Long myId = saveUserId();
+        Long otherId = saveUserId();
+        Talent mine1 = save(category, "재능1", myId);
+        save(category, "남의재능", otherId);            // 제외
+        Talent mine2 = save(category, "재능2", myId);
+        Talent mineDeleted = save(category, "삭제됨", myId);
         mineDeleted.softDelete();
         talentRepository.save(mineDeleted);
 
-        List<TalentListRes> result = talentRepository.findMyTalents(1L);
+        List<TalentListRes> result = talentRepository.findMyTalents(myId);
 
         assertThat(result).extracting(TalentListRes::talentId)
-                .containsExactly(mine2.getId(), mine1.getId()); // id desc, 삭제/타인 제외
+                .containsExactly(mine2.getId(), mine1.getId());
     }
 
     private Category saveCategory() {
@@ -142,7 +171,23 @@ class TalentRepositoryTest {
     }
 
     private Talent save(Category category, String title) {
-        Talent talent = Talent.create(1L, category, title, "내용", 2, 100);
+        return save(category, title, saveUserId());
+    }
+
+    private Talent save(Category category, String title, Long authorId) {
+        Talent talent = Talent.create(authorId, category, title, "내용", 2, 100);
         return talentRepository.save(talent);
+    }
+
+    private Long saveUserId() {
+        String suffix = String.valueOf(System.nanoTime());
+        User user = User.builder()
+                .email("author" + suffix + "@test.com")
+                .password("password")
+                .nickname("author" + suffix)
+                .introduction("intro")
+                .trustScore(BigDecimal.ZERO)
+                .build();
+        return userRepository.save(user).getId();
     }
 }

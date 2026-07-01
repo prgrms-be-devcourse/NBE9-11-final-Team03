@@ -213,36 +213,18 @@ class TradeServiceTest {
     }
 
     @Test
-    @DisplayName("구매자가 IN_PROGRESS 거래를 취소하면 CANCELLED 상태로 변경된다")
-    void cancelTrade_buyerInProgress() {
+    @DisplayName("IN_PROGRESS 상태의 거래는 취소할 수 없다")
+    void cancelTrade_inProgress() {
         Long buyerId = 2L;
         Trade trade = createTrade(buyerId, 3L);
-        Escrow escrow = createEscrow(buyerId, 3L);
 
         given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
-        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
 
-        TradeRes result = tradeService.cancelTrade(1L, buyerId);
+        assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", TradeErrorCode.TRADE_ALREADY_IN_PROGRESS);
 
-        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.CANCELLED);
-        assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.REFUNDED);
-        verify(creditService).refundFromEscrow(escrow.getPayerId(), escrow.getAmount(), 1L);
-    }
-
-    @Test
-    @DisplayName("판매자가 IN_PROGRESS 거래를 취소하면 CANCELLED 상태로 변경된다")
-    void cancelTrade_sellerInProgress() {
-        Long sellerId = 3L;
-        Trade trade = createTrade(2L, sellerId);
-        Escrow escrow = createEscrow(2L, sellerId);
-
-        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
-        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.of(escrow));
-
-        TradeRes result = tradeService.cancelTrade(1L, sellerId);
-
-        assertThat(result.tradeStatus()).isEqualTo(TradeStatus.CANCELLED);
-        assertThat(result.escrowStatus()).isEqualTo(EscrowStatus.REFUNDED);
+        verify(escrowRepository, never()).findByTradeId(any());
     }
 
     @Test
@@ -347,22 +329,7 @@ class TradeServiceTest {
         verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
     }
 
-    @Test
-    @DisplayName("에스크로가 없는 거래를 취소하면 ESCROW_NOT_FOUND 예외가 발생한다")
-    void cancelTrade_escrowNotFound() {
-        Long buyerId = 2L;
-        Trade trade = createTrade(buyerId, 3L);
 
-        given(tradeRepository.findByIdWithLock(1L)).willReturn(Optional.of(trade));
-        given(escrowRepository.findByTradeId(1L)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> tradeService.cancelTrade(1L, buyerId))
-                .isInstanceOf(CustomException.class)
-                .extracting(e -> ((CustomException) e).getErrorCode())
-                .isEqualTo(EscrowErrorCode.ESCROW_NOT_FOUND);
-
-        verify(creditService, never()).refundFromEscrow(any(), anyInt(), any());
-    }
 
     @Test
     @DisplayName("구매자가 UNDER_REVIEW 거래에 분쟁을 신청하면 DISPUTED/FROZEN 상태로 변경되고 사유가 저장된다")

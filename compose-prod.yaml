@@ -23,9 +23,21 @@ services:
       - '8080:8080'
     environment:
       SPRING_PROFILES_ACTIVE: "prod,secret"
+      SENTRY_DSN: "${SENTRY_DSN}"
+      SENTRY_ENVIRONMENT: "prod"
       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/baton?serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
       SPRING_DATASOURCE_USERNAME: "admin"
       SPRING_DATASOURCE_PASSWORD: "${LIVE_DB_PASSWORD}"
+      SPRING_MAIL_HOST: "smtp.naver.com"
+      SPRING_MAIL_PORT: 465
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: true
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: true
+
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST: "smtp.naver.com"
+
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT: 5000
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT: 3000
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT: 5000
     depends_on:
       mysql:
         condition: service_healthy # ◀ 중요: MySQL 헬스체크가 통과되면 스프링이 켜짐

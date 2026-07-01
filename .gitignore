@@ -44,3 +44,7 @@ out/
 
 # QueryDSL generated sources
 src/main/generated/
+
+# Application logs (logback)
+logs/
+*.log

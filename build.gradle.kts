@@ -72,6 +72,10 @@ dependencies {
     implementation("com.github.ben-manes.caffeine:caffeine")
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework:spring-context-support")
+
+    // Sentry 에러 모니터링/알림 (BATON-157)
+    // Spring Boot 스타터는 Spring Boot 4 비호환(RestClientCustomizer 부재) → logback 어펜더만 사용
+    implementation("io.sentry:sentry-logback:8.16.0")
 }
 
 tasks.withType<Test> {

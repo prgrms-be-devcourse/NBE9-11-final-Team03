@@ -6,6 +6,7 @@ import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.QTalent;
 import com.back.baton.domain.talent.entity.TalentSortType;
 import com.back.baton.domain.talent.entity.TalentStatus;
+import com.back.baton.domain.user.entity.QUser;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -24,10 +25,13 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
     public List<TalentListRes> findTalentList(Long cursor, int size, TalentSortType sort) {
         QTalent talent = QTalent.talent;
         QCategory category = QCategory.category;
+        QUser user = QUser.user;
 
         return queryFactory
                 .select(Projections.constructor(TalentListRes.class,
                         talent.id,
+                        talent.authorId,
+                        user.nickname,
                         category.name,
                         talent.title,
                         talent.creditPrice,
@@ -39,6 +43,7 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
                 ))
                 .from(talent)
                 .join(talent.category, category)
+                .join(user).on(user.id.eq(talent.authorId))
                 .where(
                         talent.deletedAt.isNull(),   // 소프트 삭제 제외
                         talent.status.eq(TalentStatus.ACTIVE),
@@ -54,10 +59,13 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
     public List<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size, TalentSortType sort) {
         QTalent talent = QTalent.talent;
         QCategory category = QCategory.category;
+        QUser user = QUser.user;
 
         return queryFactory
                 .select(Projections.constructor(TalentListRes.class,
                         talent.id,
+                        talent.authorId,
+                        user.nickname,
                         category.name,
                         talent.title,
                         talent.creditPrice,
@@ -69,6 +77,7 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
                 ))
                 .from(talent)
                 .join(talent.category, category)
+                .join(user).on(user.id.eq(talent.authorId))
                 .where(
                         talent.deletedAt.isNull(),
                         talent.status.eq(TalentStatus.ACTIVE),// soft delete 제외

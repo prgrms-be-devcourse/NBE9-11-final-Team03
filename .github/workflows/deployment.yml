@@ -54,15 +54,17 @@ jobs:
       # 6. EC2 서버에 접속하여 최신 이미지로 교체 (Nginx 포트 8080 연결 유지)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@master
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: SENTRY_DSN
           script: |
             cd /home/ubuntu/app
             git pull origin main # compose-prod.yaml 파일 설정을 최신화하기 위해 pull 진행
             
             # 운영 전용 컴포즈 파일을 지정(-f)하여 백엔드만 새 이미지로 갱신
-            docker compose -f compose-prod.yaml down
             docker compose -f compose-prod.yaml pull backend
-            docker compose -f compose-prod.yaml up -d backend
+            docker compose -f compose-prod.yaml up -d
