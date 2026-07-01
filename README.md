@@ -16,7 +16,7 @@ Windows:
 
 - Local Swagger: `http://localhost:8080/swagger-ui/index.html`
 - Local OpenAPI: `http://localhost:8080/v3/api-docs`
-- 배포 서비스: [https://baton.io.kr](https://baton.io.kr)
+- 배포 서비스: [http://baton.io.kr](http://baton.io.kr)
 - 백엔드 직접 접근: `http://54.116.23.255`
 - 배포 Swagger: `http://54.116.23.255/swagger-ui/index.html`
 
