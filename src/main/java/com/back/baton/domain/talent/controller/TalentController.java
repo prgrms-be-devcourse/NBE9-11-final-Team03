@@ -133,9 +133,13 @@ public class TalentController {
     )
     public ResponseEntity<ApiResponse<TalentDetailRes>> getTalentDetail(
             @Parameter(description = "조회할 재능 ID", example = "1", required = true)
-            @PathVariable Long talentId
+            @PathVariable Long talentId,
+            @Parameter(description = "조회수 증가 여부. 실제 상세 페이지 조회일 때만 true", example = "false")
+            @RequestParam(defaultValue = "false") boolean increaseView
     ) {
-        TalentDetailRes response = talentService.getTalentDetail(talentId);
+        TalentDetailRes response = increaseView
+                ? talentService.getTalentDetailWithViewCount(talentId)
+                : talentService.getTalentDetail(talentId);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 

@@ -65,4 +65,20 @@ class TalentControllerDetailTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TALENT-404-001"));
     }
+
+    @Test
+    @DisplayName("increaseView=true 파라미터가 서비스로 전달된다 (실제 상세 페이지 조회)")
+    void getTalentDetail_increaseViewTrue() throws Exception {
+        TalentDetailRes res = new TalentDetailRes(
+                1L, 9L, "개발", "웹페이지 개발", "내용...",
+                3, 500, TalentStatus.ACTIVE, 10, 2, new BigDecimal("4.50"),
+                LocalDateTime.now(), LocalDateTime.now(),
+                new AuthorInfo(7L, "박재현", "https://img/7.png", "개발자입니다", new BigDecimal("36.50"))
+        );
+        given(talentService.getTalentDetailWithViewCount(1L)).willReturn(res);
+
+        mockMvc.perform(get("/api/v1/talents/{talentId}", 1L).param("increaseView", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
+    }
 }
