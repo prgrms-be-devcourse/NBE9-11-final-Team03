@@ -18,16 +18,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
-import org.slf4j.LoggerFactory;
-
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -49,23 +42,18 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
-    @DisplayName("탈퇴회원 삭제 스케줄러 실패 시 ERROR 로그로 기록된다(Sentry 알림)")
-    void deleteExpiredWithdrawalUsers_logsError_onFailure() {
+    @DisplayName("탈퇴회원 삭제 스케줄러 실패 시 예외를 삼키지 않고 전파한다(트랜잭션 롤백 위임)")
+    void deleteExpiredWithdrawalUsers_propagates_onFailure() {
         // given
-        Logger schedulerLogger = (Logger) LoggerFactory.getLogger(UserService.class);
-        ListAppender<ILoggingEvent> appender = new ListAppender<>();
-        appender.start();
-        schedulerLogger.addAppender(appender);
-        doThrow(new RuntimeException("DB 삭제 실패"))
+        RuntimeException dbError = new RuntimeException("DB 삭제 실패");
+        doThrow(dbError)
                 .when(withdrawnUserRepository)
                 .deleteByCreatedAtBeforeAndPermanentBanIsFalse(any());
 
-        // when
-        userService.deleteExpiredWithdrawalUsers();
-
-        // then
-        assertThat(appender.list).anyMatch(e -> e.getLevel() == Level.ERROR);
-        schedulerLogger.detachAppender(appender);
+        // when & then: 트랜잭션 메서드 안에서 catch로 삼키면 commit 시 UnexpectedRollbackException이
+        // 발생하므로, 예외를 그대로 전파해 @Transactional 롤백에 위임하는지 검증한다.
+        assertThatThrownBy(() -> userService.deleteExpiredWithdrawalUsers())
+                .isSameAs(dbError);
     }
 
     @Test

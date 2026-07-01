@@ -13,7 +13,6 @@ import com.back.baton.domain.user.repository.WithdrawnUserRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.UserErrorCode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,6 @@ import java.util.List;
 
 import static java.time.LocalDateTime.now;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -77,15 +75,13 @@ public class UserService {
     private int retentionDay;
 
     // 오후 3시마다 탈퇴한 사용자 중 영구정지 아닌 사용자 정보 삭제
+    // 예외는 삼키지 않고 전파한다: @Transactional 롤백에 위임하고, 실패는 Spring 스케줄러 기본
+    // 핸들러가 ERROR로 로깅(→Sentry)한다. (트랜잭션 메서드 안에서 catch로 삼키면 rollback-only
+    // 트랜잭션을 commit하려다 UnexpectedRollbackException이 발생하므로 catch를 두지 않는다.)
     @Transactional
     @Scheduled(cron = "0 0 15 * * *", zone = "Asia/Seoul")
     public void deleteExpiredWithdrawalUsers() {
-        try {
-            LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
-            withdrawnUserRepository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
-        } catch (Exception e) {
-            // 데이터 정리 배치 실패를 조용히 넘기지 않고 ERROR로 남겨 Sentry로 알린다.
-            log.error("탈퇴 회원 정보 자동 삭제 스케줄러 실패", e);
-        }
+        LocalDateTime thresholdDate = LocalDateTime.now().minusDays(retentionDay);
+        withdrawnUserRepository.deleteByCreatedAtBeforeAndPermanentBanIsFalse(thresholdDate);
     }
 }
