@@ -47,12 +47,12 @@ public class SlackService {
                         }
                     })
                     .exceptionally(ex -> {
-                        log.error("슬랙 알림 전송 중 에러 발생: {}", ex.getMessage());
+                        log.error("슬랙 알림 전송 중 에러 발생", ex);
                         return null;
                     });
 
         } catch (Exception e) {
-            log.error("슬랙 알림 전송 준비 실패: {}", e.getMessage());
+            log.error("슬랙 알림 전송 준비 실패", e);
         }
     }
 

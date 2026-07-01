@@ -33,7 +33,8 @@ public class EmailSender {
         try{
             mailSender.send(message);
         }catch (Exception e){
-            throw new CustomException(UserErrorCode.EMAIL_SEND_FAILED);
+            // 원인 예외(SMTP 오류 등)를 함께 전달해 Sentry에 근본 원인이 남도록 한다.
+            throw new CustomException(UserErrorCode.EMAIL_SEND_FAILED, e);
         }
     }
 }

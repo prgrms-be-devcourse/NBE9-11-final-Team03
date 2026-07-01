@@ -25,6 +25,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
 
+        // 처리된 예외라도 5xx(서버측 실패)는 모니터링 대상 → ERROR로 남겨 Sentry로 전송한다.
+        // 4xx(사용자 오류)는 정상 흐름이라 로깅하지 않는다(노이즈 방지).
+        if (errorCode.getHttpStatus().is5xxServerError()) {
+            log.error("Server-side CustomException [{}] {}", errorCode.getCode(), errorCode.getMessage(), e);
+        }
+
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
                 .body(ApiResponse.fail(errorCode));

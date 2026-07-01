@@ -50,7 +50,7 @@ public class TradeScheduler {
                 }
                 // 그 외 예외 상황
                 else {
-                    log.error("거래 ID {}의 자동 구매 확정 실패. 사유: {}", trade.getId(), e.getMessage());
+                    log.error("거래 ID {}의 자동 구매 확정 실패", trade.getId(), e);
                     slackService.sendNotification(String.format(
                             "⚠️ *[자동 구매 확정 실패]*\n- 거래 ID: %d\n- 구매자 ID: %d\n- 판매자 ID: %d\n- 실패 사유: %s",
                             trade.getId(), trade.getBuyerId(), trade.getSellerId(), e.getMessage()
@@ -58,7 +58,7 @@ public class TradeScheduler {
                 }
             } catch (Exception e) {
                 // 예상치 못한 런타임 오류
-                log.error("거래 ID {}의 자동 구매 확정 중 예상치 못한 오류 발생. 사유: {}", trade.getId(), e.getMessage());
+                log.error("거래 ID {}의 자동 구매 확정 중 예상치 못한 오류 발생", trade.getId(), e);
                 slackService.sendNotification(String.format(
                         "⚠️ *[자동 구매 확정 실패]*\n- 거래 ID: %d\n- 구매자 ID: %d\n- 판매자 ID: %d\n- 실패 사유: %s",
                         trade.getId(), trade.getBuyerId(), trade.getSellerId(), e.getMessage()
