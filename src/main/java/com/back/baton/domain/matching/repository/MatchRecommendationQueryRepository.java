@@ -140,6 +140,7 @@ public class MatchRecommendationQueryRepository {
                         providerWantCategory.active.isTrue(),
                         talent.authorId.ne(requesterId),
                         requesterTalent.status.eq(TalentStatus.ACTIVE),
+                        requesterTalent.deletedAt.isNull(),
                         talent.status.eq(TalentStatus.ACTIVE),
                         talent.deletedAt.isNull()
                 )
