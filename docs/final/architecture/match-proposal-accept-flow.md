@@ -1,4 +1,4 @@
-# MatchProposal Accept Flow
+# 매칭 제안 수락 흐름
 
 기준: 원격 `dev` 코드 기준  
 대상 흐름: 매칭 제안 수락 시 `MatchProposal -> Trade -> Credit -> Escrow`가 연결되는 PURCHASE MVP 핵심 흐름
@@ -15,10 +15,10 @@ Idempotency-Key: accept-proposal-1
 
 | 값 | 위치 | 설명 |
 | --- | --- | --- |
-| `proposalId` | Path Variable | 수락할 매칭 제안 ID |
-| `Idempotency-Key` | Header | 중복 수락 요청 방지를 위한 클라이언트 멱등키 |
+| `proposalId` | 경로 변수 | 수락할 매칭 제안 ID |
+| `Idempotency-Key` | 헤더 | 중복 수락 요청 방지를 위한 클라이언트 멱등키 |
 | `providerId` | JWT principal | 요청값으로 직접 받지 않고 `@CurrentUser SecurityUser`에서 추출 |
-| Request Body | 없음 | 수락 API는 body를 받지 않음 |
+| 요청 본문 | 없음 | 수락 API는 본문을 받지 않음 |
 
 ### 응답
 
@@ -180,7 +180,7 @@ stateDiagram-v2
 
     ACCEPTED --> IN_PROGRESS: Trade 생성 + Escrow HELD
     IN_PROGRESS --> UNDER_REVIEW: 제공자 결과물 제출
-    IN_PROGRESS --> CANCELLED: 거래 취소 + Escrow REFUNDED
+    IN_PROGRESS --> IN_PROGRESS: 취소 요청 거절 (TRADE-400-009)
     UNDER_REVIEW --> COMPLETED: 구매 확정 + Escrow RELEASED
     UNDER_REVIEW --> DISPUTED: 분쟁 전환
 ```
