@@ -86,7 +86,7 @@ public class MatchRecommendationQueryRepository {
                         talent.viewCount.desc(),
                         talent.id.desc()
                 )
-                .limit(3)
+                .limit(30)
                 .fetch();
     }
 
