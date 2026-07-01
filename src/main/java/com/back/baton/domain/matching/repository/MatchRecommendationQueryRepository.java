@@ -3,6 +3,7 @@ package com.back.baton.domain.matching.repository;
 import com.back.baton.domain.category.entity.QCategory;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
+import com.back.baton.domain.profile.entity.QProfile;
 import com.back.baton.domain.talent.entity.QTalent;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.domain.user.entity.QUser;
@@ -22,15 +23,20 @@ public class MatchRecommendationQueryRepository {
     private final JPAQueryFactory queryFactory;
 
     public List<MatchRecommendationRes> findMatchRecommendations(
-            Long categoryId,
+            List<Long> requesterWantCategoryIds,
             Long requesterId
     ) {
         QTalent talent = QTalent.talent;
+        QTalent requesterTalent = new QTalent("requesterTalent");
         QCategory category = QCategory.category;
+        QCategory requesterTalentCategory = new QCategory("requesterTalentCategory");
+        QProfile profile = QProfile.profile;
+        QCategory providerWantCategory = new QCategory("providerWantCategory");
 
         return queryFactory
                 .select(Projections.constructor(MatchRecommendationRes.class,
                         talent.id,
+                        requesterTalent.id.min(),
                         talent.authorId,
                         category.id,
                         category.name,
@@ -45,12 +51,34 @@ public class MatchRecommendationQueryRepository {
                 ))
                 .from(talent)
                 .join(talent.category, category)
+                .join(requesterTalent).on(requesterTalent.authorId.eq(requesterId))
+                .join(requesterTalent.category, requesterTalentCategory)
+                .join(profile).on(profile.user.id.eq(talent.authorId))
+                .join(profile.wantTalentCategories, providerWantCategory)
                 .where(
-                        category.id.eq(categoryId),
+                        providerWantCategory.id.eq(requesterTalentCategory.id),
+                        category.id.in(requesterWantCategoryIds),
                         category.active.isTrue(),
+                        requesterTalentCategory.active.isTrue(),
+                        providerWantCategory.active.isTrue(),
                         talent.authorId.ne(requesterId),
+                        requesterTalent.status.eq(TalentStatus.ACTIVE),
+                        requesterTalent.deletedAt.isNull(),
                         talent.status.eq(TalentStatus.ACTIVE),
                         talent.deletedAt.isNull()
+                )
+                .groupBy(
+                        talent.id,
+                        talent.authorId,
+                        category.id,
+                        category.name,
+                        talent.title,
+                        talent.content,
+                        talent.creditPrice,
+                        talent.estimatedHours,
+                        talent.avgRating,
+                        talent.completeCount,
+                        talent.viewCount
                 )
                 .orderBy(
                         talent.avgRating.desc(),
@@ -63,11 +91,14 @@ public class MatchRecommendationQueryRepository {
     }
 
     public Optional<MatchRecommendationDetailRes> findMatchRecommendationDetail(
-            Long categoryId,
+            Long requesterTalentCategoryId,
+            List<Long> requesterWantCategoryIds,
             Long providerTalentId
     ) {
         QTalent talent = QTalent.talent;
         QCategory category = QCategory.category;
+        QProfile profile = QProfile.profile;
+        QCategory providerWantCategory = new QCategory("providerWantCategory");
         QUser user = QUser.user;
 
         MatchRecommendationDetailRes result = queryFactory
@@ -92,11 +123,15 @@ public class MatchRecommendationQueryRepository {
                 ))
                 .from(talent)
                 .join(talent.category, category)
+                .join(profile).on(profile.user.id.eq(talent.authorId))
+                .join(profile.wantTalentCategories, providerWantCategory)
                 .join(user).on(talent.authorId.eq(user.id))
                 .where(
                         talent.id.eq(providerTalentId),
-                        category.id.eq(categoryId),
+                        providerWantCategory.id.eq(requesterTalentCategoryId),
+                        category.id.in(requesterWantCategoryIds),
                         category.active.isTrue(),
+                        providerWantCategory.active.isTrue(),
                         talent.status.eq(TalentStatus.ACTIVE),
                         talent.deletedAt.isNull()
                 )

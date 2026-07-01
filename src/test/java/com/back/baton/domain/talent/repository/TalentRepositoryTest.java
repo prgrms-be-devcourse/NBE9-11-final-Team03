@@ -135,6 +135,25 @@ class TalentRepositoryTest {
                 .isInstanceOf(CustomException.class);
     }
 
+    @Test
+    @DisplayName("findMyTalents - 본인의 삭제되지 않은 재능만 id desc로 조회한다")
+    void findMyTalents_onlyMineAndNotDeleted() {
+        Category category = saveCategory();
+        Long myId = saveUserId();
+        Long otherId = saveUserId();
+        Talent mine1 = save(category, "재능1", myId);
+        save(category, "남의재능", otherId);            // 제외
+        Talent mine2 = save(category, "재능2", myId);
+        Talent mineDeleted = save(category, "삭제됨", myId);
+        mineDeleted.softDelete();
+        talentRepository.save(mineDeleted);
+
+        List<TalentListRes> result = talentRepository.findMyTalents(myId);
+
+        assertThat(result).extracting(TalentListRes::talentId)
+                .containsExactly(mine2.getId(), mine1.getId());
+    }
+
     private Category saveCategory() {
         try {
             Constructor<Category> constructor = Category.class.getDeclaredConstructor();

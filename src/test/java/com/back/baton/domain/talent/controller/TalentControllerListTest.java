@@ -4,6 +4,7 @@ import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.service.TalentService;
 import com.back.baton.global.response.CursorPageRes;
 import com.back.baton.global.security.JwtTokenProvider;
+import com.back.baton.support.security.WithMockSecurityUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,5 +66,22 @@ class TalentControllerListTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.data.nextCursor").isEmpty());
+    }
+
+    @Test
+    @DisplayName("내 재능 목록 조회 성공 - 200과 인증 사용자 기준 목록을 반환한다")
+    @WithMockSecurityUser(userId = 1)
+    void getMyTalents_success() throws Exception {
+        var item = new TalentListRes(5L, 1L, "user1", "백엔드", "스프링 리뷰", 100, 2,
+                BigDecimal.valueOf(4.5), 3, 10, LocalDateTime.now()); // 11-인자
+        given(talentService.getMyTalents(eq(1L))).willReturn(List.of(item));
+
+        mockMvc.perform(get("/api/v1/talents/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200-2"))
+                .andExpect(jsonPath("$.data[0].talentId").value(5))
+                .andExpect(jsonPath("$.data[0].authorId").value(1))
+                .andExpect(jsonPath("$.data[0].authorNickname").value("user1"))
+                .andExpect(jsonPath("$.data[0].categoryName").value("백엔드"));
     }
 }

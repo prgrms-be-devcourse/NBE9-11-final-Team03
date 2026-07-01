@@ -143,4 +143,8 @@ public class TalentService {
         return CursorPageRes.from(rows, pageSize, TalentListRes::talentId);
     }
 
+    public List<TalentListRes> getMyTalents(Long authorId) {
+        return talentRepository.findMyTalents(authorId);
+    }
+
 }

@@ -1,9 +1,11 @@
 package com.back.baton.domain.matching.service;
 
+import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.matching.repository.MatchRecommendationQueryRepository;
+import com.back.baton.domain.profile.repository.ProfileRepository;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.domain.talent.repository.TalentRepository;
@@ -27,18 +29,16 @@ public class MatchRecommendationService {
     private static final String TRADE_IN_PROGRESS_REASON = "이미 진행 중인 교환 거래가 있습니다.";
 
     private final TalentRepository talentRepository;
+    private final ProfileRepository profileRepository;
     private final MatchRecommendationQueryRepository matchRecommendationQueryRepository;
     private final MatchProposalRepository matchProposalRepository;
 
-    public List<MatchRecommendationRes> getMatchRecommendations(Long talentId, Long userId) {
-        Talent requesterTalent = getTalent(talentId);
-
-        validateTalentAvailable(requesterTalent);
-        validateRequesterOwnsTalent(userId, requesterTalent);
+    public List<MatchRecommendationRes> getMatchRecommendations(Long userId) {
+        List<Long> requesterWantCategoryIds = getRequesterWantCategoryIds(userId);
 
         List<MatchRecommendationRes> recommendations =
                 matchRecommendationQueryRepository.findMatchRecommendations(
-                        requesterTalent.getCategory().getId(),
+                        requesterWantCategoryIds,
                         userId
                 );
 
@@ -46,7 +46,7 @@ public class MatchRecommendationService {
                 .map(recommendation -> {
                     String disabledReason = resolveProposalDisabledReason(
                             userId,
-                            requesterTalent.getId(),
+                            recommendation.requesterTalentId(),
                             recommendation.providerId(),
                             recommendation.talentId()
                     );
@@ -57,6 +57,7 @@ public class MatchRecommendationService {
 
                     return new MatchRecommendationRes(
                             recommendation.talentId(),
+                            recommendation.requesterTalentId(),
                             recommendation.providerId(),
                             recommendation.categoryId(),
                             recommendation.categoryName(),
@@ -83,9 +84,12 @@ public class MatchRecommendationService {
         validateTalentAvailable(requesterTalent);
         validateRequesterOwnsTalent(userId, requesterTalent);
 
+        List<Long> requesterWantCategoryIds = getRequesterWantCategoryIds(userId);
+
         MatchRecommendationDetailRes detail =
                 matchRecommendationQueryRepository.findMatchRecommendationDetail(
                                 requesterTalent.getCategory().getId(),
+                                requesterWantCategoryIds,
                                 providerTalentId
                         )
                         .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
@@ -111,6 +115,18 @@ public class MatchRecommendationService {
     private Talent getTalent(Long talentId) {
         return talentRepository.findById(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+    }
+
+    private List<Long> getRequesterWantCategoryIds(Long userId) {
+        List<Long> wantCategoryIds = profileRepository.findWantTalentCategoriesByUserId(userId).stream()
+                .map(Category::getId)
+                .toList();
+
+        if(wantCategoryIds.isEmpty()) {
+            throw new CustomException(MatchingErrorCode.WANT_TALENT_CATEGORY_REQUIRED);
+        }
+
+        return wantCategoryIds;
     }
 
     private String resolveProposalDisabledReason(

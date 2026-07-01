@@ -42,6 +42,21 @@ class UserServiceTest {
     private UserService userService;
 
     @Test
+    @DisplayName("탈퇴회원 삭제 스케줄러 실패 시 예외를 삼키지 않고 전파한다(트랜잭션 롤백 위임)")
+    void deleteExpiredWithdrawalUsers_propagates_onFailure() {
+        // given
+        RuntimeException dbError = new RuntimeException("DB 삭제 실패");
+        doThrow(dbError)
+                .when(withdrawnUserRepository)
+                .deleteByCreatedAtBeforeAndPermanentBanIsFalse(any());
+
+        // when & then: 트랜잭션 메서드 안에서 catch로 삼키면 commit 시 UnexpectedRollbackException이
+        // 발생하므로, 예외를 그대로 전파해 @Transactional 롤백에 위임하는지 검증한다.
+        assertThatThrownBy(() -> userService.deleteExpiredWithdrawalUsers())
+                .isSameAs(dbError);
+    }
+
+    @Test
     @DisplayName("탈퇴 성공 - 모든 조건 만족 시")
     void withdraw_success() {
         // given
