@@ -41,7 +41,7 @@ class TalentControllerDetailTest {
                 LocalDateTime.now(), LocalDateTime.now(),
                 new AuthorInfo(7L, "박재현", "https://img/7.png", "개발자입니다", new BigDecimal("36.50"))
         );
-        given(talentService.getTalentDetail(1L)).willReturn(res);
+        given(talentService.getTalentDetail(1L, false)).willReturn(res);
 
         mockMvc.perform(get("/api/v1/talents/{talentId}", 1L))
                 .andExpect(status().isOk())
@@ -59,10 +59,26 @@ class TalentControllerDetailTest {
     @DisplayName("없는/삭제된 재능이면 404를 반환한다")
     void getTalentDetail_404() throws Exception {
         willThrow(new CustomException(TalentErrorCode.TALENT_NOT_FOUND))
-                .given(talentService).getTalentDetail(99L);
+                .given(talentService).getTalentDetail(99L, false);
 
         mockMvc.perform(get("/api/v1/talents/{talentId}", 99L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("TALENT-404-001"));
+    }
+
+    @Test
+    @DisplayName("increaseView=true 파라미터가 서비스로 전달된다 (실제 상세 페이지 조회)")
+    void getTalentDetail_increaseViewTrue() throws Exception {
+        TalentDetailRes res = new TalentDetailRes(
+                1L, 9L, "개발", "웹페이지 개발", "내용...",
+                3, 500, TalentStatus.ACTIVE, 10, 2, new BigDecimal("4.50"),
+                LocalDateTime.now(), LocalDateTime.now(),
+                new AuthorInfo(7L, "박재현", "https://img/7.png", "개발자입니다", new BigDecimal("36.50"))
+        );
+        given(talentService.getTalentDetail(1L, true)).willReturn(res);
+
+        mockMvc.perform(get("/api/v1/talents/{talentId}", 1L).param("increaseView", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
     }
 }

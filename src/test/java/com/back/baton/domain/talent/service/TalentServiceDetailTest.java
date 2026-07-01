@@ -50,7 +50,7 @@ class TalentServiceDetailTest {
         given(talentRepository.findDetailById(1L))
                 .willReturn(List.<Object[]>of(new Object[]{talent, author}));
 
-        TalentDetailRes res = talentService.getTalentDetail(1L);
+        TalentDetailRes res = talentService.getTalentDetail(1L, true);
 
         assertThat(res.viewCount()).isEqualTo(10);            // 증가 전 값
         assertThat(res.author().nickname()).isEqualTo("박재현");
@@ -63,11 +63,33 @@ class TalentServiceDetailTest {
         given(talentRepository.findDetailById(99L)).willReturn(List.of());
         // increaseViewCount는 호출 안 됨 -> stub 자체를 안
 
-        assertThatThrownBy(() -> talentService.getTalentDetail(99L))
+        assertThatThrownBy(() -> talentService.getTalentDetail(99L, true))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(TalentErrorCode.TALENT_NOT_FOUND));
 
+        then(talentRepository).should(never()).increaseViewCount(anyLong());
+    }
+
+    @Test
+    @DisplayName("increaseView=false면 조회수를 증가시키지 않는다 (채팅/거래/크레딧 등 정보 조회용)")
+    void getTalentDetail_withoutIncreaseView() {
+        Talent talent = Talent.create(7L, mock(Category.class), "웹페이지 개발", "내용", 3, 500);
+        ReflectionTestUtils.setField(talent, "id", 1L);
+        ReflectionTestUtils.setField(talent, "viewCount", 10);
+
+        User author = User.builder()
+                .email("a@test.com").password("p").nickname("박재현")
+                .profileImageUrl("https://img/7.png").introduction("소개입니다")
+                .trustScore(new BigDecimal("36.50")).build();
+        ReflectionTestUtils.setField(author, "id", 7L);
+
+        given(talentRepository.findDetailById(1L))
+                .willReturn(List.<Object[]>of(new Object[]{talent, author}));
+
+        TalentDetailRes res = talentService.getTalentDetail(1L, false);
+
+        assertThat(res.viewCount()).isEqualTo(10);
         then(talentRepository).should(never()).increaseViewCount(anyLong());
     }
 }
