@@ -136,7 +136,9 @@ public class TalentController {
             @Parameter(description = "조회수 증가 여부. 실제 상세 페이지 조회일 때만 true", example = "false")
             @RequestParam(defaultValue = "false") boolean increaseView
     ) {
-        TalentDetailRes response = talentService.getTalentDetail(talentId, increaseView);
+        TalentDetailRes response = increaseView
+                ? talentService.getTalentDetailWithViewCount(talentId)
+                : talentService.getTalentDetail(talentId);
         return ApiResponses.success(SuccessCode.TALENT_OK, response);
     }
 

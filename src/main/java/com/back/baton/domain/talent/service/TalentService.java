@@ -119,21 +119,19 @@ public class TalentService {
 
 
     // 재능 상세 조회 (increaseView=true일 때만 조회수 증가)
-    // 실제 상세 페이지 조회에서만 true로 호출한다.
-    @Transactional
-    public TalentDetailRes getTalentDetail(Long talentId, boolean increaseView) {
+    // 조회수 증가 없음 (클래스 레벨 readOnly 트랜잭션)
+    public TalentDetailRes getTalentDetail(Long talentId) {
         List<Object[]> rows = talentRepository.findDetailById(talentId);
-        if (rows.isEmpty()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
+        if (rows.isEmpty()) throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
         Object[] row = rows.get(0);
-        Talent talent = (Talent) row[0];
-        User author = (User) row[1];
+        return TalentDetailRes.from((Talent) row[0], (User) row[1]);
+    }
 
-        TalentDetailRes response = TalentDetailRes.from(talent, author);
-        if (increaseView) {
-            talentRepository.increaseViewCount(talentId);
-        }
+    // 조회수 증가 (쓰기 트랜잭션)
+    @Transactional
+    public TalentDetailRes getTalentDetailWithViewCount(Long talentId) {
+        TalentDetailRes response = getTalentDetail(talentId);
+        talentRepository.increaseViewCount(talentId);
         return response;
     }
 

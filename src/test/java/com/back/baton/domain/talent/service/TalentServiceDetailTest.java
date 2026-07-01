@@ -50,7 +50,7 @@ class TalentServiceDetailTest {
         given(talentRepository.findDetailById(1L))
                 .willReturn(List.<Object[]>of(new Object[]{talent, author}));
 
-        TalentDetailRes res = talentService.getTalentDetail(1L, true);
+        TalentDetailRes res = talentService.getTalentDetailWithViewCount(1L);
 
         assertThat(res.viewCount()).isEqualTo(10);            // 증가 전 값
         assertThat(res.author().nickname()).isEqualTo("박재현");
@@ -63,7 +63,7 @@ class TalentServiceDetailTest {
         given(talentRepository.findDetailById(99L)).willReturn(List.of());
         // increaseViewCount는 호출 안 됨 -> stub 자체를 안
 
-        assertThatThrownBy(() -> talentService.getTalentDetail(99L, true))
+        assertThatThrownBy(() -> talentService.getTalentDetailWithViewCount(99L))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(TalentErrorCode.TALENT_NOT_FOUND));
@@ -87,7 +87,7 @@ class TalentServiceDetailTest {
         given(talentRepository.findDetailById(1L))
                 .willReturn(List.<Object[]>of(new Object[]{talent, author}));
 
-        TalentDetailRes res = talentService.getTalentDetail(1L, false);
+        TalentDetailRes res = talentService.getTalentDetail(1L);
 
         assertThat(res.viewCount()).isEqualTo(10);
         then(talentRepository).should(never()).increaseViewCount(anyLong());
