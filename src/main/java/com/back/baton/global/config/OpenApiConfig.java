@@ -7,6 +7,9 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import io.swagger.v3.oas.models.servers.Server;
+
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -16,6 +19,14 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()
+                .servers(List.of(
+                        new Server()
+                                .url("http://54.116.23.255")
+                                .description("배포 서버"),
+                        new Server()
+                                .url("http://localhost:8080")
+                                .description("로컬 서버")
+                ))
                 .info(new Info()
                         .title("Baton API")
                         .description("Baton 서비스 API 명세서")
