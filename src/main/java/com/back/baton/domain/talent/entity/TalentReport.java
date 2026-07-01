@@ -60,4 +60,8 @@ public class TalentReport extends BaseTimeEntity {
                 .description(description)
                 .build();
     }
+
+    public void resolve() {
+        this.status = ReportStatus.RESOLVED;
+    }
 }

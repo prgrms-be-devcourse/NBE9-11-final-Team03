@@ -61,48 +61,13 @@ public class CreditService {
             throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_ALREADY_EXISTS);
         }
         creditAccountRepository.save(CreditAccount.create(userId, initialCreditAmount));
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId, null, CreditTransactionType.WELCOME, initialCreditAmount, initialCreditAmount,
-                UUID.randomUUID().toString(), null
-        ));
-    }
-
-    // 크레딧 적립
-    @Transactional
-    public void earnCredit(Long userId, int amount, CreditTransactionType type) {
-        if (amount <= 0) {
-            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
-        }
-
-        int updatedRows = creditAccountRepository.addBalance(userId, amount);
-        if (updatedRows == 0) {
-            throw new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND);
-        }
-
-        int balanceAfter = creditAccountRepository.findByUserId(userId)
-                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
-                .getBalance();
-
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId, null, type, amount, balanceAfter, UUID.randomUUID().toString(), null
-        ));
+        creditTransactionRepository.save(CreditTransaction.createWelcome(userId, initialCreditAmount));
     }
 
     // 크레딧 잠금 - 매칭 제안 수락 시 구매자 크레딧을 거래 완료까지 동결 (거래 취소 시 환불 가능)
     @Transactional
-    public void holdForEscrow(Long userId, int amount, Long relatedTradeId, String idempotencyKey) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
-        }
-
-        if (amount <= 0) {
-            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
-        }
-
-        // 멱등성 체크
-        if (creditTransactionRepository.existsByIdempotencyKey(idempotencyKey)) {
-            return;
-        }
+    public void holdForEscrow(Long userId, int amount, Long relatedTradeId) {
+        validatePositiveAmount(amount);
 
         int updatedRows = creditAccountRepository.holdForEscrow(userId, amount);
         if (updatedRows == 0) {
@@ -115,30 +80,13 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        try {
-            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
-                    userId, relatedTradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter,
-                    idempotencyKey, null
-            ));
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_HOLD_REQUEST); // idempotencyKey unique 제약 위반 예외 처리
-        }
+        creditTransactionRepository.save(CreditTransaction.createEscrowHold(userId, relatedTradeId, amount, balanceAfter));
     }
 
     // 크레딧 환불 - 거래 취소 시 에스크로에서 구매자에게 크레딧 반환
     @Transactional
-    public void refundFromEscrow(Long userId, int amount, Long relatedTradeId, String idempotencyKey) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
-        }
-
-        if (amount <= 0) {
-            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
-        }
-
-        if (creditTransactionRepository.existsByIdempotencyKey(idempotencyKey)) {
-            return;
-        }
+    public void refundFromEscrow(Long userId, int amount, Long relatedTradeId) {
+        validatePositiveAmount(amount);
 
         int updatedRows = creditAccountRepository.releaseEscrow(userId, amount);
         if (updatedRows == 0) {
@@ -151,30 +99,15 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        try {
-            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
-                    userId, relatedTradeId, CreditTransactionType.REFUND, amount, balanceAfter,
-                    idempotencyKey, null
-            ));
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_REFUND_REQUEST);
-        }
+        creditTransactionRepository.save(CreditTransaction.createRefund(userId, relatedTradeId, amount, balanceAfter));
     }
 
     // 크레딧 정산 - 구매 확정 시 구매자 에스크로 차감 후 판매자에게 지급
     @Transactional
-    public void settleEscrow(Long buyerId, Long sellerId, int amount, int settlementAmount, Long tradeId, String idempotencyKey) {
-        if (idempotencyKey == null || idempotencyKey.isBlank()) {
-            throw new CustomException(CreditErrorCode.INVALID_IDEMPOTENCY_KEY);
-        }
+    public void settleEscrow(Long buyerId, Long sellerId, int amount, int settlementAmount, Long tradeId) {
 
-        if (amount <= 0 || settlementAmount <= 0) {
-            throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
-        }
-
-        if (creditTransactionRepository.existsByIdempotencyKey(idempotencyKey + "-buyer")) {
-            return;
-        }
+        validatePositiveAmount(amount);
+        validatePositiveAmount(settlementAmount);
 
         // 구매자 크레딧 잔액 조회
         CreditAccount buyerAccount = creditAccountRepository.findByUserId(buyerId)
@@ -198,42 +131,14 @@ public class CreditService {
                 .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
                 .getBalance();
 
-        // 거래 내역 기록
-        try {
-            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
-                    buyerId, tradeId, CreditTransactionType.ESCROW_RELEASE, -amount, buyerBalanceAfter,
-                    idempotencyKey + "-buyer", null
-            ));
-            creditTransactionRepository.saveAndFlush(CreditTransaction.create(
-                    sellerId, tradeId, CreditTransactionType.ESCROW_RELEASE, settlementAmount, sellerBalanceAfter,
-                    idempotencyKey + "-seller", null
-            ));
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(CreditErrorCode.DUPLICATE_ESCROW_SETTLE_REQUEST);
-        }
+        creditTransactionRepository.save(CreditTransaction.createEscrowRelease(buyerId, tradeId, -amount, buyerBalanceAfter));
+
+        creditTransactionRepository.save(CreditTransaction.createEscrowRelease(sellerId, tradeId, settlementAmount, sellerBalanceAfter));
     }
 
-    // 크레딧 차감 - 수수료 등 즉시 소멸되는 크레딧에 사용 (환불 불가)
-    @Transactional
-    public void deductCredit(Long userId, int amount) {
-        if (amount <= 0) {
+    private void validatePositiveAmount(int amount) {
+        if (amount < 0) {
             throw new CustomException(CreditErrorCode.INVALID_CREDIT_AMOUNT);
         }
-
-        int updatedRows = creditAccountRepository.deductBalance(userId, amount);
-        if (updatedRows == 0) {
-            creditAccountRepository.findByUserId(userId)
-                    .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND));
-            throw new CustomException(CreditErrorCode.INSUFFICIENT_CREDIT_BALANCE);
-        }
-
-        int balanceAfter = creditAccountRepository.findByUserId(userId)
-                .orElseThrow(() -> new CustomException(CreditErrorCode.CREDIT_ACCOUNT_NOT_FOUND))
-                .getBalance();
-
-        creditTransactionRepository.save(CreditTransaction.create(
-                userId, null, CreditTransactionType.PURCHASE_DEBIT, -amount, balanceAfter,
-                UUID.randomUUID().toString(), null
-        ));
     }
 }

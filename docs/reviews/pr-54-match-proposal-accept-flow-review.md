@@ -1,17 +1,17 @@
-# PR #54 Review Memo - Match Proposal Accept Flow
+# PR #54 리뷰 기록 - 매칭 제안 수락 흐름
 
-## Summary
+## 요약
 
 - PR: https://github.com/prgrms-be-devcourse/NBE9-11-final-Team03/pull/54
 - Jira: BATON-79
-- Title: 매칭 제안 수락 거래 흐름 연결
-- Status checked: 2026-06-22
-- Current judgment: 머지를 막을 P0 필수 수정은 없음.
+- 제목: 매칭 제안 수락 거래 흐름 연결
+- 상태 확인일: 2026-06-22
+- 현재 판단: 병합을 막을 P0 필수 수정은 없음.
 
 PR #54는 매칭 제안 수락 시 `Trade` 생성, 구매자 크레딧 에스크로 보류, `Escrow` 생성, 매칭 제안 `ACCEPTED` 전환 흐름을 연결한다.
 GitHub Actions build는 성공했고, PR은 `mergeable: clean` 상태로 확인했다.
 
-## Current Decision
+## 현재 결정
 
 현재 기준으로 즉시 머지를 막아야 하는 P0 이슈는 보이지 않는다.
 
@@ -91,7 +91,7 @@ PR #54 머지 후 BATON-88 브랜치를 rebase할 때 충돌과 동작 정합성
 현재 PR은 `TradeType.SWAP`으로만 구분하고 실제 양방향 거래 그룹 구조는 후속 작업으로 남긴다.
 PR 설명과 구현 범위가 일치하므로 이번 PR에서 막을 내용은 아니다.
 
-## Suggested Review Conclusion
+## 권장 리뷰 결론
 
 팀장 관점에서는 아래처럼 판단할 수 있다.
 
@@ -101,7 +101,7 @@ P0 필수 수정은 없어 보여서 머지 자체를 막을 정도는 아닙니
 providerId 인증 기반 전환은 BATON-88에서 이어서 정리하면 됩니다.
 ```
 
-## Follow-up Checklist
+## 후속 작업 체크리스트
 
 - [ ] 0 크레딧 재능 허용 여부 결정
 - [ ] 허용하지 않으면 `creditPrice` 검증을 `@Positive`로 변경

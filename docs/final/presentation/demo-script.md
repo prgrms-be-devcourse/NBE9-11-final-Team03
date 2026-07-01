@@ -1,235 +1,74 @@
-﻿# Baton 시연 스크립트
+# Baton 최종 시연 스크립트
 
-> 문서 버전: v1.3
-> 기준일: 2026-06-23
-> 기준 브랜치: `dev`
-> 기준 PR: `#62`, `#63`, `#64`, `#67`, `#68` 반영 기준
-> 문서 상태: MVP 수동 API 테스트 결과와 P1 필수 구현 범위 반영
-> 목적: Swagger/Postman API 시연과 UI 시연을 발표 중 끊기지 않게 진행하기 위한 순서 문서
+> 문서 버전: v2.0
+> 기준일: 2026-07-01
+> 공식 제출: API 시연 영상과 UI 시연 영상 모두 필요
 
-## 변경 이력
+## 1. 공통 준비
 
-| 버전 | 날짜 | 변경 내용 | 상태 |
-| --- | --- | --- | --- |
-| v1.0 | 2026-06-20 | 최초 시연 스크립트 작성 | 작성 완료 |
-| v1.1 | 2026-06-22 | 문서 버전/기준 브랜치/문서 상태 추가 | 구현 반영 필요 |
-| v1.2 | 2026-06-22 | `@CurrentUser` 인증 사용자 기준, Trade/Submission/S3 API 반영 | 최신 구현 기준 요약 |
-| v1.3 | 2026-06-23 | 초기 크레딧 자동 지급, CreditTransaction 조회, 구매 확정 재조회 이슈 반영 | 최신 테스트 기준 |
-| v1.4 | 2026-06-23 | 채팅 구현 상태와 SWAP/관리자/리뷰 P1 범위 반영 | 최신 총괄 기준 |
-
-## 1. 시연 원칙
-
-- 메인 시연은 PURCHASE MVP 흐름만 사용한다.
-- 채팅은 기본 구현된 보조 시연 후보로 분리하고, 실제 REST/WebSocket 호출 가능 범위를 발표 전 검증한다.
-- SWAP, 관리자, 리뷰/신뢰 점수는 PURCHASE 이후 P1 필수 구현 범위로 관리하되, 검증되지 않은 흐름은 메인 시연에 넣지 않는다.
-- 시연 전 구매자/제공자 계정, `talentId`, `proposalId`, `tradeId`를 기록한다.
-- 검증되지 않은 기능은 발표 중 즉석으로 시도하지 않는다.
-- 배포 환경이 불안정하면 로컬 Swagger를 대체 경로로 사용한다.
-
-## 2. 사전 준비
-
-| 항목 | 값 | 상태 |
-| --- | --- | --- |
-| Local Swagger | `http://localhost:8080/swagger-ui/index.html` | 준비 |
-| Local OpenAPI | `http://localhost:8080/v3/api-docs` | 준비 |
-| 배포 Swagger | 확인 필요 | 배포 후 갱신 |
-| 구매자 계정 | 신규 생성 또는 init data | 준비 필요 |
-| 제공자 계정 | 신규 생성 또는 init data | 준비 필요 |
-| 카테고리 ID | init data 또는 DB 확인 | 준비 필요 |
-| 초기 크레딧 | 신규 가입 직후 `10000` | 구현/검증 완료 |
-
-## 3. API 시연 흐름
-
-### 3.1 회원가입
-
-Endpoint: `POST /api/v1/auth/signup`
-
-구매자와 제공자를 각각 생성한다.
-
-확인 포인트:
-
-| 확인 | 기대값 |
+| 항목 | 값/준비 |
 | --- | --- |
-| HTTP status | 201 |
-| 사용자 ID | 응답 `data.id` 기록 |
-| 사용자 상태 | `ACTIVE` |
+| 배포 Swagger | `http://54.116.23.255/swagger-ui/index.html` |
+| 로컬 대체 Swagger | `http://localhost:8080/swagger-ui/index.html` |
+| 사용자 | 신규 구매자/제공자 2명 |
+| 초기 크레딧 | 각 10,000 |
+| 기록할 ID | user, talent, proposal, trade, submission |
+| 영상 | API와 UI를 별도 녹화하고 링크 권한 확인 |
 
-주의: 회원가입 후 바로 `/api/v1/credit/balance`를 조회해 초기 크레딧 `10000`, `escrowBalance=0`을 먼저 보여준다.
+## 2. API 시연 영상
 
-### 3.2 로그인
+| 순서 | 호출 | 확인 포인트 |
+| ---: | --- | --- |
+| 1 | `POST /api/v1/auth/signup` | 구매자/제공자 생성 |
+| 2 | `POST /api/v1/auth/login` | JWT 발급 |
+| 3 | `GET /api/v1/credit/balance` | balance 10,000, escrow 0 |
+| 4 | `POST /api/v1/talents` | 제공자 재능 생성 |
+| 5 | `GET /api/v1/talents/{id}` | 재능 가격/제공자 확인 |
+| 6 | `POST /api/v1/match-proposals` | REQUESTED |
+| 7 | `PATCH /api/v1/match-proposals/{id}/accept` | ACCEPTED, Idempotency-Key 사용 |
+| 8 | `GET /api/v1/trade/{id}` | IN_PROGRESS, HELD |
+| 9 | `GET /api/v1/credit/balance` | 구매자 balance 감소, escrow 증가 |
+| 10 | `POST /api/v1/trade/{id}/submission` | UNDER_REVIEW |
+| 11 | `PATCH /api/v1/trade/{id}/confirm` | COMPLETED, RELEASED |
+| 12 | `GET /api/v1/trade/{id}` | 완료 상태 DB 재조회 확인 |
+| 13 | `GET /api/v1/credit/transactions` | WELCOME/HOLD/RELEASE 원장 확인 |
 
-Endpoint: `POST /api/v1/auth/login`
+API 영상에서는 매칭 수락 응답에서 다음 단계의 `tradeId`를 얻는 방법을 사전에 확정한다. 응답에 없다면 준비된 테스트 데이터의 ID를 사용하고 영상 자막으로 설명한다.
 
-확인 포인트:
+최신 DEV에서는 카테고리 및 재능 목록/검색/상세 GET API를 비로그인 사용자에게 허용한다. 영상에서는 로그인 전 재능 탐색과 로그인 후 제안 생성의 차이를 보여줄 수 있다.
 
-| 확인 | 기대값 |
+최신 DEV의 재능 목록/검색 응답에는 작성자 ID와 닉네임이 포함되며 목록 조회 자체로 조회수가 증가하지 않는다. PR #122 배포 전에는 이 필드를 실제 배포 영상에서 기대하지 않는다.
+
+최신 DEV에서는 `IN_PROGRESS` 거래 취소 요청이 `TRADE-400-009`로 거절된다. 정상 PURCHASE 영상에서는 거래 취소를 호출하지 않는다.
+
+## 3. UI 시연 영상
+
+1. 구매자 회원가입/로그인
+2. 초기 크레딧 확인
+3. 재능 목록/검색/상세 조회
+4. 매칭 제안 생성
+5. 제공자 계정으로 전환해 제안 수락
+6. 거래 상세와 에스크로 상태 확인
+7. 제공자 결과물 제출
+8. 구매자가 결과물을 확인하고 구매 확정
+9. 제공자의 정산 잔액과 양측 크레딧 내역 확인
+
+UI에서 구현되지 않은 단계는 API 영상으로 대체하지 말고, UI 영상의 미구현 범위를 명확히 표시한다.
+
+## 4. 실패 대비
+
+| 상황 | 대응 |
 | --- | --- |
-| accessToken | 응답 body |
-| refreshToken | HttpOnly cookie |
+| 배포 서버 불안정 | 로컬 Swagger 녹화본 사용 |
+| S3 업로드 실패 | 사전 업로드한 fileKey로 제출 흐름 시연 |
+| 테스트 데이터 충돌 | 영상용 이메일/닉네임에 타임스탬프 사용 |
+| tradeId 확인 불가 | 사전 생성 데이터와 ID 기록표 사용 |
+| 실시간 시연 실패 | 제출한 녹화 영상을 재생 |
 
-이후 인증이 필요한 API는 로그인한 사용자의 access token을 사용한다.
+## 5. 녹화 완료 체크
 
-### 3.3 크레딧 잔액 확인
-
-Endpoint: `GET /api/v1/credit/balance`
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| balance | 초기 지급 크레딧 |
-| escrowBalance | 0 |
-
-### 3.4 제공자 재능 등록
-
-Endpoint: `POST /api/v1/talents`
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| HTTP status | 201 |
-| Location header | `/api/v1/talents/{talentId}` |
-| talentId | 응답 `data.talentId` 기록 |
-
-### 3.5 재능 목록/상세 조회
-
-Endpoint:
-
-- `GET /api/v1/talents`
-- `GET /api/v1/talents/{talentId}`
-- `GET /api/v1/talents/search`
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| 목록 | 활성 재능 노출 |
-| 상세 | 제목, 내용, 가격, 작성자 정보 |
-| 검색 | 조건에 맞는 재능 반환 |
-
-### 3.6 매칭 제안 생성
-
-Endpoint: `POST /api/v1/match-proposals`
-
-현재 로그인한 사용자가 요청자가 된다.
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| HTTP status | 201 |
-| status | `REQUESTED` |
-| proposalId | 응답 ID 기록 |
-
-### 3.7 매칭 제안 수락
-
-Endpoint: `PATCH /api/v1/match-proposals/{proposalId}/accept`
-
-Header:
-
-```text
-Idempotency-Key: accept-proposal-{proposalId}
-```
-
-현재 로그인한 제공자가 제안을 수락한다.
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| proposal status | `ACCEPTED` |
-| Trade | PURCHASE 또는 정책상 tradeType 생성 |
-| Credit | 구매자 balance 감소, escrowBalance 증가 |
-| Escrow | `HELD` 생성 |
-| CreditTransaction | `ESCROW_HOLD` 기록 |
-
-### 3.8 거래 조회
-
-Endpoint: `GET /api/v1/trade/{tradeId}`
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| status | `IN_PROGRESS` |
-| buyer/seller | 구매자/제공자 ID 일치 |
-| escrow | HELD 상태 확인 |
-
-### 3.9 결과물 제출
-
-Endpoint:
-
-- `POST /api/v1/trade/{tradeId}/submission/presigned-url`
-- `POST /api/v1/trade/{tradeId}/submission`
-
-제공자가 S3 업로드 URL을 발급받고, 업로드한 결과물의 key 또는 설명을 제출한다.
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| submission | 결과물 기록 생성 |
-| trade status | `UNDER_REVIEW` |
-
-### 3.10 결과물 조회 및 구매 확정
-
-Endpoint:
-
-- `GET /api/v1/trade/{tradeId}/submission`
-- `PATCH /api/v1/trade/{tradeId}/confirm`
-
-구매자가 결과물을 확인하고 구매 확정을 호출한다.
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| trade status | `COMPLETED` |
-| escrow status | `RELEASED` |
-| buyer escrowBalance | 감소 |
-| seller balance | 증가 |
-| CreditTransaction | `ESCROW_RELEASE` 기록 |
-
-주의: 2026-06-23 수동 테스트에서 구매 확정 응답은 `COMPLETED/RELEASED`였지만, 직후 거래 상세 재조회가 `UNDER_REVIEW/HELD`로 남는 현상이 관측되었다. 이후 상태 저장 이슈는 코드 수정 및 통합 테스트로 해결 확인했다. 발표 전에는 수정 코드가 반영된 서버를 재기동한 뒤 같은 API 흐름을 재검증한다.
-
-### 3.11 크레딧 거래 내역 조회
-
-Endpoint: `GET /api/v1/credit/transactions`
-
-선택 Query:
-
-- `type`: `WELCOME`, `ESCROW_HOLD`, `ESCROW_RELEASE`, `REFUND` 등
-- `from`: ISO DateTime
-- `to`: ISO DateTime
-- `cursor`: 마지막으로 조회한 거래 원장 ID
-- `size`: 조회 개수
-
-확인 포인트:
-
-| 확인 | 기대값 |
-| --- | --- |
-| 구매자 내역 | `ESCROW_HOLD`, `ESCROW_RELEASE` 기록 |
-| 제공자 내역 | `ESCROW_RELEASE` 정산 기록 |
-| balanceAfter | 각 거래 이후 잔액 반영 |
-
-## 4. 실패 시 대체 기준
-
-| 실패 지점 | 대체 설명 |
-| --- | --- |
-| 회원가입 후 초기 크레딧 없음 | 최신 dev와 실행 서버가 같은지 확인하고, 필요 시 서버 재기동 후 재시도 |
-| 배포 Swagger 불안정 | 로컬 Swagger로 전환 |
-| S3 업로드 실패 | presigned URL 발급과 DB 제출 흐름을 분리해 설명 |
-| CreditTransaction 조회 실패 | `/api/v1/credit/transactions` 응답 또는 DB에서 이력 기록 확인 |
-| 구매 확정 후 재조회 상태 저장 이슈 | 코드 수정 및 통합 테스트 완료 항목으로 설명하고, 서버 재기동 후 API 재검증 결과를 보여준다 |
-
-## 5. 최종 시연 체크리스트
-
-- [ ] 구매자/제공자 로그인 토큰 준비
-- [ ] 회원가입 후 초기 크레딧 자동 지급 확인
-- [ ] 제공자 재능 등록 확인
-- [ ] 매칭 제안 생성 확인
-- [ ] 매칭 제안 수락 후 Trade/Credit/Escrow 연결 확인
-- [ ] 결과물 제출 확인
-- [ ] 구매 확정 후 정산 확인
-- [ ] `/api/v1/credit/transactions`로 크레딧 변동 이력 확인
+- [ ] API 흐름이 회원가입부터 정산까지 끊기지 않는다.
+- [ ] UI 핵심 흐름이 실제 구현 범위와 일치한다.
+- [ ] 토큰, 비밀번호, 민감한 환경 값이 영상에 노출되지 않는다.
+- [ ] 영상 링크를 로그인하지 않은 상태에서 열 수 있다.
+- [ ] PPT와 Notion에 같은 링크를 넣었다.

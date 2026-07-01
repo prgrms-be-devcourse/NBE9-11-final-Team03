@@ -18,9 +18,17 @@ user:
   initial-trust-score: 50.00 # 초기 신뢰 점수
   withdrawn-retention-day: 90 # 탈퇴 유저 정보 보관 기간 (일)
 
+auth:
+  email-verification:
+    expiry-minutes: 5
+    max-attempt: 5
+
 s3:
   presigned-put-expiry-minutes: 5 # 클라이언트 S3업로드 유효 시간 (분)
   presigned-get-expiry-hours: 3 # 조회 URL 유효 시간 (시간)
 
 talent:
   max-count-per-user: 3 # 1인당 재능 등록 상한
+
+# Sentry 알림: DSN/환경은 SENTRY_DSN, SENTRY_ENVIRONMENT 환경변수로 주입한다.
+# (logback의 SENTRY 어펜더가 읽음. 비어 있으면 Sentry 비활성=개발 안전)

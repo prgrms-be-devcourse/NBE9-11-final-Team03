@@ -2,6 +2,7 @@ package com.back.baton.domain.user.service;
 
 import com.back.baton.domain.credit.service.CreditService;
 import com.back.baton.domain.profile.service.ProfileService;
+import com.back.baton.domain.user.dto.response.UserCheckNicknameRes;
 import com.back.baton.domain.user.dto.response.UserSignupRes;
 import com.back.baton.domain.user.dto.response.UserTokenDto;
 import com.back.baton.domain.user.entity.RefreshToken;
@@ -52,6 +53,7 @@ public class AuthServiceTest {
     @Mock private WithdrawnUserRepository withdrawnUserRepository;
     @Mock private CreditService creditService;
     @Mock private ProfileService profileService;
+    @Mock private EmailVerificationService emailVerificationService;
     private User validUser;
     @BeforeEach
     void setUp() {
@@ -93,6 +95,7 @@ public class AuthServiceTest {
 
         // 내부 로직이 정확한 인자로 호출되었는지 대조 검증
         verify(withdrawnUserRepository).existsByEncodedEmail(withdrawnEncoder.encode(email));
+        verify(emailVerificationService).consumeVerifiedEmail(email);
         verify(passwordValidator).validate("securePassword123!", "baton");
         verify(passwordEncoder).encode("securePassword123!");
         verify(userRepository).save(any(User.class));
@@ -122,6 +125,34 @@ public class AuthServiceTest {
         // 패스워드가 틀렸으므로 암호화 및 저장 로직은 절대 실행되면 안 됨
         verify(passwordEncoder, never()).encode(anyString());
         verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 확인 - 사용 가능한 닉네임이면 true를 반환한다")
+    void checkNickname_available() {
+        // given
+        given(userRepository.existsByNicknameAndDeletedAt(eq("batonNick"), any(LocalDateTime.class)))
+                .willReturn(false);
+
+        // when
+        UserCheckNicknameRes result = authService.checkNickname("batonNick");
+
+        // then
+        assertThat(result.usableNickname()).isTrue();
+    }
+
+    @Test
+    @DisplayName("닉네임 중복 확인 - 이미 사용 중인 닉네임이면 false를 반환한다")
+    void checkNickname_duplicated() {
+        // given
+        given(userRepository.existsByNicknameAndDeletedAt(eq("batonNick"), any(LocalDateTime.class)))
+                .willReturn(true);
+
+        // when
+        UserCheckNicknameRes result = authService.checkNickname("batonNick");
+
+        // then
+        assertThat(result.usableNickname()).isFalse();
     }
     @Test
     @DisplayName("로그인 성공 - 기존 RefreshToken이 없는 경우 새로운 토큰을 생성(save)한다")
@@ -187,7 +218,7 @@ public class AuthServiceTest {
     @DisplayName("로그인 실패 - 유저 상태가 휴면(SUSPENDED)인 경우 예외가 발생한다")
     void login_Fail_1() {
         // given
-        validUser.setStatus(UserStatus.SUSPENDED);
+        validUser.changeStatus(UserStatus.SUSPENDED);
         given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(validUser));
 
         // when & then
@@ -281,7 +312,7 @@ public class AuthServiceTest {
         // 테스트 메서드 안에서 @BeforeEach로 생성된 mockUser의 상태를 파라미터 값으로 변경합니다.
         String savedToken = "valid-refresh-token";
         Long userId = validUser.getId();
-        validUser.setStatus(status);
+        validUser.changeStatus(status);
 
         given(jwtTokenProvider.getUserIdFromToken(savedToken)).willReturn(userId);
         given(userRepository.findById(userId)).willReturn(Optional.of(validUser));

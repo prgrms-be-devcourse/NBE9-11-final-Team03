@@ -52,10 +52,19 @@ class AdminTradeControllerTest {
         Long tradeId = 1L;
 
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.CANCELLED,
-                EscrowStatus.REFUNDED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.CANCELLED,
+                EscrowStatus.REFUNDED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.resolveDispute(eq(tradeId), eq(DisputeVerdict.BUYER_WIN))).thenReturn(res);
@@ -77,10 +86,19 @@ class AdminTradeControllerTest {
         Long tradeId = 1L;
 
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.COMPLETED,
-                EscrowStatus.RELEASED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.COMPLETED,
+                EscrowStatus.RELEASED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.resolveDispute(eq(tradeId), eq(DisputeVerdict.SELLER_WIN))).thenReturn(res);
@@ -147,10 +165,19 @@ class AdminTradeControllerTest {
     @WithMockSecurityUser(userId = 1, role = "ADMIN")
     void getDisputedTrades_success() throws Exception {
         DisputeRes dispute = new DisputeRes(
-                1L, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.DISPUTED,
-                EscrowStatus.FROZEN, "결과물이 약속한 조건과 다릅니다.",
-                LocalDateTime.now(), LocalDateTime.now()
+                1L,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.DISPUTED,
+                EscrowStatus.FROZEN,
+                "결과물이 약속한 조건과 다릅니다.",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
 
         when(tradeService.getDisputedTrades()).thenReturn(List.of(dispute));

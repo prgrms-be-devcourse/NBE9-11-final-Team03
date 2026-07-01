@@ -6,6 +6,8 @@ import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentSortType;
+import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -27,6 +29,7 @@ class TalentRepositorySearchTest {
 
     @Autowired TalentRepository talentRepository;
     @Autowired CategoryRepository categoryRepository;
+    @Autowired UserRepository userRepository;
 
     @Test
     @DisplayName("필터 없으면 삭제 제외 전체를 최신순으로 조회한다")
@@ -155,10 +158,22 @@ class TalentRepositorySearchTest {
 
     // avgRating, completeCount는 Talent.create에서 0으로 초기화되므로 reflection으로 세팅
     private Talent save(Category category, String title, int creditPrice, BigDecimal avgRating, int completeCount) {
-        Talent talent = Talent.create(1L, category, title, "내용", 2, creditPrice);
+        Talent talent = Talent.create(saveUserId(), category, title, "내용", 2, creditPrice);
         ReflectionTestUtils.setField(talent, "avgRating", avgRating);
         ReflectionTestUtils.setField(talent, "completeCount", completeCount);
         return talentRepository.save(talent);
+    }
+
+    private Long saveUserId() {
+        String suffix = String.valueOf(System.nanoTime());
+        User user = User.builder()
+                .email("author" + suffix + "@test.com")
+                .password("password")
+                .nickname("author" + suffix)
+                .introduction("intro")
+                .trustScore(BigDecimal.ZERO)
+                .build();
+        return userRepository.save(user).getId();
     }
 
     private BigDecimal dec(double v) {

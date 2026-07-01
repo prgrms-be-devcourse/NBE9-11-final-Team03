@@ -5,6 +5,8 @@ import com.back.baton.domain.category.repository.CategoryRepository;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentSortType;
+import com.back.baton.domain.user.entity.User;
+import com.back.baton.domain.user.repository.UserRepository;
 import com.back.baton.global.config.JpaAuditingConfig;
 import com.back.baton.global.config.QueryDslConfig;
 import org.junit.jupiter.api.DisplayName;
@@ -26,6 +28,7 @@ class TalentRepositorySortTest {
 
     @Autowired TalentRepository talentRepository;
     @Autowired CategoryRepository categoryRepository;
+    @Autowired UserRepository userRepository;
 
     @Test
     @DisplayName("평점순: avgRating DESC, 동점은 id DESC, 커서로 다음 페이지가 이어진다")
@@ -96,10 +99,22 @@ class TalentRepositorySortTest {
 
     // avgRating, completeCount는 create에서 0 초기화되므로 reflection으로 세팅
     private Talent save(Category category, BigDecimal avgRating, int completeCount) {
-        Talent talent = Talent.create(1L, category, "제목", "내용", 2, 100);
+        Talent talent = Talent.create(saveUserId(), category, "제목", "내용", 2, 100);
         ReflectionTestUtils.setField(talent, "avgRating", avgRating);
         ReflectionTestUtils.setField(talent, "completeCount", completeCount);
         return talentRepository.save(talent);
+    }
+
+    private Long saveUserId() {
+        String suffix = String.valueOf(System.nanoTime());
+        User user = User.builder()
+                .email("author" + suffix + "@test.com")
+                .password("password")
+                .nickname("author" + suffix)
+                .introduction("intro")
+                .trustScore(BigDecimal.ZERO)
+                .build();
+        return userRepository.save(user).getId();
     }
 
     private BigDecimal dec(double v) {

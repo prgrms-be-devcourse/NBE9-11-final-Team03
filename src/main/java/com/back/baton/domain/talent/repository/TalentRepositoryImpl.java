@@ -5,6 +5,8 @@ import com.back.baton.domain.talent.dto.request.TalentSearchReq;
 import com.back.baton.domain.talent.dto.response.TalentListRes;
 import com.back.baton.domain.talent.entity.QTalent;
 import com.back.baton.domain.talent.entity.TalentSortType;
+import com.back.baton.domain.talent.entity.TalentStatus;
+import com.back.baton.domain.user.entity.QUser;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -23,10 +25,13 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
     public List<TalentListRes> findTalentList(Long cursor, int size, TalentSortType sort) {
         QTalent talent = QTalent.talent;
         QCategory category = QCategory.category;
+        QUser user = QUser.user;
 
         return queryFactory
                 .select(Projections.constructor(TalentListRes.class,
                         talent.id,
+                        talent.authorId,
+                        user.nickname,
                         category.name,
                         talent.title,
                         talent.creditPrice,
@@ -38,8 +43,10 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
                 ))
                 .from(talent)
                 .join(talent.category, category)
+                .join(user).on(user.id.eq(talent.authorId))
                 .where(
                         talent.deletedAt.isNull(),   // 소프트 삭제 제외
+                        talent.status.eq(TalentStatus.ACTIVE),
                         cursorCondition(cursor, sort, talent)  // 커서 (첫 페이지면 null -> 무시)
                 )
                 .orderBy(orderSpecifiers(sort, talent))  // 정렬 키별 분기
@@ -52,10 +59,13 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
     public List<TalentListRes> searchTalents(TalentSearchReq req, Long cursor, int size, TalentSortType sort) {
         QTalent talent = QTalent.talent;
         QCategory category = QCategory.category;
+        QUser user = QUser.user;
 
         return queryFactory
                 .select(Projections.constructor(TalentListRes.class,
                         talent.id,
+                        talent.authorId,
+                        user.nickname,
                         category.name,
                         talent.title,
                         talent.creditPrice,
@@ -67,8 +77,10 @@ public class TalentRepositoryImpl implements TalentRepositoryCustom {
                 ))
                 .from(talent)
                 .join(talent.category, category)
+                .join(user).on(user.id.eq(talent.authorId))
                 .where(
-                        talent.deletedAt.isNull(),       // soft delete 제외
+                        talent.deletedAt.isNull(),
+                        talent.status.eq(TalentStatus.ACTIVE),// soft delete 제외
                         cursorCondition(cursor, sort, talent),  // 커서 (null이면 첫 페이지)
                         categoryEq(req.categoryId()),    // 동적 필터: null인 조건은 QueryDSL이 자동 무시
                         creditGoe(req.minCredit()),

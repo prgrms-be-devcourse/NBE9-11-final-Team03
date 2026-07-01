@@ -15,15 +15,20 @@ import com.back.baton.domain.talent.entity.Talent;
 import com.back.baton.domain.talent.entity.TalentStatus;
 import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.domain.trade.entity.Trade;
+import com.back.baton.domain.trade.entity.TradeGroup;
 import com.back.baton.domain.trade.entity.TradeType;
+import com.back.baton.domain.trade.service.TradeGroupService;
 import com.back.baton.domain.trade.service.TradeService;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
+import com.back.baton.global.response.code.TradeErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,6 +40,7 @@ public class MatchProposalService {
     private final MatchProposalRepository matchProposalRepository;
     private final TalentRepository talentRepository;
     private final TradeService tradeService;
+    private final TradeGroupService tradeGroupService;
     private final CreditService creditService;
     private final EscrowService escrowService;
     private final ChatService chatService;
@@ -42,8 +48,8 @@ public class MatchProposalService {
     @Transactional
     public MatchProposalRes createMatchProposal(Long requesterId, MatchProposalCreateReq req) {
         Talent providerTalent = getTalent(req.providerTalentId());
-
         Talent requesterTalent = null;
+
         if (req.requesterTalentId() != null) {
             requesterTalent = getTalent(req.requesterTalentId());
             validateRequesterOwnsTalent(requesterId, requesterTalent);
@@ -53,86 +59,148 @@ public class MatchProposalService {
         validateProviderOwnsTalent(req.providerId(), providerTalent);
         validateTalentAvailable(providerTalent);
         validateSelfMatching(requesterId, req.providerId());
-        validateDuplicatedProposal(requesterId, req);
+        validateDuplicatedProposal(requesterId, req); // 정방향/역방향 검증
 
-        MatchProposal matchProposal = MatchProposal.create(
-                providerTalent.getId(),
-                requesterTalent == null ? null : requesterTalent.getId(),
+        MatchProposal matchProposal = MatchProposal.createFromTalents(
+                providerTalent,
+                requesterTalent,
                 requesterId,
                 providerTalent.getAuthorId(),
                 req.requestMessage()
         );
+
+        try {
+            MatchProposal savedMatchProposal =
+                    matchProposalRepository.saveAndFlush(matchProposal);
+
+            return MatchProposalRes.from(savedMatchProposal);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
+        }
+    }
+
+    @Transactional
+    public MatchProposalRes acceptMatchProposal(
+            Long proposalId,
+            Long providerId
+    ) {
+        MatchProposal matchProposal = matchProposalRepository.findByIdWithLock(proposalId)
+                .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
+
+        validateProviderAuthority(providerId, matchProposal);
+
+        validateRequestedStatus(matchProposal);
+
+        TradeType tradeType = matchProposal.getTradeType();
+
+        if (tradeType == TradeType.PURCHASE) {
+            acceptPurchaseProposal(matchProposal, providerId);
+        } else {
+            acceptSwapProposal(matchProposal, providerId);
+        }
+
+        matchProposal.accept();
 
         MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
 
         return MatchProposalRes.from(savedMatchProposal);
     }
 
-    @Transactional
-    public MatchProposalRes acceptMatchProposal(
-            Long proposalId,
-            Long providerId,
-            String idempotencyKey
-    ) {
-        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
-                .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
+    private void acceptPurchaseProposal(MatchProposal matchProposal, Long providerId) {
+        validateProviderTalentForAccept(providerId, matchProposal);
 
-        validateProviderAuthority(providerId, matchProposal);
-
-        if (matchProposal.getStatus() == MatchProposalStatus.ACCEPTED) {
-            return MatchProposalRes.from(matchProposal);
-        }
-
-        validateRequestedStatus(matchProposal);
-
-        Talent providerTalent = getTalent(matchProposal.getProviderTalentId());
-        validateProviderOwnsTalent(providerId, providerTalent);
-        validateTalentAvailable(providerTalent);
-
-        TradeType tradeType = matchProposal.getRequesterTalentId() == null ? TradeType.PURCHASE : TradeType.SWAP;
-
-        // TODO: SWAP의 양방향 거래 그룹 구조는 회의 후 정책 확정 시 별도 확장
-        // 현재는 providerTalent 기준 단방향 거래 1건만 생성
-        Trade trade = tradeService.create(
-                matchProposal.getId(),
-                matchProposal.getProviderTalentId(),
-                matchProposal.getRequesterId(),
-                matchProposal.getProviderId(),
-                providerTalent.getCreditPrice(),
-                tradeType
-        );
-
-        String escrowHoldIdempotencyKey = "MATCH-PROPOSAL-ACCEPT-"
-                + matchProposal.getId()
-                + ":"
-                + idempotencyKey;
+        Trade trade = tradeService.createPurchaseTrade(matchProposal);
 
         creditService.holdForEscrow(
                 matchProposal.getRequesterId(),
-                providerTalent.getCreditPrice(),
-                trade.getId(),
-                escrowHoldIdempotencyKey
+                matchProposal.getProviderTalentPriceSnapshot(),
+                trade.getId()
         );
 
         escrowService.create(
                 trade.getId(),
                 matchProposal.getRequesterId(),
                 matchProposal.getProviderId(),
-                providerTalent.getCreditPrice()
+                matchProposal.getProviderTalentPriceSnapshot()
         );
 
-        matchProposal.accept();
-
         chatService.getOrCreateTransactionRoom(TradeChatRoomCreateReq.from(trade));
+    }
 
-        MatchProposal savedMatchProposal = matchProposalRepository.save(matchProposal);
+    private void acceptSwapProposal(MatchProposal matchProposal, Long providerId) {
+        // provider/requester talent 재검증
+        validateProviderTalentForAccept(providerId, matchProposal);
+        validateRequesterTalentForAccept(matchProposal);
 
-        return MatchProposalRes.from(savedMatchProposal);
+        // TradeGroup 생성
+        TradeGroup tradeGroup = tradeGroupService.create(
+                matchProposal.getId(),
+                TradeType.SWAP
+        );
+
+        // Trade 2건 생성
+        List<Trade> trades = tradeService.createSwapTrades(matchProposal, tradeGroup);
+
+        Trade requesterReceivesTrade = findSwapTrade(
+                trades,
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId()
+        );
+
+        Trade providerReceivesTrade = findSwapTrade(
+                trades,
+                matchProposal.getRequesterTalentId(),
+                matchProposal.getProviderId(),
+                matchProposal.getRequesterId()
+        );
+
+        List<SwapEscrowLeg> escrowLegs = List.of(
+                        new SwapEscrowLeg(
+                                requesterReceivesTrade,
+                                matchProposal.getRequesterId(), // payer
+                                matchProposal.getProviderId(),  // payee
+                                matchProposal.getProviderTalentPriceSnapshot()
+                        ),
+                        new SwapEscrowLeg(
+                                providerReceivesTrade,
+                                matchProposal.getProviderId(),  // payer
+                                matchProposal.getRequesterId(), // payee
+                                matchProposal.getRequesterTalentPriceSnapshot()
+                        )
+                ).stream()
+                .sorted(Comparator.comparing(SwapEscrowLeg::payerId))
+                .toList();
+
+        // Credit hold 2건
+        // Escrow 2건
+        for (SwapEscrowLeg escrowLeg : escrowLegs) {
+            creditService.holdForEscrow(
+                    escrowLeg.payerId(),
+                    escrowLeg.amount(),
+                    escrowLeg.trade().getId()
+            );
+
+            escrowService.create(
+                    escrowLeg.trade().getId(),
+                    escrowLeg.payerId(),
+                    escrowLeg.payeeId(),
+                    escrowLeg.amount()
+            );
+        }
+
+        // TradeGroup 기준 채팅방 1개 생성
+        chatService.getOrCreateSwapTransactionRoom(
+                tradeGroup.getId(),
+                matchProposal.getProviderTalentId(),
+                matchProposal.getRequesterId(),
+                matchProposal.getProviderId()
+        );
     }
 
     @Transactional
     public MatchProposalRes rejectMatchProposal(Long proposalId, Long providerId) {
-        MatchProposal matchProposal = matchProposalRepository.findById(proposalId)
+        MatchProposal matchProposal = matchProposalRepository.findByIdWithLock(proposalId)
                 .orElseThrow(() -> new CustomException(MatchingErrorCode.MATCH_PROPOSAL_NOT_FOUND));
 
         validateRequestedStatus(matchProposal);
@@ -154,6 +222,20 @@ public class MatchProposalService {
     private Talent getTalent(Long talentId) {
         return talentRepository.findById(talentId)
                 .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
+    }
+
+    private Trade findSwapTrade(
+            List<Trade> trades,
+            Long talentId,
+            Long buyerId,
+            Long sellerId
+    ) {
+        return trades.stream()
+                .filter(trade -> Objects.equals(trade.getTalentId(), talentId))
+                .filter(trade -> Objects.equals(trade.getBuyerId(), buyerId))
+                .filter(trade -> Objects.equals(trade.getSellerId(), sellerId))
+                .findFirst()
+                .orElseThrow(() -> new CustomException(TradeErrorCode.INVALID_SWAP_TRADE_MAPPING));
     }
 
     private void validateRequesterOwnsTalent(Long requesterId, Talent requesterTalent) {
@@ -193,19 +275,60 @@ public class MatchProposalService {
     }
 
     private void validateDuplicatedProposal(Long requesterId, MatchProposalCreateReq req) {
-        boolean exists = matchProposalRepository
-                .existsActiveProposal(
-                        requesterId,
-                        req.requesterTalentId(),
-                        req.providerTalentId(),
-                        List.of(
-                                MatchProposalStatus.REQUESTED,
-                                MatchProposalStatus.ACCEPTED
-                        )
-                );
+        if (req.requesterTalentId() == null) {
+            validateDuplicatedPurchaseProposal(requesterId, req);
+            return;
+        }
+
+        validateDuplicatedSwapProposal(req);
+    }
+
+    private void validateDuplicatedPurchaseProposal(Long requesterId, MatchProposalCreateReq req) {
+        boolean exists = matchProposalRepository.existsActiveProposal(
+                requesterId,
+                req.requesterTalentId(),
+                req.providerTalentId()
+        );
 
         if (exists) {
             throw new CustomException(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
         }
+    }
+
+    private void validateDuplicatedSwapProposal(MatchProposalCreateReq req) {
+        String activeSwapPairKey = MatchProposal.createActiveSwapPairKey(
+                req.requesterTalentId(),
+                req.providerTalentId()
+        );
+
+        if (matchProposalRepository.existsByActiveSwapPairKey(activeSwapPairKey)) {
+            throw new CustomException(MatchingErrorCode.DUPLICATED_MATCHING_PROPOSAL);
+        }
+    }
+
+    private void validateProviderTalentForAccept(Long providerId, MatchProposal matchProposal) {
+        Talent providerTalent = getTalent(matchProposal.getProviderTalentId());
+        validateProviderOwnsTalent(providerId, providerTalent);
+        validateTalentAvailable(providerTalent);
+    }
+
+    private void validateRequesterTalentForAccept(MatchProposal matchProposal) {
+        Long requesterTalentId = matchProposal.getRequesterTalentId();
+
+        if (requesterTalentId == null) {
+            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
+        }
+
+        Talent requesterTalent = getTalent(requesterTalentId);
+        validateRequesterOwnsTalent(matchProposal.getRequesterId(), requesterTalent);
+        validateTalentAvailable(requesterTalent);
+    }
+
+    private record SwapEscrowLeg(
+            Trade trade,
+            Long payerId,
+            Long payeeId,
+            Integer amount
+    ) {
     }
 }

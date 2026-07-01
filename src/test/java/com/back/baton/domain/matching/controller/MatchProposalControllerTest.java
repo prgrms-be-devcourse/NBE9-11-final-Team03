@@ -176,7 +176,6 @@ class MatchProposalControllerTest {
     void acceptMatchProposal_Success() throws Exception {
         Long proposalId = 1L;
         Long providerId = 2L;
-        String idempotencyKey = "accept-proposal-1";
 
         MatchProposalRes res = new MatchProposalRes(
                 proposalId,
@@ -191,11 +190,10 @@ class MatchProposalControllerTest {
                 LocalDateTime.now()
         );
 
-        when(matchProposalService.acceptMatchProposal(eq(proposalId), eq(providerId), eq(idempotencyKey)))
+        when(matchProposalService.acceptMatchProposal(eq(proposalId), eq(providerId)))
                 .thenReturn(res);
 
-        mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/accept", proposalId)
-                        .header("Idempotency-Key", idempotencyKey))
+        mockMvc.perform(patch("/api/v1/match-proposals/{proposalId}/accept", proposalId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-4"))
                 .andExpect(jsonPath("$.data.id").value(proposalId))

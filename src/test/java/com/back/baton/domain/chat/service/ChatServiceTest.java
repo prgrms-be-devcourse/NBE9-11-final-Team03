@@ -240,6 +240,7 @@ class ChatServiceTest {
                 new ChatRoomListRes(
                         5L,
                         100L,
+                        null,
                         1L,
                         "Spring Boot API 구현 도와드립니다",
                         10L,
@@ -255,6 +256,7 @@ class ChatServiceTest {
                 new ChatRoomListRes(
                         4L,
                         null,
+                        null,
                         2L,
                         "React 화면 구현 도와드립니다",
                         10L,
@@ -269,6 +271,7 @@ class ChatServiceTest {
                 ),
                 new ChatRoomListRes(
                         3L,
+                        null,
                         null,
                         3L,
                         "코드 구현 도와드립니다",

@@ -30,7 +30,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "jwt.secret=trade-admin-security-test-secret-key")
+@SpringBootTest(properties = {
+        "jwt.secret=trade-admin-security-test-secret-key",
+        "hash.salt=trade-admin-security-test-salt"
+})
 @AutoConfigureMockMvc
 class TradeAdminSecurityTest {
 
@@ -57,10 +60,19 @@ class TradeAdminSecurityTest {
     @DisplayName("분쟁 목록 조회 - 관리자는 접근 가능하다")
     void getDisputedTrades_admin_allowed() throws Exception {
         DisputeRes dispute = new DisputeRes(
-                1L, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.DISPUTED,
-                EscrowStatus.FROZEN, "결과물이 약속한 조건과 다릅니다.",
-                LocalDateTime.now(), LocalDateTime.now()
+                1L,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.DISPUTED,
+                EscrowStatus.FROZEN,
+                "결과물이 약속한 조건과 다릅니다.",
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
         when(tradeService.getDisputedTrades()).thenReturn(List.of(dispute));
 
@@ -78,10 +90,10 @@ class TradeAdminSecurityTest {
     }
 
     @Test
-    @DisplayName("분쟁 목록 조회 - 비인증 요청은 403이 반환된다")
-    void getDisputedTrades_unauthenticated_forbidden() throws Exception {
+    @DisplayName("분쟁 목록 조회 - 비인증 요청은 401이 반환된다")
+    void getDisputedTrades_unauthenticated_unauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/admin/trade/disputes"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -89,10 +101,19 @@ class TradeAdminSecurityTest {
     void resolveDispute_admin_allowed() throws Exception {
         Long tradeId = 1L;
         TradeRes res = new TradeRes(
-                tradeId, 1L, 10L, 2L, 3L,
-                5000, TradeType.PURCHASE, TradeStatus.CANCELLED,
-                EscrowStatus.REFUNDED, null,
-                LocalDateTime.now(), LocalDateTime.now()
+                tradeId,
+                1L,
+                null,
+                10L,
+                2L,
+                3L,
+                5000,
+                TradeType.PURCHASE,
+                TradeStatus.CANCELLED,
+                EscrowStatus.REFUNDED,
+                null,
+                LocalDateTime.now(),
+                LocalDateTime.now()
         );
         when(tradeService.resolveDispute(eq(tradeId), eq(DisputeVerdict.BUYER_WIN))).thenReturn(res);
 
@@ -116,13 +137,13 @@ class TradeAdminSecurityTest {
     }
 
     @Test
-    @DisplayName("분쟁 처리 - 비인증 요청은 403이 반환된다")
-    void resolveDispute_unauthenticated_forbidden() throws Exception {
+    @DisplayName("분쟁 처리 - 비인증 요청은 401이 반환된다")
+    void resolveDispute_unauthenticated_unauthorized() throws Exception {
         Long tradeId = 1L;
 
         mockMvc.perform(patch("/api/v1/admin/trade/{tradeId}/dispute/resolve", tradeId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"verdict\":\"BUYER_WIN\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 }

@@ -45,10 +45,6 @@ public class CreditTransaction extends BaseTimeEntity {
     @Column(name = "balance_after", nullable = false, updatable = false)
     private Integer balanceAfter;
 
-    @Schema(description = "멱등성 키. 중복 요청 방지를 위한 unique 제약", example = "550e8400-e29b-41d4-a716-446655440000")
-    @Column(name = "idempotency_key", nullable = false, unique = true, length = 100, updatable = false)
-    private String idempotencyKey;
-
     @Schema(description = "거래 유형별 고정 기본 사유 (type.defaultReason 스냅샷)", example = "거래 완료까지 크레딧 에스크로 예치")
     @Column(name = "default_reason", length = 200, nullable = false, updatable = false)
     private String defaultReason;
@@ -63,7 +59,6 @@ public class CreditTransaction extends BaseTimeEntity {
             CreditTransactionType type,
             Integer amount,
             Integer balanceAfter,
-            String idempotencyKey,
             String detailReason
     ) {
         CreditTransaction ct = new CreditTransaction();
@@ -72,9 +67,29 @@ public class CreditTransaction extends BaseTimeEntity {
         ct.type = type;
         ct.amount = amount;
         ct.balanceAfter = balanceAfter;
-        ct.idempotencyKey = idempotencyKey;
         ct.defaultReason = type.getDefaultReason();
         ct.detailReason = detailReason;
         return ct;
+    }
+
+    /* 거래 원장 생성 로직 캡슐화를 위한 정적 팩토리 메소드 */
+    // 신규 가입 웰컴 크레딧용 원장 생성
+    public static CreditTransaction createWelcome(Long userId, Integer initialAmount) {
+        return create(userId, null, CreditTransactionType.WELCOME, initialAmount, initialAmount, null);
+    }
+
+    // 에스크로 예치용 원장 생성 (금액을 음수로 자동 변환하여 기록)
+    public static CreditTransaction createEscrowHold(Long userId, Long tradeId, int amount, Integer balanceAfter) {
+        return create(userId, tradeId, CreditTransactionType.ESCROW_HOLD, -amount, balanceAfter, null);
+    }
+
+    // 에스크로 환불용 원장 생성 (환불은 잔액이 늘어나므로 양수로 기록)
+    public static CreditTransaction createRefund(Long userId, Long tradeId, Integer amount, Integer balanceAfter) {
+        return create(userId, tradeId, CreditTransactionType.REFUND, amount, balanceAfter, null);
+    }
+
+    // 에스크로 최종 정산(지급/차감)용 원장 생성 (부호가 포함된 금액을 그대로 전달)
+    public static CreditTransaction createEscrowRelease(Long userId, Long tradeId, Integer signedAmount, Integer balanceAfter) {
+        return create(userId, tradeId, CreditTransactionType.ESCROW_RELEASE, signedAmount, balanceAfter, null);
     }
 }
