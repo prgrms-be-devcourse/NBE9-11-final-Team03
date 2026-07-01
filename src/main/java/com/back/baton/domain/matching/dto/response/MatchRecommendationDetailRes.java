@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public record MatchRecommendationDetailRes(
         Long talentId,
+        Long requesterTalentId,
         Long providerId,
         Long categoryId,
         String categoryName,
@@ -26,6 +27,7 @@ public record MatchRecommendationDetailRes(
     public MatchRecommendationDetailRes withProposalDisabled(String reason) {
         return new MatchRecommendationDetailRes(
                 talentId,
+                requesterTalentId,
                 providerId,
                 categoryId,
                 categoryName,

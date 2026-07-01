@@ -6,9 +6,6 @@ import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.matching.repository.MatchRecommendationQueryRepository;
 import com.back.baton.domain.profile.repository.ProfileRepository;
-import com.back.baton.domain.talent.entity.Talent;
-import com.back.baton.domain.talent.entity.TalentStatus;
-import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import com.back.baton.global.response.code.TalentErrorCode;
@@ -28,7 +25,6 @@ public class MatchRecommendationService {
     private static final String RECEIVED_PENDING_PROPOSAL_REASON = "상대가 보낸 교환 제안이 있습니다. 받은 제안을 확인해 주세요.";
     private static final String TRADE_IN_PROGRESS_REASON = "이미 진행 중인 교환 거래가 있습니다.";
 
-    private final TalentRepository talentRepository;
     private final ProfileRepository profileRepository;
     private final MatchRecommendationQueryRepository matchRecommendationQueryRepository;
     private final MatchProposalRepository matchProposalRepository;
@@ -74,23 +70,14 @@ public class MatchRecommendationService {
                 .toList();
     }
 
-    public MatchRecommendationDetailRes getMatchRecommendationDetail(
-            Long requesterTalentId,
-            Long providerTalentId,
-            Long userId
-    ) {
-        Talent requesterTalent = getTalent(requesterTalentId);
-
-        validateTalentAvailable(requesterTalent);
-        validateRequesterOwnsTalent(userId, requesterTalent);
-
+    public MatchRecommendationDetailRes getMatchRecommendationDetail(Long providerTalentId, Long userId) {
         List<Long> requesterWantCategoryIds = getRequesterWantCategoryIds(userId);
 
         MatchRecommendationDetailRes detail =
                 matchRecommendationQueryRepository.findMatchRecommendationDetail(
-                                requesterTalent.getCategory().getId(),
                                 requesterWantCategoryIds,
-                                providerTalentId
+                                providerTalentId,
+                                userId
                         )
                         .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
 
@@ -100,7 +87,7 @@ public class MatchRecommendationService {
 
         String disabledReason = resolveProposalDisabledReason(
                 userId,
-                requesterTalentId,
+                detail.requesterTalentId(),
                 detail.providerId(),
                 providerTalentId
         );
@@ -110,11 +97,6 @@ public class MatchRecommendationService {
         }
 
         return detail.withProposalDisabled(disabledReason);
-    }
-
-    private Talent getTalent(Long talentId) {
-        return talentRepository.findById(talentId)
-                .orElseThrow(() -> new CustomException(TalentErrorCode.TALENT_NOT_FOUND));
     }
 
     private List<Long> getRequesterWantCategoryIds(Long userId) {
@@ -163,15 +145,4 @@ public class MatchRecommendationService {
         return null;
     }
 
-    private void validateRequesterOwnsTalent(Long requesterId, Talent requesterTalent) {
-        if (!Objects.equals(requesterTalent.getAuthorId(), requesterId)) {
-            throw new CustomException(MatchingErrorCode.MATCH_PROPOSAL_ACCESS_DENIED);
-        }
-    }
-
-    private void validateTalentAvailable(Talent talent) {
-        if (talent.getStatus() != TalentStatus.ACTIVE || talent.isDeleted()) {
-            throw new CustomException(TalentErrorCode.TALENT_NOT_FOUND);
-        }
-    }
 }

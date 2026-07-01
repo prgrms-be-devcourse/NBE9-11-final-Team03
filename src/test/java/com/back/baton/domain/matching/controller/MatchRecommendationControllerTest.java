@@ -89,6 +89,7 @@ class MatchRecommendationControllerTest {
 
         MatchRecommendationDetailRes response = new MatchRecommendationDetailRes(
                 providerTalentId,
+                requesterTalentId,
                 3L,
                 1L,
                 "Design",
@@ -108,16 +109,15 @@ class MatchRecommendationControllerTest {
         );
 
         given(matchRecommendationService.getMatchRecommendationDetail(
-                requesterTalentId,
                 providerTalentId,
                 userId
         )).willReturn(response);
 
-        mockMvc.perform(get("/api/v1/match-recommendations/{providerTalentId}", providerTalentId)
-                        .param("requesterTalentId", String.valueOf(requesterTalentId)))
+        mockMvc.perform(get("/api/v1/match-recommendations/{providerTalentId}", providerTalentId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("200-7"))
                 .andExpect(jsonPath("$.data.talentId").value(providerTalentId))
+                .andExpect(jsonPath("$.data.requesterTalentId").value(requesterTalentId))
                 .andExpect(jsonPath("$.data.providerId").value(3L))
                 .andExpect(jsonPath("$.data.categoryId").value(1L))
                 .andExpect(jsonPath("$.data.categoryName").value("Design"))
@@ -133,6 +133,6 @@ class MatchRecommendationControllerTest {
                 .andExpect(jsonPath("$.data.proposalRequestDisabledReason").isEmpty());
 
         then(matchRecommendationService).should()
-                .getMatchRecommendationDetail(requesterTalentId, providerTalentId, userId);
+                .getMatchRecommendationDetail(providerTalentId, userId);
     }
 }

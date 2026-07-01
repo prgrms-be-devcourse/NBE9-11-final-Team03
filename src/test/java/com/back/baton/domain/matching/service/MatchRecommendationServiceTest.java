@@ -6,8 +6,6 @@ import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.matching.repository.MatchProposalRepository;
 import com.back.baton.domain.matching.repository.MatchRecommendationQueryRepository;
 import com.back.baton.domain.profile.repository.ProfileRepository;
-import com.back.baton.domain.talent.entity.Talent;
-import com.back.baton.domain.talent.repository.TalentRepository;
 import com.back.baton.global.exception.CustomException;
 import com.back.baton.global.response.code.MatchingErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,9 +36,6 @@ import static org.mockito.Mockito.never;
 class MatchRecommendationServiceTest {
 
     private static final String SENT_PENDING_PROPOSAL_REASON = "이미 보낸 교환 제안이 대기 중입니다.";
-
-    @Mock
-    private TalentRepository talentRepository;
 
     @Mock
     private ProfileRepository profileRepository;
@@ -175,33 +170,33 @@ class MatchRecommendationServiceTest {
     }
 
     @Test
-    @DisplayName("recommendation detail uses selected requester talent")
+    @DisplayName("recommendation detail uses calculated requester talent id")
     void getMatchRecommendationDetail_success() {
-        Long requesterTalentId = 1L;
+        Long calculatedRequesterTalentId = 1L;
         Long providerTalentId = 2L;
         Long providerId = 3L;
         Long userId = 1L;
-        Category category = createCategory(10L);
-        Talent requesterTalent = createTalent(requesterTalentId, userId, category);
-        MatchRecommendationDetailRes detail = createDetail(providerTalentId, providerId, 999L);
+        MatchRecommendationDetailRes detail =
+                createDetail(providerTalentId, calculatedRequesterTalentId, providerId, 999L);
 
-        given(talentRepository.findById(requesterTalentId))
-                .willReturn(Optional.of(requesterTalent));
         given(matchRecommendationQueryRepository.findMatchRecommendationDetail(
-                eq(category.getId()),
                 anyList(),
-                eq(providerTalentId)
+                eq(providerTalentId),
+                eq(userId)
         )).willReturn(Optional.of(detail));
 
         MatchRecommendationDetailRes result =
                 matchRecommendationService.getMatchRecommendationDetail(
-                        requesterTalentId,
                         providerTalentId,
                         userId
                 );
 
         assertThat(result.talentId()).isEqualTo(providerTalentId);
+        assertThat(result.requesterTalentId()).isEqualTo(calculatedRequesterTalentId);
         assertThat(result.proposalRequestEnabled()).isTrue();
+
+        then(matchProposalRepository).should()
+                .existsSentPendingProposal(userId, calculatedRequesterTalentId, providerTalentId);
     }
 
     @Test
@@ -210,21 +205,17 @@ class MatchRecommendationServiceTest {
         Long requesterTalentId = 1L;
         Long providerTalentId = 2L;
         Long userId = 1L;
-        Category category = createCategory(10L);
-        Talent requesterTalent = createTalent(requesterTalentId, userId, category);
-        MatchRecommendationDetailRes detail = createDetail(providerTalentId, userId, 999L);
+        MatchRecommendationDetailRes detail =
+                createDetail(providerTalentId, requesterTalentId, userId, 999L);
 
-        given(talentRepository.findById(requesterTalentId))
-                .willReturn(Optional.of(requesterTalent));
         given(matchRecommendationQueryRepository.findMatchRecommendationDetail(
-                eq(category.getId()),
                 anyList(),
-                eq(providerTalentId)
+                eq(providerTalentId),
+                eq(userId)
         )).willReturn(Optional.of(detail));
 
         assertThatThrownBy(() ->
                 matchRecommendationService.getMatchRecommendationDetail(
-                        requesterTalentId,
                         providerTalentId,
                         userId
                 )
@@ -235,9 +226,15 @@ class MatchRecommendationServiceTest {
         then(matchProposalRepository).shouldHaveNoInteractions();
     }
 
-    private MatchRecommendationDetailRes createDetail(Long talentId, Long providerId, Long categoryId) {
+    private MatchRecommendationDetailRes createDetail(
+            Long talentId,
+            Long requesterTalentId,
+            Long providerId,
+            Long categoryId
+    ) {
         return new MatchRecommendationDetailRes(
                 talentId,
+                requesterTalentId,
                 providerId,
                 categoryId,
                 "Design",
@@ -255,21 +252,6 @@ class MatchRecommendationServiceTest {
                 true,
                 null
         );
-    }
-
-    private Talent createTalent(Long id, Long authorId, Category category) {
-        Talent talent = Talent.create(
-                authorId,
-                category,
-                "test talent",
-                "test content",
-                2,
-                100
-        );
-
-        ReflectionTestUtils.setField(talent, "id", id);
-
-        return talent;
     }
 
     private Category createCategory(Long id) {

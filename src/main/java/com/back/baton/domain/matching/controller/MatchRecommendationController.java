@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -51,14 +50,11 @@ public class MatchRecommendationController {
     public ResponseEntity<ApiResponse<MatchRecommendationDetailRes>> getMatchRecommendationDetail(
             @Parameter(description = "추천 대상 재능 ID", example = "2", required = true)
             @PathVariable Long providerTalentId,
-            @Parameter(description = "요청자의 재능 ID", example = "1", required = true)
-            @RequestParam Long requesterTalentId,
             @CurrentUser SecurityUser currentUser
     ) {
         Long userId = currentUser.getUserId();
         MatchRecommendationDetailRes response =
                 matchRecommendationService.getMatchRecommendationDetail(
-                        requesterTalentId,
                         providerTalentId,
                         userId
                 );
