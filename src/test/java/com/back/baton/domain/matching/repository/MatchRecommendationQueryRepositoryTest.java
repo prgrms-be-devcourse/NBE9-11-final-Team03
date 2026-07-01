@@ -2,6 +2,7 @@ package com.back.baton.domain.matching.repository;
 
 import com.back.baton.domain.category.entity.Category;
 import com.back.baton.domain.category.repository.CategoryRepository;
+import com.back.baton.domain.matching.dto.response.MatchRecommendationDetailRes;
 import com.back.baton.domain.matching.dto.response.MatchRecommendationRes;
 import com.back.baton.domain.profile.entity.Profile;
 import com.back.baton.domain.profile.repository.ProfileRepository;
@@ -120,6 +121,32 @@ class MatchRecommendationQueryRepositoryTest {
                         highRatingLowComplete.getId(),
                         lowRating.getId()
                 );
+    }
+
+    @Test
+    @DisplayName("추천 상세는 요청자의 여러 재능 중 매칭 가능한 대표 재능 ID를 조회한다")
+    void findMatchRecommendationDetail_calculatesRequesterTalentId() {
+        Category backend = categoryRepository.save(Category.create("Backend", 1));
+        Category design = categoryRepository.save(Category.create("Design", 2));
+
+        User requester = saveUser("requester-detail@test.com", "requesterDetail");
+        User provider = saveUser("provider-detail@test.com", "providerDetail");
+
+        saveProfile(provider, List.of(backend));
+
+        Talent requesterTalent = saveTalent(requester.getId(), backend, "requester backend", 0, 0, BigDecimal.ZERO);
+        saveTalent(requester.getId(), backend, "requester backend duplicate category", 0, 0, BigDecimal.ZERO);
+        Talent providerTalent = saveTalent(provider.getId(), design, "figma lesson", 10, 3, BigDecimal.valueOf(4.50));
+
+        MatchRecommendationDetailRes result = matchRecommendationQueryRepository.findMatchRecommendationDetail(
+                List.of(design.getId()),
+                providerTalent.getId(),
+                requester.getId()
+        ).orElseThrow();
+
+        assertThat(result.talentId()).isEqualTo(providerTalent.getId());
+        assertThat(result.requesterTalentId()).isEqualTo(requesterTalent.getId());
+        assertThat(result.providerId()).isEqualTo(provider.getId());
     }
 
     private User saveUser(String email, String nickname) {
