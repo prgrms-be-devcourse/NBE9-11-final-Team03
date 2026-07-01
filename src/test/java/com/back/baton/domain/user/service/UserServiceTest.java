@@ -18,9 +18,16 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -40,6 +47,26 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Test
+    @DisplayName("탈퇴회원 삭제 스케줄러 실패 시 ERROR 로그로 기록된다(Sentry 알림)")
+    void deleteExpiredWithdrawalUsers_logsError_onFailure() {
+        // given
+        Logger schedulerLogger = (Logger) LoggerFactory.getLogger(UserService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        schedulerLogger.addAppender(appender);
+        doThrow(new RuntimeException("DB 삭제 실패"))
+                .when(withdrawnUserRepository)
+                .deleteByCreatedAtBeforeAndPermanentBanIsFalse(any());
+
+        // when
+        userService.deleteExpiredWithdrawalUsers();
+
+        // then
+        assertThat(appender.list).anyMatch(e -> e.getLevel() == Level.ERROR);
+        schedulerLogger.detachAppender(appender);
+    }
 
     @Test
     @DisplayName("탈퇴 성공 - 모든 조건 만족 시")
