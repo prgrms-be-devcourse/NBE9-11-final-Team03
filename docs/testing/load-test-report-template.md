@@ -1,46 +1,46 @@
-# Baton Load Test Report
+# Baton 부하테스트 결과 보고서 양식
 
-> Date:
-> Target:
-> Tool: k6
-> Tester:
+> 기준일:
+> 테스트 대상:
+> 테스트 도구: k6
+> 테스트 담당자:
 
-## 1. Scope
+## 1. 테스트 범위
 
-| Item | Value |
+| 항목 | 값 |
 | --- | --- |
-| Scenario |  |
-| Target APIs |  |
-| Test data |  |
-| Max virtual users |  |
-| Duration |  |
+| 시나리오 |  |
+| 대상 API |  |
+| 테스트 데이터 |  |
+| 최대 가상 사용자 수 |  |
+| 실행 시간 |  |
 
-## 2. Pass Criteria
+## 2. 통과 기준
 
-| Metric | Target | Result |
+| 측정 지표 | 목표 | 결과 |
 | --- | ---: | ---: |
-| HTTP failure rate | `< 1%` |  |
-| 5xx errors | `0` |  |
-| Read API p95 | `< 1000ms` |  |
-| Write API p95 | `< 2000ms` |  |
+| HTTP 요청 실패율 | `< 1%` |  |
+| 5xx 오류 | `0` |  |
+| 조회 API p95 | `< 1000ms` |  |
+| 쓰기 API p95 | `< 2000ms` |  |
 
-## 3. Result Summary
+## 3. 결과 요약
 
-| Scenario | Requests | Failures | Avg | p95 | Max | Result |
+| 시나리오 | 요청 수 | 실패 수 | 평균 | p95 | 최대 | 판정 |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| smoke-read |  |  |  |  |  |  |
-| read-apis |  |  |  |  |  |  |
-| auth-login |  |  |  |  |  |  |
-| purchase-flow-smoke |  |  |  |  |  |  |
+| `smoke-read` |  |  |  |  |  |  |
+| `read-apis` |  |  |  |  |  |  |
+| `auth-login` |  |  |  |  |  |  |
+| `purchase-flow-smoke` |  |  |  |  |  |  |
 
-## 4. Findings
+## 4. 발견 사항
 
-| Priority | Finding | Evidence | Next Action |
+| 우선순위 | 발견 내용 | 근거 | 후속 조치 |
 | --- | --- | --- | --- |
 | P0 |  |  |  |
 | P1 |  |  |  |
 | P2 |  |  |  |
 
-## 5. Conclusion
+## 5. 결론
 
 - 
